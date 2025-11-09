@@ -1,0 +1,48 @@
+services:
+  gateway:
+    build: ../src/Gateway
+    ports:
+      - "5000:8080"
+      - "5001:8081"
+    depends_on:
+      - collector
+    networks:
+      - public
+      - internal
+    environment:
+    - ASPNETCORE_ENVIRONMENT=Docker
+
+  collector:
+    build: ../src/CollectorService
+    depends_on:
+      - rabbitmq
+    networks:
+      - internal
+    environment:
+    - ASPNETCORE_ENVIRONMENT=Docker
+
+  rabbitmq:
+    image: rabbitmq:4.2-management
+    ports:
+      - "15672:15672"
+    networks:
+      - internal
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - internal
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
+
+networks:
+  public:
+  internal: 

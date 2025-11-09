@@ -1,0 +1,19 @@
+{
+	"Routes": [
+		{
+			"UpstreamPathTemplate": "/gateway/weather",
+			"UpstreamHttpMethod": [ "GET" ],
+			"DownstreamPathTemplate": "/weatherforecast",
+			"DownstreamScheme": "http",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "collector",
+					"Port": 8080
+				}
+			]
+		}
+	],
+	"GlobalConfiguration": {
+		"BaseUrl": "https://localhost:8081"
+	}
+}

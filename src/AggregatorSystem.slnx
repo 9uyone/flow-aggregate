@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="CollectorService/CollectorService.csproj" />
+  <Project Path="Common/Common.csproj" Id="ee85da4b-e8cf-4c34-8051-8d3648c41f9b" />
+  <Project Path="Gateway/Gateway.csproj" Id="138c9ef1-3e94-43f1-b638-12e749c5a26b" />
+  <Project Path="ProcessorService/ProcessorService.csproj" Id="e8887a22-ce16-49f3-9085-b0bc85a948d1" />
+  <Project Path="StorageService/StorageService.csproj" Id="8a06ce3f-b2dc-473c-8125-86fc3baf3dbd" />
+</Solution>
