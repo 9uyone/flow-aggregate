@@ -1,6 +1,9 @@
 services:
   gateway:
-    build: ../src/Gateway
+    build:
+      context: ./src
+      dockerfile: Gateway/Dockerfile
+
     ports:
       - "5000:8080"
       - "5001:8081"
@@ -13,7 +16,7 @@ services:
     - ASPNETCORE_ENVIRONMENT=Docker
 
   collector:
-    build: ../src/CollectorService
+    build: src/CollectorService
     depends_on:
       - rabbitmq
     networks:
@@ -22,6 +25,7 @@ services:
     - ASPNETCORE_ENVIRONMENT=Docker
 
   rabbitmq:
+    container_name: unfu-rabbit
     image: rabbitmq:4.2-management
     ports:
       - "15672:15672"
@@ -32,6 +36,7 @@ services:
       RABBITMQ_DEFAULT_PASS: admin
 
   mongo:
+    container_name: unfu-mongo
     image: mongo
     ports:
       - "27017:27017"
