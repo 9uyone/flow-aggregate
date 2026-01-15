@@ -1,0 +1,30 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Visual Studio files
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+*.[Rr]e[Ss]harper
+_ReSharper*/
+*.DotSettings.user
+
+# Package files
+**/packages/*
+*.nupkg
+
+# Environment and configuration files
+.env
+.env.local
+.git
+.gitignore
+**/appsettings.*.json # Exclude environment-specific settings if already in the image
+
+# Docker artifacts
+[Dd]ockerfile*
+.dockerignore
+docker-compose*.yml

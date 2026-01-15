@@ -1,8 +1,0 @@
-{
-  "ServiceUrls": {
-    "CollectorHost": "localhost",
-    "CollectorPort": 7221,
-    "ProcessorHost": "localhost",
-    "ProcessorPort": 7002
-  }
-}

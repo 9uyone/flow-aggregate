@@ -12,6 +12,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 COPY ["CollectorService.csproj", "."]
+COPY ["Gateway/Gateway.csproj", "Gateway/"]
 RUN dotnet restore "./CollectorService.csproj"
 
 COPY . .

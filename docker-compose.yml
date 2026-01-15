@@ -1,5 +1,6 @@
 services:
   gateway:
+    container_name: diploma-gateway
     build:
       context: ./src
       dockerfile: Gateway/Dockerfile
@@ -12,31 +13,34 @@ services:
     networks:
       - public
       - internal
-    environment:
-    - ASPNETCORE_ENVIRONMENT=Docker
+    env_file: .env
 
   collector:
-    build: src/CollectorService
+    container_name: diploma-collector
+    build:
+      context: ./src
+      dockerfile: Gateway/Dockerfile
+    
     depends_on:
       - rabbitmq
     networks:
       - internal
-    environment:
-    - ASPNETCORE_ENVIRONMENT=Docker
+    env_file: .env
 
   rabbitmq:
-    container_name: unfu-rabbit
+    container_name: diploma-rabbitmq
     image: rabbitmq:4.2-management
     ports:
       - "15672:15672"
     networks:
       - internal
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ__USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ__PASS}
 
   mongo:
-    container_name: unfu-mongo
+    container_name: diploma-mongo
     image: mongo
     ports:
       - "27017:27017"

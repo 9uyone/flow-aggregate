@@ -7,7 +7,19 @@
 			"DownstreamScheme": "https",
 			"DownstreamHostAndPorts": [
 				{
-					"Host":  "localhost",
+					"Host": "localhost",
+					"Port": 7221
+				}
+			]
+		},
+		{
+			"UpstreamPathTemplate": "/send-test",
+			"UpstreamHttpMethod": [ "POST" ],
+			"DownstreamPathTemplate": "/send-test",
+			"DownstreamScheme": "https",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "localhost",
 					"Port": 7221
 				}
 			]

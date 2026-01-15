@@ -1,8 +1,14 @@
+using Common.Extensions;
+using Common.Config;
+using MassTransit;
+using CollectorService;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// Add services to the container
+builder.Configuration.LoadFromEnvFile(builder.Environment);
 builder.Services.AddOpenApi();
+builder.Services.AddRabbit(builder.Configuration);
 
 var app = builder.Build();
 
@@ -32,6 +38,7 @@ app.MapGet("/weatherforecast", () => {
 	return forecast;
 })
 .WithName("GetWeatherForecast");
+
 
 app.Run();
 
