@@ -41,17 +41,42 @@ services:
 
   mongo:
     container_name: diploma-mongo
-    image: mongo
+    image: mongo:8.0
+    #restart: always
     ports:
       - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${Mongo__Username}
+      - MONGO_INITDB_ROOT_PASSWORD=${Mongo__Password}
     networks:
-      - internal
+      - mongo-network
     volumes:
       - mongo_data:/data/db
 
+  mongo-express:
+      image: mongo-express
+      container_name: mongo-express
+      #restart: always
+      ports:
+        - "27170:8081"
+      environment:
+        ME_CONFIG_MONGODB_SERVER: mongo
+        ME_CONFIG_MONGODB_ADMINUSERNAME: ${Mongo__Username}
+        ME_CONFIG_MONGODB_ADMINPASSWORD: ${Mongo__Password}
+        # default admin:pass
+        #ME_CONFIG_BASICAUTH_USERNAME: someUserName # For browser login
+        #ME_CONFIG_BASICAUTH_PASSWORD: somePassword # For browser login
+        ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
+      networks:
+      - mongo-network
+      depends_on:
+        - mongo
+      
 volumes:
   mongo_data:
 
 networks:
   public:
   internal: 
+  mongo-network:
+    driver: bridge

@@ -6,7 +6,7 @@ using System.Reflection;
 namespace Common.Extensions;
 
 public static class RabbitMqExtensions {
-	public static IServiceCollection AddRabbit(this IServiceCollection services, IConfiguration configuration) {
+	public static IServiceCollection AddAppRabbit(this IServiceCollection services, IConfiguration configuration) {
 		services.AddMassTransit(x =>
 		{
 			x.AddConsumers(Assembly.GetEntryAssembly());
@@ -15,8 +15,8 @@ public static class RabbitMqExtensions {
 			{
 				var section = configuration.GetSection("RABBITMQ");
 				cfg.Host(section["HOST"], "/", h => {
-					h.Username(section["USER"]);
-					h.Password(section["PASS"]);
+					h.Username(section["USER"] ?? "guest");
+					h.Password(section["PASS"] ?? "guest");
 				});
 
 				cfg.ConfigureEndpoints(context);

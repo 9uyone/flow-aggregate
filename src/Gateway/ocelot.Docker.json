@@ -1,28 +1,16 @@
 {
 	"Routes": [
 		{
-			"UpstreamPathTemplate": "/gateway/weather",
-			"UpstreamHttpMethod": [ "GET" ],
-			"DownstreamPathTemplate": "/weatherforecast",
+			"DownstreamPathTemplate": "/ingest",
 			"DownstreamScheme": "http",
 			"DownstreamHostAndPorts": [
 				{
 					"Host": "collector",
 					"Port": 8080
 				}
-			]
-		},
-		{
-			"UpstreamPathTemplate": "/send-test",
-			"UpstreamHttpMethod": [ "POST" ],
-			"DownstreamPathTemplate": "/send-test",
-			"DownstreamScheme": "http",
-			"DownstreamHostAndPorts": [
-				{
-					"Host": "collector",
-					"Port": 8080
-				}
-			]
+			],
+			"UpstreamPathTemplate": "/api/ingest",
+			"UpstreamHttpMethod": [ "POST" ]
 		}
 	],
 	"GlobalConfiguration": {

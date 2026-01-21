@@ -1,4 +1,4 @@
-﻿using MassTransit;
+﻿/*using MassTransit;
 using Common.Contracts;
 
 namespace CollectorService;
@@ -17,3 +17,4 @@ public class DataCollectedConsumer(ILogger<DataCollectedConsumer> logger) : ICon
 		await Task.CompletedTask;
 	}
 }
+*/

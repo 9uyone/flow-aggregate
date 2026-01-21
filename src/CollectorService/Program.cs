@@ -1,14 +1,16 @@
-using Common.Extensions;
+using CollectorService.Interfaces;
 using Common.Config;
-using MassTransit;
-using CollectorService;
+using Common.Extensions;
+using Gateway.Models;
+using Gateway.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Configuration.LoadFromEnvFile(builder.Environment);
 builder.Services.AddOpenApi();
-builder.Services.AddRabbit(builder.Configuration);
+builder.Services.AddAppRabbit(builder.Configuration);
+builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
 
 var app = builder.Build();
 
@@ -18,31 +20,22 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.MapPost("/ingest", async (InboundDataDto dto, IIntegrationDispatcher dispatcher) => {
+	if (dto.Value < -50 || dto.Value > 100)
+		return Results.BadRequest("Value is not valid");
+
+	// 2. Мапінг у Event (можна AutoMapper, але краще руками для швидкості)
+	var @event = new Common.Contracts.DataCollectedEvent(
+		Id: Guid.NewGuid(),
+		Value: dto.Value.ToString(),
+		Timestamp: DateTime.UtcNow,
+		Metadata: dto.Metadata
+	);
+
+	await dispatcher.DispatchAsync(@event);
+	return Results.Accepted();
+});
+
 //app.UseHttpsRedirection();
 
-// Define the weather forecast endpoint
-app.MapGet("/weatherforecast", () => {
-	var summaries = new[]
-	{
-		"Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-	};
-
-	var forecast = Enumerable.Range(1, 5).Select(index =>
-		new WeatherForecast
-		(
-			DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-			Random.Shared.Next(-20, 55),
-			summaries[Random.Shared.Next(summaries.Length)]
-		))
-		.ToArray();
-	return forecast;
-})
-.WithName("GetWeatherForecast");
-
-
 app.Run();
-
-// Define the WeatherForecast record
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary) {
-	public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
