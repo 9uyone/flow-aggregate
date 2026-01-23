@@ -8,8 +8,8 @@ namespace AuthService.Services;
 
 public class UserService(IMongoRepository<User> userRepo) : IUserService {
 	public async Task<User> HandleGoogleLoginAsync(GoogleJsonWebSignature.Payload payload) {
-		var user = (await userRepo.GetAllAsync())
-					.FirstOrDefault(u => u.GoogleSub == payload.Subject);
+		var user = (await userRepo.FindAsync(u => u.GoogleSub == payload.Subject))
+			.FirstOrDefault();
 
 		if (user == null) {
 			user = new User {
