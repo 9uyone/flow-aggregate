@@ -35,7 +35,7 @@ public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyPa
 		};
 	}
 
-	public async Task<IEnumerable<string>> GetLookupValuesAsync(string parameterName) {
+	public async Task<IEnumerable<string>> GetParameterLookupsAsync(string parameterName) {
 		if (parameterName == "valcode") {
 			var rates = await httpClient.GetAsync<List<NbuRateModel>>("https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json");
 			return rates?.Select(r => r.CurrencyCode).OrderBy(c => c) ?? Enumerable.Empty<string>();
