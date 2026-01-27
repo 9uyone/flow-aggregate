@@ -1,7 +1,7 @@
-﻿using CollectorService.Attributes;
+﻿using Common.Attributes;
 using CollectorService.Interfaces;
 using CollectorService.Models;
-using Common.Interfaces;
+using Common.Interfaces.Parser;
 using System.Reflection;
 
 namespace CollectorService.Services;

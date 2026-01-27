@@ -11,4 +11,7 @@ internal class NbuRateModel {
 
 	[JsonPropertyName("cc")]
 	public string CurrencyCode { get; set; }
+
+	[JsonPropertyName("txt")]
+	public string CurrencyName { get; set; }
 }

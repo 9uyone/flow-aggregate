@@ -1,10 +1,9 @@
-﻿using CollectorService.Attributes;
-using CollectorService.Interfaces;
+﻿using Common.Attributes;
 using Common.Constants;
 using Common.Enums;
 using Common.Extensions;
-using Common.Interfaces;
 using Common.Models;
+using Common.Interfaces.Parser;
 
 namespace CollectorService.Parsers.NbuUsd;
 
@@ -35,11 +34,18 @@ public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyPa
 		};
 	}
 
-	public async Task<IEnumerable<string>> GetParameterLookupsAsync(string parameterName) {
+	public async Task<IEnumerable<LookupOptionDto>> GetParameterLookupsAsync(string parameterName) {
 		if (parameterName == "valcode") {
 			var rates = await httpClient.GetAsync<List<NbuRateModel>>("https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json");
-			return rates?.Select(r => r.CurrencyCode).OrderBy(c => c) ?? Enumerable.Empty<string>();
+			if (rates == null) return Enumerable.Empty<LookupOptionDto>();
+
+			return rates
+				.OrderBy(r => r.CurrencyCode)
+				.Select(r => new LookupOptionDto(
+					Value: r.CurrencyCode,
+					Label: $"{r.CurrencyName} ({r.CurrencyCode})"));
 		}
-		return Enumerable.Empty<string>();
+
+		return Enumerable.Empty<LookupOptionDto>();
 	}
 }

@@ -1,5 +1,5 @@
-using CollectorService.Attributes;
-using Common.Interfaces;
+using Common.Attributes;
+using Common.Interfaces.Parser;
 using System.Reflection;
 
 namespace CollectorService.Extensions

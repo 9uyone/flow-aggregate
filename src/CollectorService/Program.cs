@@ -4,6 +4,7 @@ using CollectorService.Interfaces;
 using CollectorService.Services;
 using Common.Contracts;
 using Common.Extensions;
+using Common.Interfaces.Parser;
 using Common.Models;
 using Gateway.Services;
 using Nelibur.ObjectMapper;

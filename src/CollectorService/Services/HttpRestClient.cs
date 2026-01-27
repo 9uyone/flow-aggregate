@@ -1,4 +1,4 @@
-﻿using CollectorService.Interfaces;
+﻿using Common.Interfaces.Parser;
 
 namespace CollectorService.Services;
 

@@ -1,6 +1,4 @@
-﻿using CollectorService.Interfaces;
-
-namespace CollectorService.Attributes;
+﻿namespace Common.Attributes;
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class ParserParameterAttribute(string name, string description, bool isRequired) : Attribute {

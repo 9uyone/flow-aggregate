@@ -1,7 +1,9 @@
-﻿namespace CollectorService.Models;
+﻿using Common.Models;
+
+namespace CollectorService.Models;
 
 public record ParameterDetailsDto(
 	string Name,
 	string Description,
 	bool IsRequired,
-	IEnumerable<string> Options);
+	IEnumerable<LookupOptionDto> Options);

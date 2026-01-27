@@ -1,8 +1,8 @@
-﻿using CollectorService.Attributes;
-using CollectorService.Interfaces;
+﻿using CollectorService.Interfaces;
+using Common.Attributes;
 using Common.Contracts;
 using Common.Extensions;
-using Common.Interfaces;
+using Common.Interfaces.Parser;
 using Common.Models;
 using Microsoft.AspNetCore.Mvc;
 using Nelibur.ObjectMapper;
