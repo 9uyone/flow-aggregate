@@ -13,6 +13,7 @@ builder.Services.AddGoogleOptions(builder.Configuration);
 // Add services to the container
 builder.Services.AddAppMongo(builder.Configuration);
 builder.Services.AddAppMongoRepository<User>("Users");
+builder.Services.AddGlobalExceptionHandler();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -24,6 +25,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 
 app.UseHttpsRedirection();
+app.UseExceptionHandler();
 
 app.MapPost("/auth/google", async (GoogleTokenRequest request, IUserService userService, IJwtService jwtService) => {
 	if (string.IsNullOrEmpty(request.IdToken)) return Results.BadRequest("Token is missing");

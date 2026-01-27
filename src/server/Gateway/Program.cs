@@ -12,10 +12,13 @@ builder.Configuration.LoadFromEnvFile(builder.Environment);
 builder.Services.AddOcelot(builder.Configuration);
 builder.Services.AddAppRabbit(builder.Configuration);
 builder.Services.AddAppAuthentication(builder.Configuration);
+builder.Services.AddProblemDetails();
+builder.Services.AddGlobalExceptionHandler();
 
 var app = builder.Build();
 
 //app.UseHttpsRedirection();
+app.UseExceptionHandler();
 
 app.Use(async (context, next) => {
 	var path = context.Request.Path.Value!;

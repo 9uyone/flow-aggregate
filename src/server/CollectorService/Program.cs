@@ -19,6 +19,7 @@ builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
 builder.Services.AddHttpClient<IHttpRestClient, HttpRestClient>();
 builder.Services.AddAuthorization();
 builder.Services.AddAppAuthentication(builder.Configuration);
+builder.Services.AddGlobalExceptionHandler();
 
 builder.Services.AddSingleton<IParserRegistry, ParserRegistry>();
 builder.Services.AddInternalParsers();
@@ -34,6 +35,7 @@ if (app.Environment.IsDevelopment())
 }
 //app.UseHttpsRedirection();
 
+app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 

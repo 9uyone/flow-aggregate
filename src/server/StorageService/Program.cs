@@ -9,6 +9,7 @@ builder.Configuration.LoadFromEnvFile(builder.Environment);
 builder.Services.AddAppRabbit(builder.Configuration);
 builder.Services.AddAppMongo(builder.Configuration);
 builder.Services.AddAppMongoRepository<DataCollectedEvent>("InboundData");
+builder.Services.AddGlobalExceptionHandler();
 
 var app = builder.Build();
 
@@ -18,6 +19,7 @@ if (app.Environment.IsDevelopment()) {
 }
 
 app.UseHttpsRedirection();
+app.UseExceptionHandler();
 
 app.MapGet("/source/{src}", async (string src, int? page, int? pageSize, IServiceProvider sp) => {
     var repo = sp.GetRequiredService<Common.Interfaces.IMongoRepository<DataCollectedEvent>>();

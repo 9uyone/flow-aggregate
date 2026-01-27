@@ -1,6 +1,7 @@
-﻿using Common.Attributes;
-using CollectorService.Interfaces;
+﻿using CollectorService.Interfaces;
 using CollectorService.Models;
+using Common.Attributes;
+using Common.Exceptions;
 using Common.Interfaces.Parser;
 using System.Reflection;
 
@@ -28,8 +29,8 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 	}
 
 	public async Task<ParserDetailsDto?> GetParserDetailsAsync(string name) {
-		var parserType = GetParserType(name);
-		if (parserType == null) return null;
+		var parserType = GetParserType(name)
+			?? throw new ParserNotFoundException(name);
 
 		var info = parserType.GetCustomAttribute<ParserInfoAttribute>()!;
 		var paramsAttr = parserType.GetCustomAttributes<ParserParameterAttribute>();
