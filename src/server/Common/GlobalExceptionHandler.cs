@@ -11,6 +11,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
 
 		var (statusCode, title) = ex switch {
 			ParserNotFoundException => (StatusCodes.Status404NotFound, "Parser not found"),
+			NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
 			ExternalApiException => (StatusCodes.Status503ServiceUnavailable, "External provider error"),
 			BadRequestException => (StatusCodes.Status400BadRequest, "Bad request to API"),
 			UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized access to API"),
