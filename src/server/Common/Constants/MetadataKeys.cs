@@ -2,9 +2,9 @@
 
 public static class MetadataKeys
 {
-    public const string Unit = nameof(Unit);
-    public const string BaseEntity = nameof(BaseEntity);
-    public const string TargetEntity = nameof(TargetEntity);
-    public const string Location = nameof(Location);
-    public const string Provider = nameof(Provider);
+    public const string Unit = "unit";
+    public const string BaseEntity = "baseEntity";
+    public const string TargetEntity = "targetEntity";
+    public const string Location = "Location";
+    public const string Provider = "provider";
 }

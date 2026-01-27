@@ -7,7 +7,7 @@ using Common.Interfaces.Parser;
 
 namespace CollectorService.Parsers.NbuUsd;
 
-[ParserInfo("nbuCurrency", "Parses USD to UAH exchange rate from National Bank of Ukraine", DataType.Currency)]
+[ParserInfo("nbuExchangeRate", "NBU Currency Exchange Rates", DataType.Currency, "Parses currency exchange rates to UAH from the National Bank of Ukraine")]
 [ParserParameter("valcode", "Requested currency\nBy default is USD", false)]
 [ParserParameter("date", "Requested date in format YYYYMMDD.\nBy default is current", false)]
 public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyParser> logger) : IDataParser {
@@ -27,8 +27,8 @@ public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyPa
 			Value = rate.Rate,
 			Metadata = new Dictionary<string, string>
 			{
-				["ExchangeDate"] = rate.ExchangeDate,
-				[MetadataKeys.Unit] = "UAH per " + valcode,
+				["exchangeDate"] = rate.ExchangeDate,
+				[MetadataKeys.Unit] = "UAH per " + valcode.ToUpper(),
 				[MetadataKeys.Provider] = "National bank of Ukraine"
 			}
 		};
