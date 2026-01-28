@@ -13,6 +13,9 @@ public class MongoRepository<T>(IMongoDatabase database, string collectionName) 
 
 	public async Task<List<T>> GetAllAsync() => await _collection.Find(_ => true).ToListAsync();
 
+	public Task<T> GetByIdAsync(string id) =>
+		_collection.Find(Builders<T>.Filter.Eq("Id", id)).FirstOrDefaultAsync();
+
 	public async Task<List<T>> GetBySourceAsync(string source, int? page = 1, int? pageSize = 20) {
 		var filter = Builders<T>.Filter.Regex("Source", new BsonRegularExpression($"^{source}$", "i"));
 		return await _collection.Find(filter)
@@ -23,4 +26,10 @@ public class MongoRepository<T>(IMongoDatabase database, string collectionName) 
 
 	public async Task<List<T>> FindAsync(Expression<Func<T, bool>> filter) =>
 		await _collection.Find(filter).ToListAsync();
+
+	public Task<T> InsertOneAsync(T entity) =>
+		_collection.InsertOneAsync(entity).ContinueWith(_ => entity);
+
+	public async Task ReplaceOneAsync(Expression<Func<T, bool>> filter, T entity) =>
+		await _collection.ReplaceOneAsync(filter, entity);
 }

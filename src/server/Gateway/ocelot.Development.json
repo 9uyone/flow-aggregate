@@ -11,10 +11,10 @@
 			],
 			"UpstreamPathTemplate": "/api/collector/{everything}",
 			"UpstreamHttpMethod": [ "GET", "POST" ],
-			"AuthenticationOptions": {
-				"AuthenticationProviderKey": "Bearer",
-				"AllowedScopes": []
-			}
+			//"AuthenticationOptions": {
+			//	"AuthenticationProviderKey": "Bearer",
+			//	"AllowedScopes": []
+			//}
 		},
 		{
 			"DownstreamPathTemplate": "/source/{src}",
@@ -33,7 +33,7 @@
 			}
 		},
 		{
-			"DownstreamPathTemplate": "/auth/google",
+			"DownstreamPathTemplate": "/auth/{everything}",
 			"DownstreamScheme": "https",
 			"DownstreamHostAndPorts": [
 				{
@@ -41,7 +41,7 @@
 					"Port": 7131
 				}
 			],
-			"UpstreamPathTemplate": "/api/auth/google",
+			"UpstreamPathTemplate": "/api/auth/{everything}",
 			"UpstreamHttpMethod": [ "POST" ]
 		}
 	],
