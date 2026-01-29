@@ -51,8 +51,10 @@ export const GoogleLoginButton: React.FC = () => {
     setError('Google login was cancelled or failed');
   };
 
-  return (
-    <>
+  let googleButton: React.ReactNode = null;
+
+  try {
+    googleButton = (
       <GoogleLogin
         onSuccess={handleSuccess}
         onError={handleError}
@@ -61,6 +63,19 @@ export const GoogleLoginButton: React.FC = () => {
         width="400"
         logo_alignment="left"
       />
+    );
+  } catch (gsiError) {
+    console.error('Google GSI initialization error:', gsiError);
+    googleButton = (
+      <Alert severity="warning">
+        Google Sign-In is temporarily unavailable. Please try again later.
+      </Alert>
+    );
+  }
+
+  return (
+    <>
+      {googleButton}
 
       {error && (
         <Alert severity="error" sx={{ mt: 2 }}>

@@ -143,6 +143,7 @@ export const useAuthStore = create<AuthState>()(
       // NOT persisted: accessToken, isLoading, isInitialized
       partialize: (state) => ({
         user: state.user,
+        refreshToken: state.refreshToken,
         isAuthenticated: !!state.refreshToken,
       }),
     }

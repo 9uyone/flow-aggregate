@@ -75,20 +75,41 @@ const attachAuthAndCorrelationId = (config: InternalAxiosRequestConfig) => {
 const handleAuthError = async (error: AxiosError) => {
   const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-  if (error.response?.status !== 401 || originalRequest._retry) {
+  if (error.response?.status !== 401 && error.response?.status !== 403) {
+    return Promise.reject(error);
+  }
+
+  console.log('[Auth Debug] Interceptor caught auth error', {
+    status: error.response?.status,
+    url: originalRequest.url,
+  });
+
+  console.error('[Axios Error Trace]', error.response?.status, error.config?.url);
+
+  if (error.response?.status === 401) {
+    console.warn(`[Axios] 401 detected on: ${originalRequest.url}`);
+  }
+
+  if (originalRequest._retry) {
     return Promise.reject(error);
   }
 
   const { refreshToken, logout, setTokens } = useAuthStore.getState();
 
   if (originalRequest.url?.includes('/auth/refresh')) {
+    console.log('[Auth Debug] Refresh request failed', {
+      status: error.response?.status,
+    });
     processQueue(error, undefined);
-    logout();
-    redirectToLogin();
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      logout();
+      redirectToLogin();
+    }
     return Promise.reject(error);
   }
 
   if (isRefreshing) {
+    console.log('[Auth Debug] Refresh in progress, queueing request');
     return new Promise<string>((resolve, reject) => {
       failedQueue.push({ resolve, reject });
     }).then((newToken) => {
@@ -99,8 +120,6 @@ const handleAuthError = async (error: AxiosError) => {
 
   if (!refreshToken) {
     processQueue(new Error('Missing refresh token'), undefined);
-    logout();
-    redirectToLogin();
     return Promise.reject(error);
   }
 
@@ -108,18 +127,27 @@ const handleAuthError = async (error: AxiosError) => {
   isRefreshing = true;
 
   try {
+    console.log('[Auth Debug] Calling /auth/refresh', { refreshToken });
+    console.warn(`[Axios] Attempting refresh with: ${refreshToken}`);
     const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
     const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
 
     setTokens(newAccessToken, newRefreshToken);
     processQueue(null, newAccessToken);
+    console.log('[Auth Debug] Refresh result: OK');
+    console.warn('[Axios] Refresh result: OK');
 
     originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
     return axiosInstance(originalRequest);
   } catch (refreshError) {
     processQueue(refreshError, undefined);
-    logout();
-    redirectToLogin();
+    console.log('[Auth Debug] Refresh result: FAILED');
+    console.warn('[Axios] Refresh result: FAILED');
+    const refreshStatus = (refreshError as AxiosError).response?.status;
+    if (refreshStatus === 401 || refreshStatus === 403) {
+      logout();
+      redirectToLogin();
+    }
     return Promise.reject(refreshError);
   } finally {
     isRefreshing = false;
