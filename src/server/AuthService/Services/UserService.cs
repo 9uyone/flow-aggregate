@@ -15,7 +15,8 @@ public class UserService(IMongoRepository<User> userRepo) : IUserService {
 			user = new User {
 				Email = payload.Email,
 				Name = payload.Name,
-				GoogleSub = payload.Subject
+				GoogleSub = payload.Subject,
+				AvatarUrl = payload.Picture
 			};
 			await userRepo.CreateAsync(user);
 		}

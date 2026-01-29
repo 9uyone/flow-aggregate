@@ -19,13 +19,14 @@ public static class AuthExtensions {
 		services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 			.AddJwtBearer(options => {
 				options.TokenValidationParameters = new TokenValidationParameters {
-					ValidateIssuer = true,
-
-					ValidIssuer = jwtOptions.Issuer,
-					ValidateAudience = true,
-
-					ValidAudience = jwtOptions.Audience,
 					ValidateLifetime = true,
+					ClockSkew = TimeSpan.Zero,
+
+					ValidateIssuer = true,
+					ValidIssuer = jwtOptions.Issuer,
+
+					ValidateAudience = true,
+					ValidAudience = jwtOptions.Audience,
 
 					ValidateIssuerSigningKey = true,
 					IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key))

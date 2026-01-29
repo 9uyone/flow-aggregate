@@ -42,7 +42,7 @@
 				}
 			],
 			"UpstreamPathTemplate": "/api/auth/{everything}",
-			"UpstreamHttpMethod": [ "POST" ]
+			"UpstreamHttpMethod": [ "POST", "GET" ]
 		}
 	],
 	"GlobalConfiguration": {

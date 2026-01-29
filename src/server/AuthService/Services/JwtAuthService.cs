@@ -30,7 +30,7 @@ public class JwtAuthService(
 		}
 	}
 
-	private string GenerateAccessToken(string userId, string email, string name) {
+	private string GenerateAccessToken(string userId, string email, string name, string? avatarUrl) {
 		var claims = new[] {
 			new Claim(ClaimTypes.NameIdentifier, userId),
 			new Claim(ClaimTypes.Email, email),
@@ -44,7 +44,7 @@ public class JwtAuthService(
 			issuer: jwtOptions.Value.Issuer,
 			audience: jwtOptions.Value.Audience,
 			claims: claims,
-			expires: DateTime.UtcNow.AddMinutes(jwtOptions.Value.AccessTokenLifetimeHours), // Можна через jwtOptions
+			expires: DateTime.UtcNow.AddHours(jwtOptions.Value.AccessTokenLifetimeHours), // Можна через jwtOptions
 			signingCredentials: creds
 		);
 
@@ -52,7 +52,7 @@ public class JwtAuthService(
 	}
 
 	public async Task<AuthResponse> GenerateAuthResponseAsync(User user) {
-		var accessToken = GenerateAccessToken(user.Id, user.Email, user.Name);
+		var accessToken = GenerateAccessToken(user.Id, user.Email, user.Name, user?.AvatarUrl);
 		var refreshToken = Guid.NewGuid().ToString();
 
 		await rtRepo.InsertOneAsync(new RefreshToken {
