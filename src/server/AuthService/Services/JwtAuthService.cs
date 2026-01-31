@@ -55,7 +55,7 @@ public class JwtAuthService(
 		var accessToken = GenerateAccessToken(user.Id, user.Email, user.Name, user?.AvatarUrl);
 		var refreshToken = Guid.NewGuid().ToString();
 
-		await rtRepo.InsertOneAsync(new RefreshToken {
+		await rtRepo.CreateAsync(new RefreshToken {
 			UserId = user.Id,
 			Token = refreshToken,
 			ExpiresAt = DateTime.UtcNow.AddDays(jwtOptions.Value.RefreshTokenLifetimeDays),

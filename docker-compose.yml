@@ -1,4 +1,5 @@
 services:
+  # ASP.NET
   gateway:
     container_name: diploma-gateway
     build:
@@ -27,6 +28,7 @@ services:
       - internal
     env_file: .env
 
+  # Others
   rabbitmq:
     container_name: diploma-rabbitmq
     image: rabbitmq:4.2-management
@@ -39,12 +41,13 @@ services:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ__USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ__PASS}
 
+
   mongo:
     container_name: diploma-mongo
     image: mongo:8.0
     #restart: always
     ports:
-      - "27017:27017"
+      - "${MONGO__PORT}:27017"
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${Mongo__Username}
       - MONGO_INITDB_ROOT_PASSWORD=${Mongo__Password}
@@ -53,24 +56,13 @@ services:
     volumes:
       - mongo_data:/data/db
 
-  mongo-express:
-      image: mongo-express
-      container_name: mongo-express
-      #restart: always
-      ports:
-        - "27170:8081"
-      environment:
-        ME_CONFIG_MONGODB_SERVER: mongo
-        ME_CONFIG_MONGODB_ADMINUSERNAME: ${Mongo__Username}
-        ME_CONFIG_MONGODB_ADMINPASSWORD: ${Mongo__Password}
-        # default admin:pass
-        #ME_CONFIG_BASICAUTH_USERNAME: someUserName # For browser login
-        #ME_CONFIG_BASICAUTH_PASSWORD: somePassword # For browser login
-        ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
-      networks:
-      - mongo-network
-      depends_on:
-        - mongo
+  redis:
+    container_name: diploma-redis
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server --requirepass ${REDIS__PASS}
       
 volumes:
   mongo_data:

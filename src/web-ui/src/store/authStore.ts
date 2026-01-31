@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User } from '../types/auth';
 
+// User data is cached for UX only.
+// Do not use for authorization decisions.
+
 const ACCESS_TOKEN_STORAGE_KEY = 'auth.accessToken';
 
 /**

@@ -8,8 +8,9 @@ namespace Common.Repositories;
 public class MongoRepository<T>(IMongoDatabase database, string collectionName) : IMongoRepository<T> where T : class {
 	private readonly IMongoCollection<T> _collection = database.GetCollection<T>(collectionName);
 
-	public async Task CreateAsync(T entity) => 
-		await _collection.InsertOneAsync(entity);
+	public async Task<T> CreateAsync(T entity) => 
+		await _collection.InsertOneAsync(entity)
+			.ContinueWith(_ => entity);
 
 	public async Task<List<T>> GetAllAsync() => await _collection.Find(_ => true).ToListAsync();
 
@@ -27,9 +28,12 @@ public class MongoRepository<T>(IMongoDatabase database, string collectionName) 
 	public async Task<List<T>> FindAsync(Expression<Func<T, bool>> filter) =>
 		await _collection.Find(filter).ToListAsync();
 
-	public Task<T> InsertOneAsync(T entity) =>
-		_collection.InsertOneAsync(entity).ContinueWith(_ => entity);
-
 	public async Task ReplaceOneAsync(Expression<Func<T, bool>> filter, T entity) =>
 		await _collection.ReplaceOneAsync(filter, entity);
+
+	public async Task UpdateOneAsync(Expression<Func<T, bool>> filter, UpdateDefinition<T> update) =>
+		await _collection.UpdateOneAsync(filter, update);
+
+	public async Task DeleteAsync(Expression<Func<T, bool>> filter) =>
+		await _collection.DeleteOneAsync(filter);
 }

@@ -1,5 +1,6 @@
 ﻿using Common.Interfaces;
 using Common.Repositories;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
@@ -16,10 +17,11 @@ public static class MognoExtensions {
 
 		var urlEnc = UrlEncoder.Create();
 
-		var user = urlEnc.Encode(config["Mongo:Username"]);
-		var pass = urlEnc.Encode(config["Mongo:Password"]);
-		var host = config["Mongo:Host"] ?? "localhost";
-		var port = config["Mongo:Port"] ?? "27017";
+		var section = config.GetSection("Mongo");
+		var user = urlEnc.Encode(section["User"]);
+		var pass = urlEnc.Encode(section["Pass"]);
+		var host = section["Host"] ?? "localhost";
+		var port = section["Port"] ?? "27017";
 
 		var connectionString = $"mongodb://{user}:{pass}@{host}:{port}";
 
@@ -38,6 +40,23 @@ public static class MognoExtensions {
 			var database = sp.GetRequiredService<IMongoDatabase>();
 			return new MongoRepository<T>(database, collectionName);
 		});
+		return services;
+	}
+
+	public static IServiceCollection AddCachedMongoRepository<T>(this IServiceCollection services, string collectionName) where T : class {
+		// 1. Реєструємо звичайну Монгу (але не як інтерфейс, а як конкретний клас)
+		services.AddScoped<MongoRepository<T>>(sp => {
+			var database = sp.GetRequiredService<IMongoDatabase>();
+			return new MongoRepository<T>(database, collectionName);
+		});
+
+		// 2. Реєструємо наш кешований інтерфейс, який "ковтає" Монгу всередину
+		services.AddScoped<IMongoRepository<T>>(sp => {
+			var mongoRepo = sp.GetRequiredService<MongoRepository<T>>();
+			var cache = sp.GetRequiredService<IDistributedCache>();
+			return new CachedMongoRepository<T>(mongoRepo, cache);
+		});
+
 		return services;
 	}
 }

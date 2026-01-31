@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.7" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0-rc.2.25502.107" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
     <PackageReference Include="MongoDB.Driver" Version="3.6.0" />
   </ItemGroup>
 
