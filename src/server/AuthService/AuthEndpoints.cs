@@ -1,10 +1,9 @@
 ﻿using AuthService.Interfaces;
 using AuthService.Models;
-using Common.Config;
 using Common.Exceptions;
+using Common.Extensions;
 using Common.Interfaces;
 using Microsoft.AspNetCore.Identity.Data;
-using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
 namespace AuthService;
@@ -36,8 +35,7 @@ public static class AuthEndpoints {
 		}).RequireAuthorization();
 
 		authGroup.MapGet("/me", async (ClaimsPrincipal user, IMongoRepository<User> repo) => {
-			var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-			var userData = await repo.GetByIdAsync(userId);
+			var userData = await repo.GetByIdAsync(user.GetUserId());
 			return Results.Ok(new { userData.Id, userData.Email, userData.Name, userData.AvatarUrl });
 		}).RequireAuthorization();
 	}

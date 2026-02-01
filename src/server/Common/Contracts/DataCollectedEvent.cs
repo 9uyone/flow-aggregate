@@ -5,12 +5,14 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace Common.Contracts;
 
-public class DataCollectedEvent: BaseEntity {
-	public Guid CorrelationId { get; set; }
+public class DataCollectedEvent: BaseEntity, ICorrelatedMessage {
+	public Guid? CorrelationId { get; set; }
 
 	public required string ParserName { get; set; } // e.g. OpenWeatherMapParser
 	public required string UserId { get; set; } // Who requested the data
 	public required string Source { get; init; } // e.g. api.openweathermap.org
+
+	public required string Metric { get; set; }
 
 	public decimal? Value { get; init; } // Numeric value (if applicable)
 	public string? RawContent { get; init; } // Text content (if applicable)

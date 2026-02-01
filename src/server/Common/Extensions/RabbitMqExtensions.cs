@@ -1,4 +1,5 @@
-﻿using MassTransit;
+﻿using Common.Filters;
+using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
@@ -20,7 +21,12 @@ public static class RabbitMqExtensions {
 				});
 
 				cfg.ConfigureEndpoints(context);
+
+				// Це змусить MassTransit виконувати твій код перед кожною публікацією
+				cfg.UsePublishFilter(typeof(CorrelationFilter<>), context);
+				cfg.UseSendFilter(typeof(CorrelationFilter<>), context);
 			});
+
 		});
 
 		return services;

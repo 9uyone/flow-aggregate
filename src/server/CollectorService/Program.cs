@@ -14,12 +14,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.LoadFromEnvFile(builder.Environment);
 
 builder.Services.AddOpenApi();
+builder.Services.AddAuthorization();
 builder.Services.AddAppRabbit(builder.Configuration);
 builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
 builder.Services.AddHttpClient<IHttpRestClient, HttpRestClient>();
-builder.Services.AddAuthorization();
 builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddGlobalExceptionHandler();
+builder.Services.AddScoped<IParserRunner, ParserRunner>();
 
 builder.Services.AddSingleton<IParserRegistry, ParserRegistry>();
 builder.Services.AddInternalParsers();

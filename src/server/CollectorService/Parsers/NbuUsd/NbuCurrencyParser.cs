@@ -23,7 +23,7 @@ public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyPa
 
 		return new InboundDataDto {
 			Source = "bank.gov.ua",
-			Metric = $"{valcode}_UAH",
+			Metric = $"{valcode.ToUpper()}_UAH",
 			Value = rate.Rate,
 			Metadata = new Dictionary<string, string>
 			{

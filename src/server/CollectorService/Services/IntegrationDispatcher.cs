@@ -1,6 +1,7 @@
 ﻿using CollectorService.Interfaces;
 using Common.Contracts;
 using Common.Exceptions;
+using Common.Extensions;
 using MassTransit;
 
 namespace Gateway.Services;
@@ -10,6 +11,10 @@ public class IntegrationDispatcher(
 	ILogger<IntegrationDispatcher> logger) : IIntegrationDispatcher {
 	public async Task DispatchAsync<T>(T message) where T : class {
 		try {
+			if (message is ICorrelatedMessage correlated) {
+				correlated.CorrelationId.EnsureCorrelationId();
+			}
+
 			logger.LogInformation("Dispatching {MessageType} to RabbitMQ. Content: {@Message}",
 				typeof(T).Name, message);
 

@@ -1,5 +1,5 @@
 ﻿namespace Common.Contracts;
 
 public interface ICorrelatedMessage {
-	Guid CorrelationId { get; init; }
+	Guid? CorrelationId { get; set; }
 }

@@ -1,12 +1,10 @@
 ﻿using CollectorService.Interfaces;
-using Common.Attributes;
+using CollectorService.Services;
 using Common.Contracts;
 using Common.Extensions;
-using Common.Interfaces.Parser;
 using Common.Models;
 using Microsoft.AspNetCore.Mvc;
 using Nelibur.ObjectMapper;
-using System.Reflection;
 
 namespace CollectorService;
 
@@ -17,53 +15,38 @@ public static class CollectorEndpoints {
 
 		group.MapPost("/ingest", async (
 			InboundDataDto dto,
-			[FromQuery] string? correlationId,
-			IIntegrationDispatcher dispatcher) =>
+			[FromQuery] Guid? correlationId,
+			IIntegrationDispatcher dispatcher,
+			HttpContext httpContext) =>
 		{
-			var effectiveCorrelationId = string.IsNullOrEmpty(correlationId)
-				? Guid.NewGuid().ToString()
-				: correlationId;
-
-			var ev = TinyMapper.Map<DataCollectedEvent>(dto);
-			ev.CorrelationId = Guid.Parse(effectiveCorrelationId);
-
-			await dispatcher.DispatchAsync(ev);
-			return Results.Accepted();
-		});
-
-		group.MapPost("/run/{name}", async (
-			string name,
-			[FromQuery] string? correlationId,
-			[FromBody] IDictionary<string, string>? options,
-			IParserRegistry registry,
-			IServiceProvider sp,
-			HttpContext httpContext,
-			IIntegrationDispatcher dispatcher) =>
-		{
-			var effectiveCorrelationId = string.IsNullOrEmpty(correlationId)
-				? Guid.NewGuid().ToString()
-				: correlationId;
-
 			var userId = httpContext.User.GetUserId();
 			if (userId == null)
 				return Results.Unauthorized();
 
-			var parserType = registry.GetParserType(name);
-			if (parserType == null)
-				return Results.NotFound($"Parser '{name}' not found");
-
-			var parser = sp.GetRequiredService(parserType) as IDataParser;
-			var info = parserType.GetCustomAttribute<ParserInfoAttribute>();
-			var data = await parser.ParseAsync(options);
-
-			var ev = TinyMapper.Map<DataCollectedEvent>(data);
-			ev.UserId = userId;
-			ev.ParserName = info.Name;
-			ev.Type = info.DataType;
-			ev.CorrelationId = Guid.Parse(effectiveCorrelationId);
+			var ev = TinyMapper.Map<DataCollectedEvent>(dto);
+			ev.CorrelationId = correlationId.EnsureCorrelationId();
 
 			await dispatcher.DispatchAsync(ev);
-			return Results.Ok(data);
+			return Results.Accepted();
+		})
+		.RequireAuthorization();
+
+		group.MapPost("/run/{name}", async (
+			string name,
+			[FromQuery] Guid? correlationId,
+			[FromBody] IDictionary<string, string>? options,
+			IParserRegistry registry,
+			IParserRunner parserRunner,
+			HttpContext httpContext
+			) =>
+		{
+			var userId = httpContext.User.GetUserId();
+			if (userId == null)
+				return Results.Unauthorized();
+
+			var result = await parserRunner.ExecuteAsync(name, userId, options, correlationId);
+
+			return Results.Ok(result);
 		})
 		.RequireAuthorization();
 
