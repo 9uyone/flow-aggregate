@@ -8,34 +8,33 @@ using System.Reflection;
 namespace CollectorService.Services;
 
 public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
-	private readonly Dictionary<string, Type> _parsers = new(StringComparer.OrdinalIgnoreCase);
+	private sealed record ParserRegistration(Type ParserType, ParserInfoAttribute Info);
 
-	public ParserRegistry(IEnumerable<IDataParser> allParsers, IServiceProvider sp): this(sp) {
+	private readonly Dictionary<string, ParserRegistration> _parsers = new(StringComparer.OrdinalIgnoreCase);
+
+	public ParserRegistry(IEnumerable<IDataParser> allParsers, IServiceProvider sp) : this(sp) {
 		foreach (var parser in allParsers) {
 			var type = parser.GetType();
-			var attr = type.GetCustomAttribute<ParserInfoAttribute>();
-			if (attr != null)
-				_parsers[attr.Name] = type;
+			var info = type.GetCustomAttribute<ParserInfoAttribute>();
+			if (info != null)
+				_parsers[info.Name] = new ParserRegistration(type, info);
 		}
 	}
 
-	public Type? GetParserType(string name) => _parsers.GetValueOrDefault(name);
+	public Type? GetParserType(string name) =>
+		_parsers.TryGetValue(name, out var reg) ? reg.ParserType : null;
 
 	public IEnumerable<ParserDescriptorDto> GetAvailableParsers() {
-		return _parsers.Select(p => {
-			var info = p.Value.GetCustomAttribute<ParserInfoAttribute>()!;
-			return new ParserDescriptorDto(info.Name, info.DisplayName, info.DataType);
-		});
+		return _parsers.Values.Select(r =>
+			new ParserDescriptorDto(r.Info.Name, r.Info.DisplayName, r.Info.DataType));
 	}
 
 	public async Task<ParserDetailsDto?> GetParserDetailsAsync(string name) {
-		var parserType = GetParserType(name)
-			?? throw new ParserNotFoundException(name);
+		if (!_parsers.TryGetValue(name, out var reg))
+			throw new ParserNotFoundException(name);
 
-		var info = parserType.GetCustomAttribute<ParserInfoAttribute>()!;
-		var paramsAttr = parserType.GetCustomAttributes<ParserParameterAttribute>();
-
-		var parser = sp.GetRequiredService(parserType) as IDataParser;
+		var paramsAttr = reg.ParserType.GetCustomAttributes<ParserParameterAttribute>();
+		var parser = sp.GetRequiredService(reg.ParserType) as IDataParser;
 
 		var parameters = new List<ParameterDetailsDto>();
 		foreach (var p in paramsAttr) {
@@ -43,6 +42,7 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 			parameters.Add(new ParameterDetailsDto(p.Name, p.Description, p.IsRequired, lookups));
 		}
 
+		var info = reg.Info;
 		return new ParserDetailsDto(info.Name, info.DisplayName, info.Description, info.DataType, parameters);
 	}
 }

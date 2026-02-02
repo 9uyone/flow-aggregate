@@ -32,7 +32,7 @@ public static class AuthEndpoints {
 			catch (UnauthorizedException ex) {
 				return Results.Unauthorized();
 			}
-		}).RequireAuthorization();
+		});
 
 		authGroup.MapGet("/me", async (ClaimsPrincipal user, IMongoRepository<User> repo) => {
 			var userData = await repo.GetByIdAsync(user.GetUserId());
