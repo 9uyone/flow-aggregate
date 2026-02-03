@@ -18,7 +18,7 @@ builder.Services.AddGlobalExceptionHandler();
 builder.Services.AddCors(options => {
 	options.AddPolicy("AllowFrontend",
 		policy => {
-			policy.WithOrigins("http://localhost:3000") // Replace with your allowed client origin
+			policy.WithOrigins("http://localhost:3000")
 				  .AllowAnyHeader()
 				  .AllowAnyMethod();
 				  //.AllowCredentials(); // Use with caution, often required for authenticated requests

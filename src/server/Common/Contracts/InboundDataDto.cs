@@ -1,7 +1,6 @@
 ﻿namespace Common.Models;
 
 public class InboundDataDto {
-	public string Id { get; init; } = Guid.NewGuid().ToString();
 	public required string Source { get; set; } // e.g. api.openweathermap.org
 
 	public required string Metric { get; set; }      // "USD_UAH", "AirTemperature"

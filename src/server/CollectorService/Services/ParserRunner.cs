@@ -17,24 +17,21 @@ public class ParserRunner(
 	IIntegrationDispatcher dispatcher) : IParserRunner 
 {
 	public async Task<InboundDataDto> ExecuteAsync(
-		string parserName, 
-		string userId, 
-		IDictionary<string, string>? options,
-		Guid? correlationId)
+		RunParserCommand command)
 	{
-		var parserType = registry.GetParserType(parserName);
+		var parserType = registry.GetParserType(command.ParserName);
 		if (parserType == null)
-			throw new ParserNotFoundException(parserName);
+			throw new ParserNotFoundException(command.ParserName);
 
 		var parser = sp.GetRequiredService(parserType) as IDataParser;
 		var info = parserType.GetCustomAttribute<ParserInfoAttribute>();
-		var data = await parser.ParseAsync(options);
+		var data = await parser.ParseAsync(command.Options);
 
 		var ev = TinyMapper.Map<DataCollectedEvent>(data);
-		ev.UserId = userId;
+		ev.UserId = command.UserId;
 		ev.ParserName = info.Name;
 		ev.Type = info.DataType;
-		ev.CorrelationId = correlationId.EnsureCorrelationId();
+		ev.CorrelationId = command.CorrelationId.EnsureCorrelationId();
 
 		await dispatcher.DispatchAsync(ev);
 

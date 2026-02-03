@@ -20,8 +20,6 @@ public static class CollectorEndpoints {
 			HttpContext httpContext) =>
 		{
 			var userId = httpContext.User.GetUserId();
-			if (userId == null)
-				return Results.Unauthorized();
 
 			var ev = TinyMapper.Map<DataCollectedEvent>(dto);
 			ev.CorrelationId = correlationId.EnsureCorrelationId();
@@ -41,10 +39,12 @@ public static class CollectorEndpoints {
 			) =>
 		{
 			var userId = httpContext.User.GetUserId();
-			if (userId == null)
-				return Results.Unauthorized();
-
-			var result = await parserRunner.ExecuteAsync(name, userId, options, correlationId);
+			var result = await parserRunner.ExecuteAsync(new RunParserCommand{ 
+				ParserName = name, 
+				UserId = userId!,
+				Options = options, 
+				CorrelationId = correlationId.EnsureCorrelationId(),
+			});
 
 			return Results.Ok(result);
 		})

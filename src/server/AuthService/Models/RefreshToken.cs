@@ -1,4 +1,5 @@
 ﻿using Common.Models;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace AuthService.Models;
 
@@ -9,5 +10,6 @@ public class RefreshToken: BaseEntity {
 	public bool IsUsed { get; set; }
 	public bool IsRevoked { get; set; }
 
+	[BsonIgnore]
 	public bool IsActive => !IsRevoked && !IsUsed && DateTime.UtcNow < ExpiresAt;
 }

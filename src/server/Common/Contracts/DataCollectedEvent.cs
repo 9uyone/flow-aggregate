@@ -20,4 +20,6 @@ public class DataCollectedEvent: BaseEntity, ICorrelatedMessage {
 	[BsonRepresentation(BsonType.String)]
 	public required DataType Type { get; set; } // "Price", "Temperature", "Stock"
 	public Dictionary<string, string>? Metadata { get; init; } // Additional data
+
+	public string? ConfigId { get; set; } = null; // Related ParserUserConfig ID
 };

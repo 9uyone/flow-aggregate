@@ -1,4 +1,5 @@
-﻿using AuthService.Interfaces;
+﻿using AuthService.Contracts;
+using AuthService.Interfaces;
 using AuthService.Models;
 using Common.Config;
 using Common.Exceptions;
@@ -35,6 +36,7 @@ public class JwtAuthService(
 			new Claim(ClaimTypes.NameIdentifier, userId),
 			new Claim(ClaimTypes.Email, email),
 			new Claim(ClaimTypes.Name, name),
+			new Claim("avatar_url", avatarUrl ?? string.Empty)
 		};
 
 		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Value.Key));
@@ -44,7 +46,7 @@ public class JwtAuthService(
 			issuer: jwtOptions.Value.Issuer,
 			audience: jwtOptions.Value.Audience,
 			claims: claims,
-			expires: DateTime.UtcNow.AddHours(jwtOptions.Value.AccessTokenLifetimeHours), // Можна через jwtOptions
+			expires: DateTime.UtcNow.AddHours(jwtOptions.Value.AccessTokenLifetimeHours),
 			signingCredentials: creds
 		);
 
@@ -69,7 +71,7 @@ public class JwtAuthService(
 		var storedToken = (await rtRepo.FindAsync(x => x.Token == oldRefreshToken)).FirstOrDefault();
 
 		if (storedToken == null || !storedToken.IsActive)
-			throw new UnauthorizedException("Invalid refresh token attempt");
+			throw new UnauthorizedAccessException("Invalid refresh token attempt");
 
 		storedToken.IsUsed = true;
 		await rtRepo.ReplaceOneAsync(x => x.Id == storedToken.Id, storedToken);

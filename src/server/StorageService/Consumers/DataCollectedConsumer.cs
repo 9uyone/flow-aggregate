@@ -1,6 +1,5 @@
 ﻿using MassTransit;
 using Common.Contracts;
-using Common.Extensions;
 using Common.Interfaces;
 
 namespace ProcessorService.Consumers;

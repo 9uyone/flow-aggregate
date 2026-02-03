@@ -3,17 +3,17 @@ using Common.Contracts;
 using Common.Exceptions;
 using Common.Extensions;
 using MassTransit;
+using Microsoft.Extensions.Logging;
 
-namespace Gateway.Services;
+namespace Common.Messaging;
 
 public class IntegrationDispatcher(
 	IPublishEndpoint publishEndpoint,
 	ILogger<IntegrationDispatcher> logger) : IIntegrationDispatcher {
 	public async Task DispatchAsync<T>(T message) where T : class {
 		try {
-			if (message is ICorrelatedMessage correlated) {
+			if (message is ICorrelatedMessage correlated)
 				correlated.CorrelationId.EnsureCorrelationId();
-			}
 
 			logger.LogInformation("Dispatching {MessageType} to RabbitMQ. Content: {@Message}",
 				typeof(T).Name, message);

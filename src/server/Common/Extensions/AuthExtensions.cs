@@ -10,7 +10,8 @@ namespace Common.Extensions;
 
 public static class AuthExtensions {
 	public static string? GetUserId(this ClaimsPrincipal user) {
-		return user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+		return user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+			?? throw new UnauthorizedAccessException("User ID not found in token");
 	}
 
 	public static IServiceCollection AddAppAuthentication(this IServiceCollection services, IConfiguration config) {

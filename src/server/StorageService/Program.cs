@@ -1,19 +1,24 @@
+using Common.Constants;
 using Common.Contracts;
 using Common.Extensions;
+using Common.Models;
+using StorageService.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddOpenApi();
 builder.Configuration.LoadFromEnvFile(builder.Environment);
 builder.Services.AddAppRabbit(builder.Configuration);
-builder.Services.AddAppMongo(builder.Configuration);
-builder.Services.AddAppMongoRepository<DataCollectedEvent>("collected_data");
 builder.Services.AddGlobalExceptionHandler();
+builder.Services.AddAppAuthentication(builder.Configuration);
+builder.Services.AddAuthorization();
+
+builder.Services.AddAppMongo(builder.Configuration);
+builder.Services.AddAppMongoRepository<DataCollectedEvent>(MongoCollections.CollectedData);
+builder.Services.AddAppMongoRepository<ParserUserConfig>(MongoCollections.ParserUserConfigs);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()) {
     app.MapOpenApi();
 }
@@ -21,10 +26,10 @@ if (app.Environment.IsDevelopment()) {
 app.UseHttpsRedirection();
 app.UseExceptionHandler();
 
-app.MapGet("/source/{src}", async (string src, int? page, int? pageSize, IServiceProvider sp) => {
-    var repo = sp.GetRequiredService<Common.Interfaces.IMongoRepository<DataCollectedEvent>>();
-    var results = await repo.GetBySourceAsync(src, page, pageSize);
-    return Results.Ok(results);
-});
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapParserConfigEndpoints();
+//app.MapCollectedDataEndpoints();
 
 app.Run();

@@ -10,7 +10,7 @@
 				}
 			],
 			"UpstreamPathTemplate": "/api/collector/{everything}",
-			"UpstreamHttpMethod": [ "GET", "POST" ],
+			"UpstreamHttpMethod": [ "GET", "POST" ]
 			//"AuthenticationOptions": {
 			//	"AuthenticationProviderKey": "Bearer",
 			//	"AllowedScopes": []
@@ -27,6 +27,22 @@
 			],
 			"UpstreamPathTemplate": "/api/source/{src}",
 			"UpstreamHttpMethod": [ "GET" ],
+			"AuthenticationOptions": {
+				"AuthenticationProviderKey": "Bearer",
+				"AllowedScopes": []
+			}
+		},
+		{
+			"DownstreamPathTemplate": "/parser-cfg/{everything}",
+			"DownstreamScheme": "https",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "localhost",
+					"Port": 7228
+				}
+			],
+			"UpstreamPathTemplate": "/api/parser-cfg/{everything}",
+			"UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
 			"AuthenticationOptions": {
 				"AuthenticationProviderKey": "Bearer",
 				"AllowedScopes": []

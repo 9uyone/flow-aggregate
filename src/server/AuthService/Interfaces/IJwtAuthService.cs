@@ -1,4 +1,5 @@
-﻿using AuthService.Models;
+﻿using AuthService.Contracts;
+using AuthService.Models;
 using Google.Apis.Auth;
 
 namespace AuthService.Interfaces;

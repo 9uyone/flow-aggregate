@@ -1,6 +1,6 @@
-﻿using AuthService.Interfaces;
+﻿using AuthService.Contracts;
+using AuthService.Interfaces;
 using AuthService.Models;
-using Common.Exceptions;
 using Common.Extensions;
 using Common.Interfaces;
 using Microsoft.AspNetCore.Identity.Data;
@@ -29,13 +29,13 @@ public static class AuthEndpoints {
 				var result = await jwtAuthService.RotateTokenAsync(request.RefreshToken);
 				return Results.Ok(result);
 			}
-			catch (UnauthorizedException ex) {
+			catch (UnauthorizedAccessException ex) {
 				return Results.Unauthorized();
 			}
 		});
 
 		authGroup.MapGet("/me", async (ClaimsPrincipal user, IMongoRepository<User> repo) => {
-			var userData = await repo.GetByIdAsync(user.GetUserId());
+			var userData = await repo.GetByIdAsync(user.GetUserId()!);
 			return Results.Ok(new { userData.Id, userData.Email, userData.Name, userData.AvatarUrl });
 		}).RequireAuthorization();
 	}

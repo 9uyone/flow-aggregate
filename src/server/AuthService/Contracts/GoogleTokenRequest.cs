@@ -1,3 +1,3 @@
-﻿namespace AuthService.Models;
+﻿namespace AuthService.Contracts;
 
 public record GoogleTokenRequest(string IdToken);

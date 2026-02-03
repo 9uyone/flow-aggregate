@@ -14,7 +14,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
 			NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
 			ExternalApiException => (StatusCodes.Status503ServiceUnavailable, "External provider error"),
 			BadRequestException => (StatusCodes.Status400BadRequest, "Bad request to API"),
-			UnauthorizedException => (StatusCodes.Status401Unauthorized, "Unauthorized access to API"),
+			UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized access to API"),
 			_ => (StatusCodes.Status500InternalServerError, "Internal server error")
 		};
 

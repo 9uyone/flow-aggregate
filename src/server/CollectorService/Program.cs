@@ -6,7 +6,7 @@ using Common.Contracts;
 using Common.Extensions;
 using Common.Interfaces.Parser;
 using Common.Models;
-using Gateway.Services;
+using Common.Messaging;
 using Nelibur.ObjectMapper;
 
 var builder = WebApplication.CreateBuilder(args);
