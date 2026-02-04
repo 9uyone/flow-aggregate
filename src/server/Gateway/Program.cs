@@ -10,7 +10,6 @@ builder.Configuration.LoadFromEnvFile(builder.Environment);
 
 // Register services
 builder.Services.AddOcelot(builder.Configuration);
-builder.Services.AddAppRabbit(builder.Configuration);
 builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddGlobalExceptionHandler();

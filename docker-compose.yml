@@ -1,46 +1,107 @@
+x-healthcheck: &default-healthcheck
+  test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+  interval: 30s
+  timeout: 3s
+  retries: 3
+
 services:
-  # ASP.NET
+  # --- ASP.NET ---
   gateway:
     container_name: diploma-gateway
     build:
-      context: ./src
+      context: ./src/server
       dockerfile: Gateway/Dockerfile
-
     ports:
       - "5000:8080"
       - "5001:8081"
     depends_on:
+      - auth
       - collector
+      #- processor
+      - scheduler
+      - storage
+
     networks:
       - public
       - internal
     env_file: .env
 
+  auth:
+    container_name: diploma-auth
+    build:
+      context: ./src/server
+      dockerfile: AuthService/Dockerfile
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - internal
+    env_file: .env
+    healthcheck: *default-healthcheck
+
   collector:
     container_name: diploma-collector
     build:
-      context: ./src
-      dockerfile: Gateway/Dockerfile
-    
+      context: ./src/server
+      dockerfile: CollectorService/Dockerfile
     depends_on:
       - rabbitmq
     networks:
       - internal
     env_file: .env
+    healthcheck: *default-healthcheck
 
-  # Others
+  # processor:
+  #   container_name: diploma-processor
+  #   build:
+  #     context: ./src/server
+  #     dockerfile: CollectorService/Dockerfile
+    
+  #   depends_on:
+  #     - rabbitmq
+  #   networks:
+  #     - internal
+  #   env_file: .env
+  #   healthcheck: *default-healthcheck
+
+  scheduler:
+    container_name: diploma-scheduler
+    build:
+      context: ./src/server
+      dockerfile: SchedulerService/Dockerfile
+    depends_on:
+      - rabbitmq
+      - mongo
+    networks:
+      - internal
+    env_file: .env
+    healthcheck: *default-healthcheck
+
+  storage:
+    container_name: diploma-storage
+    build:
+      context: ./src/server
+      dockerfile: StorageService/Dockerfile
+    depends_on:
+      - rabbitmq
+      - mongo
+    networks:
+      - internal
+    env_file: .env
+    healthcheck: *default-healthcheck
+
+  # --- Others ---
   rabbitmq:
     container_name: diploma-rabbitmq
     image: rabbitmq:4.2-management
     ports:
-      - "15672:15672"
+      - "5672:5672"
     networks:
       - internal
     environment:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_DEFAULT_USER=${RABBITMQ__USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ__PASS}
-
 
   mongo:
     container_name: diploma-mongo
@@ -60,7 +121,7 @@ services:
     container_name: diploma-redis
     image: redis:alpine
     ports:
-      - "6379:6379"
+      - "{REDIS__PORT}:6379"
     command: >
       redis-server --requirepass ${REDIS__PASS}
       

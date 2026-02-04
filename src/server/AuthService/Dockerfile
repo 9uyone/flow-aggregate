@@ -8,21 +8,21 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # copy csproj files (for caching)
-COPY ["CollectorService/CollectorService.csproj", "CollectorService/"]
+COPY ["AuthService/AuthService.csproj", "AuthService/"]
 COPY ["Common/Common.csproj", "Common/"]
 
-RUN dotnet restore "CollectorService/CollectorService.csproj"
+RUN dotnet restore "AuthService/AuthService.csproj"
 
 # copy everything else
 COPY . .
 
-RUN dotnet build "CollectorService/CollectorService.csproj" \
+RUN dotnet build "AuthService/AuthService.csproj" \
   -c $BUILD_CONFIGURATION \
   -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "CollectorService/CollectorService.csproj" \
+RUN dotnet publish "AuthService/AuthService.csproj" \
   -c $BUILD_CONFIGURATION \
   -o /app/publish \
   /p:UseAppHost=false
@@ -35,4 +35,4 @@ RUN adduser -u 1001 -D appuser
 USER appuser
 
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "CollectorService.dll"]
+ENTRYPOINT ["dotnet", "AuthService.dll"]
