@@ -59,6 +59,18 @@
 			],
 			"UpstreamPathTemplate": "/api/auth/{everything}",
 			"UpstreamHttpMethod": [ "POST", "GET" ]
+		},
+		{
+			"DownstreamPathTemplate": "/hangfire/{everything}",
+			"DownstreamScheme": "https",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "localhost",
+					"Port": 7053
+				}
+			],
+			"UpstreamPathTemplate": "/hangfire/{everything}",
+			"UpstreamHttpMethod": [ "POST", "GET" ]
 		}
 	],
 	"GlobalConfiguration": {

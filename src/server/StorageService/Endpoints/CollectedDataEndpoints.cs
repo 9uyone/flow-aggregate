@@ -5,7 +5,7 @@ namespace StorageService.Endpoints;
 
 public static partial class StorageEndpoints {
 	public static void MapCollectedDataEndpoints(this IEndpointRouteBuilder app) {
-		var group = app.MapGroup("/collected")
+		var group = app.MapGroup("/storage/collected")
 			.WithTags("Collected data");
 
 		group.MapGet("/source/{src}", async (string src, int? page, int? pageSize, IMongoRepository<DataCollectedEvent> repo) => {

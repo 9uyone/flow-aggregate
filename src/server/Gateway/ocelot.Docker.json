@@ -1,7 +1,7 @@
 {
 	"Routes": [
 		{
-			"DownstreamPathTemplate": "/ingest",
+			"DownstreamPathTemplate": "/collector/{everything}",
 			"DownstreamScheme": "http",
 			"DownstreamHostAndPorts": [
 				{
@@ -9,12 +9,12 @@
 					"Port": 8080
 				}
 			],
-			"UpstreamPathTemplate": "/api/ingest",
-			"UpstreamHttpMethod": [ "POST" ]
-		}
-		/*{
+			"UpstreamPathTemplate": "/api/collector/{everything}",
+			"UpstreamHttpMethod": [ "GET", "POST" ]
+		},
+		{
 			"DownstreamPathTemplate": "/source/{src}",
-			"DownstreamScheme": "https",
+			"DownstreamScheme": "http",
 			"DownstreamHostAndPorts": [
 				{
 					"Host": "storage",
@@ -22,24 +22,52 @@
 				}
 			],
 			"UpstreamPathTemplate": "/api/source/{src}",
-			"UpstreamHttpMethod": [ "GET" ]
-			/*"AuthenticationOptions": {
+			"UpstreamHttpMethod": [ "GET" ],
+			"AuthenticationOptions": {
 				"AuthenticationProviderKey": "Bearer",
 				"AllowedScopes": []
 			}
 		},
 		{
-			"DownstreamPathTemplate": "/auth/google",
-			"DownstreamScheme": "https",
+			"DownstreamPathTemplate": "/parser-cfg/{everything}",
+			"DownstreamScheme": "http",
 			"DownstreamHostAndPorts": [
 				{
-					"Host": "localhost",
+					"Host": "storage",
 					"Port": 8080
 				}
 			],
-			"UpstreamPathTemplate": "/auth/google",
-			"UpstreamHttpMethod": [ "POST" ]
-		}*/
+			"UpstreamPathTemplate": "/api/parser-cfg/{everything}",
+			"UpstreamHttpMethod": [ "GET", "POST", "PATCH", "DELETE" ],
+			"AuthenticationOptions": {
+				"AuthenticationProviderKey": "Bearer",
+				"AllowedScopes": []
+			}
+		},
+		{
+			"DownstreamPathTemplate": "/auth/{everything}",
+			"DownstreamScheme": "http",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "auth",
+					"Port": 8080
+				}
+			],
+			"UpstreamPathTemplate": "/api/auth/{everything}",
+			"UpstreamHttpMethod": [ "POST", "GET" ]
+		},
+		{
+			"DownstreamPathTemplate": "/hangfire/{everything}",
+			"DownstreamScheme": "http",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "scheduler",
+					"Port": 8080
+				}
+			],
+			"UpstreamPathTemplate": "/hangfire/{everything}",
+			"UpstreamHttpMethod": [ "POST", "GET" ]
+		}
 	],
 	"GlobalConfiguration": {
 		"BaseUrl": "https://localhost:8081"

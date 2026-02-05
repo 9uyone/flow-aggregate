@@ -4,6 +4,8 @@ using Common.Extensions;
 using Common.Messaging;
 using Common.Models;
 using Hangfire;
+using Hangfire.Dashboard.BasicAuthorization;
+
 using SchedulerService;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,8 +21,23 @@ builder.Services.AddAppHangfire();
 
 var app = builder.Build();
 
+var hangfireSection = app.Configuration.GetSection("Hangfire");
 app.UseHangfireDashboard("/hangfire", new DashboardOptions {
-	Authorization = new[] { new MyDashboardAuthFilter() }
+	Authorization = [ 
+		new MyDashboardAuthFilter(), 
+		new BasicAuthAuthorizationFilter(new BasicAuthAuthorizationFilterOptions
+	{
+		RequireSsl = false, // Для локалки ставимо false
+        SslRedirect = false,
+		Users = new []
+		{
+			new BasicAuthAuthorizationUser
+			{
+				Login = hangfireSection["user"],
+				PasswordClear = hangfireSection["pass"]
+			}
+		}
+	}) ]
 });
 
 app.UseExceptionHandler();

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.22" />
+    <PackageReference Include="Hangfire.Dashboard.BasicAuthorization" Version="1.0.2" />
     <PackageReference Include="Hangfire.Mongo" Version="1.13.0" />
     <PackageReference Include="NCrontab.Signed" Version="3.4.0" />
   </ItemGroup>

@@ -3,12 +3,14 @@ using Common.Extensions;
 using Common.Interfaces;
 using Common.Models;
 using StorageService.Validation;
+using MongoDB.Driver;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace StorageService.Endpoints;
 
 public static partial class StorageEndpoints {
 	public static void MapParserConfigEndpoints(this IEndpointRouteBuilder app) {
-		var parserConfigGroup = app.MapGroup("/parser-cfg");
+		var parserConfigGroup = app.MapGroup("/storage/parser-cfg");
 
 		// Create
 		parserConfigGroup.MapPost("/", async (
@@ -29,7 +31,7 @@ public static partial class StorageEndpoints {
 				Options = dto.Options,
 			});
 
-			return Results.Created($"/parser-cfg/{created.Id}", created);
+			return Results.Created($"/storage/parser-cfg/{created.Id}", created);
 		}).RequireAuthorization();
 
 		// Get all for user
@@ -57,9 +59,9 @@ public static partial class StorageEndpoints {
 			}).RequireAuthorization();
 
 		// Update
-		parserConfigGroup.MapPut("/{id}", async (
+		parserConfigGroup.MapPatch("/{id}", async (
 			string id,
-			ParserUserConfigDto dto,
+			ParserUserConfigPatchDto dto,
 			IMongoRepository<ParserUserConfig> repo,
 			HttpContext httpContext,
 			IConfiguration config) => 
@@ -74,18 +76,21 @@ public static partial class StorageEndpoints {
 			if (existing == null || existing.UserId != userId)
 				return Results.NotFound();
 
-			var updatedConfig = new ParserUserConfig {
-				Id = existing.Id,
-				UserId = existing.UserId,
-				ParserName = dto.ParserName,
-				CronExpression = dto.CronExpression,
-				IsEnabled = dto.IsEnabled,
-				Options = dto.Options,
-				LastRunUtc = existing.LastRunUtc,
-			};
-			await repo.ReplaceOneAsync(c => c.Id == id, updatedConfig);
+			var updates = new List<UpdateDefinition<ParserUserConfig>>();
+			if (dto.CronExpression != null)
+				updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.CronExpression, dto.CronExpression));
+			if (dto.IsEnabled.HasValue)
+				updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.IsEnabled, dto.IsEnabled.Value));
+			if (dto.Options is not null)
+				updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.Options, dto.Options));
 
-			return Results.Ok(updatedConfig);
+			if (updates.Count == 0)
+				return Results.BadRequest("No fields to update");
+
+			var combinedUpdate = Builders<ParserUserConfig>.Update.Combine(updates);
+			await repo.UpdateOneAsync(c => c.Id == id, combinedUpdate);
+
+			return Results.NoContent();
 		}).RequireAuthorization();
 
 		// Delete
