@@ -31,6 +31,7 @@ public class ParserRunner(
 		ev.ParserName = info.Name;
 		ev.Type = info.DataType;
 		ev.CorrelationId = command.CorrelationId.EnsureCorrelationId();
+		ev.ConfigId = command.ConfigId;
 
 		await dispatcher.DispatchAsync(ev);
 
