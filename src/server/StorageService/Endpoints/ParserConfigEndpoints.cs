@@ -1,18 +1,20 @@
-﻿using StorageService.Contracts;
+﻿using CollectorService.Interfaces;
+using Common.Contracts;
 using Common.Extensions;
 using Common.Interfaces;
 using Common.Models;
-using StorageService.Validation;
 using MongoDB.Driver;
+using StorageService.Contracts;
+using StorageService.Validation;
 
 namespace StorageService.Endpoints;
 
 public static partial class StorageEndpoints {
 	public static void MapParserConfigEndpoints(this IEndpointRouteBuilder app) {
-		var parserConfigGroup = app.MapGroup("/storage/parser-cfg");
+		var group = app.MapGroup("/storage/parser-cfg");
 
 		// Create
-		parserConfigGroup.MapPost("/", async (
+		group.MapPost("/", async (
 			ParserUserConfigDto dto,
 			IMongoRepository<ParserUserConfig> repo,
 			HttpContext httpContext,
@@ -34,7 +36,7 @@ public static partial class StorageEndpoints {
 		}).RequireAuthorization();
 
 		// Get all for user
-		parserConfigGroup.MapGet("/", async (
+		group.MapGet("/", async (
 			IMongoRepository<ParserUserConfig> repo,
 			HttpContext httpContext) => {
 				var userId = httpContext.User.GetUserId()!;
@@ -44,7 +46,7 @@ public static partial class StorageEndpoints {
 			}).RequireAuthorization();
 
 		// Get by id
-		parserConfigGroup.MapGet("/{id}", async (
+		group.MapGet("/{id}", async (
 			string id,
 			IMongoRepository<ParserUserConfig> repo,
 			HttpContext httpContext) => {
@@ -58,7 +60,7 @@ public static partial class StorageEndpoints {
 			}).RequireAuthorization();
 
 		// Update
-		parserConfigGroup.MapPatch("/{id}", async (
+		group.MapPatch("/{id}", async (
 			string id,
 			ParserUserConfigPatchDto dto,
 			IMongoRepository<ParserUserConfig> repo,
@@ -93,7 +95,7 @@ public static partial class StorageEndpoints {
 		}).RequireAuthorization();
 
 		// Delete
-		parserConfigGroup.MapDelete("/{id}", async (
+		group.MapDelete("/{id}", async (
 			string id,
 			IMongoRepository<ParserUserConfig> repo,
 			HttpContext httpContext) => {
@@ -104,6 +106,26 @@ public static partial class StorageEndpoints {
 
 				await repo.DeleteAsync(c => c.Id == id);
 				return Results.NoContent();
+			}).RequireAuthorization();
+
+		group.MapPost("/{id}/run", async (
+			string id,
+			IMongoRepository<ParserUserConfig> repo,
+			IIntegrationDispatcher dispatcher) => {
+				var config = await repo.GetByIdAsync(id.ToString());
+				if (config == null) return Results.NotFound();
+
+				var command = new RunParserCommand {
+					ConfigId = config.Id,
+					ParserName = config.ParserName,
+					UserId = config.UserId,
+					Options = config.Options
+				};
+
+				await dispatcher.DispatchAsync(command);
+				return Results.Ok(new { 
+					CorrelationId = command.CorrelationId.EnsureCorrelationId() 
+				});
 			}).RequireAuthorization();
 	}
 }
