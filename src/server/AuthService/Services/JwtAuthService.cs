@@ -1,6 +1,6 @@
 ﻿using AuthService.Contracts;
+using AuthService.Entities;
 using AuthService.Interfaces;
-using AuthService.Models;
 using Common.Config;
 using Common.Interfaces;
 using Google.Apis.Auth;

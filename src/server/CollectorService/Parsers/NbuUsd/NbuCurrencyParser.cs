@@ -2,8 +2,8 @@
 using Common.Constants;
 using Common.Enums;
 using Common.Extensions;
-using Common.Models;
 using Common.Interfaces.Parser;
+using Common.Contracts.Parser;
 
 namespace CollectorService.Parsers.NbuUsd;
 
@@ -11,7 +11,7 @@ namespace CollectorService.Parsers.NbuUsd;
 [ParserParameter("valcode", "Requested currency\nBy default is USD", false)]
 [ParserParameter("date", "Requested date in format YYYYMMDD.\nBy default is current", false)]
 public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyParser> logger) : IDataParser {
-	public async Task<InboundDataDto> ParseAsync(IDictionary<string, string>? parameters) {
+	public async Task<ParserDataPayload> ParseAsync(IDictionary<string, string>? parameters) {
 		var valcode = parameters.GetValueOrDefault("valcode", "USD");
 		var date = parameters.GetValueOrCompute("date", () => DateTime.UtcNow.ToString("yyyyMMdd"));
 
@@ -21,7 +21,7 @@ public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyPa
 
 		if (rate == null) throw new Exception("Failed to fetch NBU rate");
 
-		return new InboundDataDto {
+		return new ParserDataPayload {
 			Source = "bank.gov.ua",
 			Metric = $"{valcode.ToUpper()}_UAH",
 			Value = rate.Rate,

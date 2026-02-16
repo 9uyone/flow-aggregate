@@ -2,9 +2,10 @@ using CollectorService.Interfaces;
 using Common.Constants;
 using Common.Extensions;
 using Common.Messaging;
-using Common.Models;
+using Common.Entities;
 using Hangfire;
 using SchedulerService;
+using Common.Config;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,6 +1,6 @@
-﻿using Common.Models;
+﻿using Common.Entities;
 
-namespace AuthService.Models;
+namespace AuthService.Entities;
 
 public class User: BaseEntity {
 	public string Email { get; set; }

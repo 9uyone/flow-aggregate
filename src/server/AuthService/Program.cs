@@ -1,9 +1,10 @@
 using AuthService;
 using AuthService.Interfaces;
-using AuthService.Models;
+using AuthService.Entities;
 using AuthService.Services;
 using Common.Extensions;
 using Common.Constants;
+using Common.Config;
 
 var builder = WebApplication.CreateBuilder(args);
 

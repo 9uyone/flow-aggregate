@@ -1,7 +1,7 @@
-﻿using Common.Models;
+﻿using Common.Entities;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace AuthService.Models;
+namespace AuthService.Entities;
 
 public class RefreshToken: BaseEntity {
 	public Guid UserId { get; set; }

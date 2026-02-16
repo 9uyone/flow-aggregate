@@ -1,4 +1,4 @@
-﻿using Common.Contracts;
+﻿using Common.Contracts.Events;
 using Common.Extensions;
 using Common.Interfaces;
 using Microsoft.AspNetCore.Mvc;

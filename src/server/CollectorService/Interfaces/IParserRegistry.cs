@@ -1,4 +1,4 @@
-﻿using CollectorService.Models;
+﻿using CollectorService.Contracts;
 
 namespace CollectorService.Interfaces;
 

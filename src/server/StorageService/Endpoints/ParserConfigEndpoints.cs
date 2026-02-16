@@ -1,9 +1,9 @@
 ﻿using CollectorService.Interfaces;
 using Common.Contracts;
 using Common.Contracts.Parser;
+using Common.Entities;
 using Common.Extensions;
 using Common.Interfaces;
-using Common.Models;
 using MongoDB.Driver;
 using StorageService.Contracts;
 using StorageService.Validation;
@@ -125,7 +125,7 @@ public static partial class StorageEndpoints {
 				};
 
 				await dispatcher.DispatchAsync(command);
-				return Results.Accepted(value: new ParserRunResult { 
+				return Results.Accepted(value: new RunParserResult { 
 					CorrelationId = command.CorrelationId.Value
 				});
 			}).RequireAuthorization();

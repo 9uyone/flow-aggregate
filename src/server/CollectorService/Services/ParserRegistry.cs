@@ -1,5 +1,5 @@
 ﻿using CollectorService.Interfaces;
-using CollectorService.Models;
+using CollectorService.Contracts;
 using Common.Attributes;
 using Common.Exceptions;
 using Common.Interfaces.Parser;

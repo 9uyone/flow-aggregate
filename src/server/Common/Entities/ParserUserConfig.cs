@@ -1,4 +1,4 @@
-﻿namespace Common.Models;
+﻿namespace Common.Entities;
 
 public class ParserUserConfig: BaseEntity {
 	public Guid UserId { get; init; } = Guid.Empty;

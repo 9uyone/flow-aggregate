@@ -1,11 +1,10 @@
-﻿using Common.Config;
-using DotNetEnv;
+﻿using DotNetEnv;
 using DotNetEnv.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Common.Extensions;
+namespace Common.Config;
 
 public static class ConfigExtensions {
 	public static IServiceCollection AddJwtOptions(this IServiceCollection services, IConfiguration config) {

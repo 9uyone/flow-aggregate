@@ -1,6 +1,6 @@
-﻿namespace Common.Models;
+﻿namespace Common.Contracts.Parser;
 
-public class InboundDataDto {
+public class ParserDataPayload {
 	public required string Source { get; set; } // e.g. api.openweathermap.org
 
 	public required string Metric { get; set; }      // "USD_UAH", "AirTemperature"

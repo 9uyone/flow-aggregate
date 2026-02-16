@@ -1,8 +1,9 @@
 using Common.Constants;
-using Common.Contracts;
 using Common.Extensions;
-using Common.Models;
+using Common.Entities;
 using StorageService.Endpoints;
+using Common.Config;
+using Common.Contracts.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,6 +1,6 @@
-﻿using Common.Models;
+﻿using Common.Contracts.Parser;
 
-namespace CollectorService.Models;
+namespace CollectorService.Contracts;
 
 public record ParameterDetailsDto(
 	string Name,

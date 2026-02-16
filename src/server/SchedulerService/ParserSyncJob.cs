@@ -1,7 +1,7 @@
 ﻿using CollectorService.Interfaces;
 using Common.Contracts;
+using Common.Entities;
 using Common.Interfaces;
-using Common.Models;
 using Hangfire;
 using NCrontab;
 

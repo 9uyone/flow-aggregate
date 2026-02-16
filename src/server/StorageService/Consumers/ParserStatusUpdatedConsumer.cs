@@ -1,8 +1,8 @@
-﻿using Common.Contracts;
-using Common.Interfaces;
-using Common.Models;
+﻿using Common.Interfaces;
+using Common.Entities;
 using MassTransit;
 using MongoDB.Driver;
+using Common.Contracts.Events;
 
 namespace ProcessorService.Consumers;
 

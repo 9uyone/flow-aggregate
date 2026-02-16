@@ -1,9 +1,9 @@
-﻿using Common.Enums;
-using Common.Models;
+﻿using Common.Entities;
+using Common.Enums;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace Common.Contracts;
+namespace Common.Contracts.Events;
 
 public class DataCollectedEvent: BaseEntity, ICorrelatedMessage {
 	public Guid? CorrelationId { get; set; }

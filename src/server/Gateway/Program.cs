@@ -1,3 +1,4 @@
+using Common.Config;
 using Common.Extensions;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;

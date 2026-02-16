@@ -2,12 +2,13 @@ using CollectorService;
 using CollectorService.Extensions;
 using CollectorService.Interfaces;
 using CollectorService.Services;
-using Common.Contracts;
 using Common.Extensions;
 using Common.Interfaces.Parser;
-using Common.Models;
 using Common.Messaging;
 using Nelibur.ObjectMapper;
+using Common.Contracts.Parser;
+using Common.Config;
+using Common.Contracts.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +27,7 @@ builder.Services.AddInternalParsers();
 //builder.Services.AddExternalPlugins(Path.Combine(builder.Environment.ContentRootPath, "plugins"));
 builder.Services.AddHealthChecks();
 
-TinyMapper.Bind<InboundDataDto, DataCollectedEvent>();
+TinyMapper.Bind<ParserDataPayload, DataCollectedEvent>();
 
 var app = builder.Build();
 

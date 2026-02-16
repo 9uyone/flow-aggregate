@@ -1,6 +1,6 @@
 ﻿using AuthService.Contracts;
 using AuthService.Interfaces;
-using AuthService.Models;
+using AuthService.Entities;
 using Common.Extensions;
 using Common.Interfaces;
 using Microsoft.AspNetCore.Identity.Data;

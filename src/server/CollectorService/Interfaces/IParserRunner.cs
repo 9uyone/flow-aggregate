@@ -1,10 +1,10 @@
 ﻿using Common.Contracts;
-using Common.Models;
+using Common.Contracts.Parser;
 
 namespace CollectorService.Services;
 
 public interface IParserRunner {
-	Task<InboundDataDto> ExecuteAsync(
+	Task<ParserDataPayload> ExecuteAsync(
 		RunParserCommand command
 	);
 }

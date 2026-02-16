@@ -1,5 +1,6 @@
 ﻿using CollectorService.Services;
 using Common.Contracts;
+using Common.Contracts.Events;
 using MassTransit;
 
 namespace ProcessorService.Consumers;

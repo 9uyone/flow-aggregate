@@ -1,8 +1,8 @@
 ﻿using CollectorService.Interfaces;
 using Common.Contracts;
+using Common.Contracts.Events;
 using Common.Contracts.Parser;
 using Common.Extensions;
-using Common.Models;
 using Microsoft.AspNetCore.Mvc;
 using Nelibur.ObjectMapper;
 
@@ -14,7 +14,7 @@ public static class CollectorEndpoints {
 			.WithTags("Collector Service");
 
 		group.MapPost("/ingest", async (
-			InboundDataDto dto,
+			ParserDataPayload dto,
 			[FromQuery] Guid? correlationId,
 			IIntegrationDispatcher dispatcher,
 			HttpContext httpContext) =>
@@ -47,7 +47,7 @@ public static class CollectorEndpoints {
 			};
 
 			await dispatcher.DispatchAsync(command);
-			return Results.Ok(new ParserRunResult { 
+			return Results.Ok(new RunParserResult { 
 				CorrelationId = command.CorrelationId.Value
 			});
 		}).RequireAuthorization();

@@ -1,10 +1,11 @@
 ﻿using CollectorService.Interfaces;
 using Common.Attributes;
 using Common.Contracts;
+using Common.Contracts.Events;
+using Common.Contracts.Parser;
 using Common.Exceptions;
 using Common.Extensions;
 using Common.Interfaces.Parser;
-using Common.Models;
 using Nelibur.ObjectMapper;
 using System.Reflection;
 
@@ -15,7 +16,7 @@ public class ParserRunner(
 	IServiceProvider sp,
 	IIntegrationDispatcher dispatcher) : IParserRunner 
 {
-	public async Task<InboundDataDto> ExecuteAsync(
+	public async Task<ParserDataPayload> ExecuteAsync(
 		RunParserCommand command)
 	{
 		var parserType = registry.GetParserType(command.ParserName);

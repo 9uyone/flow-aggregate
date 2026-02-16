@@ -2,9 +2,9 @@
 using Common.Enums;
 using Common.Extensions;
 using Common.Interfaces.Parser;
-using Common.Models;
 using Common.Exceptions;
 using Common.Constants;
+using Common.Contracts.Parser;
 
 namespace CollectorService.Parsers.OpenWeather;
 
@@ -17,7 +17,7 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 			?? throw new InvalidOperationException("OpenWeather API Key is missing in configuration.");
 	}
 
-	public async Task<InboundDataDto> ParseAsync(IDictionary<string, string> parameters) {
+	public async Task<ParserDataPayload> ParseAsync(IDictionary<string, string> parameters) {
 		var units = parameters.GetValueOrDefault("units", "metric");
 		var city = parameters["city"] 
 			?? throw new ArgumentException("Parameter 'city' is required.");
@@ -34,7 +34,7 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 		var weather = await httpClient.GetAsync<WeatherResponse>(weatherUrl)
 			?? throw new ExternalServiceException("Failed to retrieve weather data from OpenWeather API.");
 
-		return new InboundDataDto {
+		return new ParserDataPayload {
 			Source = "openweathermap.org",
 			Metric = $"weather_{city.ToLower().Replace(" ", "_")}",
 			Value = (decimal)weather.Main.Temp,
