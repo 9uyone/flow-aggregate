@@ -4,6 +4,7 @@ using Common.Contracts.Parser;
 using Common.Entities;
 using Common.Extensions;
 using Common.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using StorageService.Contracts;
 using StorageService.Validation;
@@ -39,9 +40,12 @@ public static partial class StorageEndpoints {
 		// Get all for user
 		group.MapGet("/", async (
 			IMongoRepository<ParserUserConfig> repo,
-			HttpContext httpContext) => {
+			HttpContext httpContext,
+			[FromQuery] int? page,
+			[FromQuery] int? pageSize,
+			[FromQuery] bool? oldFirst) => {
 				var userId = httpContext.User.GetUserId()!;
-				var configs = await repo.FindAsync(c => c.UserId == userId);
+				var configs = await repo.FindAsync(c => c.UserId == userId, page, pageSize, oldFirst);
 
 				return Results.Ok(configs);
 			}).RequireAuthorization();

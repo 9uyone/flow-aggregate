@@ -16,7 +16,7 @@ public class ParserRunner(
 	IServiceProvider sp,
 	IIntegrationDispatcher dispatcher) : IParserRunner 
 {
-	public async Task<ParserDataPayload> ExecuteAsync(
+	public async Task<IEnumerable<ParserDataPayload>> ExecuteAsync(
 		RunParserCommand command)
 	{
 		var parserType = registry.GetParserType(command.ParserName);
@@ -27,14 +27,16 @@ public class ParserRunner(
 		var info = parserType.GetCustomAttribute<ParserInfoAttribute>();
 		var data = await parser.ParseAsync(command.Options);
 
-		var ev = TinyMapper.Map<DataCollectedEvent>(data);
-		ev.UserId = command.UserId;
-		ev.ParserName = info.Name;
-		ev.Type = info.DataType;
-		ev.CorrelationId = command.CorrelationId.EnsureCorrelationId();
-		ev.ConfigId = command.ConfigId;
+		foreach (var entry in data) {
+			var ev = TinyMapper.Map<DataCollectedEvent>(entry);
+			ev.UserId = command.UserId;
+			ev.ParserName = info.Name;
+			ev.Type = info.DataType;
+			ev.CorrelationId = command.CorrelationId.EnsureCorrelationId();
+			ev.ConfigId = command.ConfigId;
 
-		await dispatcher.DispatchAsync(ev);
+			await dispatcher.DispatchAsync(ev);
+		}
 
 		return data;
 	}

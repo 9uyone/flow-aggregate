@@ -11,7 +11,7 @@ namespace CollectorService.Parsers.NbuUsd;
 [ParserParameter("valcode", "Requested currency\nBy default is USD", false)]
 [ParserParameter("date", "Requested date in format YYYYMMDD.\nBy default is current", false)]
 public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyParser> logger) : IDataParser {
-	public async Task<ParserDataPayload> ParseAsync(IDictionary<string, string>? parameters) {
+	public async Task<IEnumerable<ParserDataPayload>> ParseAsync(IDictionary<string, string>? parameters) {
 		var valcode = parameters.GetValueOrDefault("valcode", "USD");
 		var date = parameters.GetValueOrCompute("date", () => DateTime.UtcNow.ToString("yyyyMMdd"));
 
@@ -21,7 +21,7 @@ public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyPa
 
 		if (rate == null) throw new Exception("Failed to fetch NBU rate");
 
-		return new ParserDataPayload {
+		return [new ParserDataPayload {
 			Source = "bank.gov.ua",
 			Metric = $"{valcode.ToUpper()}_UAH",
 			Value = rate.Rate,
@@ -31,7 +31,7 @@ public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyPa
 				[MetadataKeys.Unit] = "UAH per " + valcode.ToUpper(),
 				[MetadataKeys.Provider] = "National bank of Ukraine"
 			}
-		};
+		}];
 	}
 
 	public async Task<IEnumerable<LookupOptionDto>> GetParameterLookupsAsync(string parameterName) {
