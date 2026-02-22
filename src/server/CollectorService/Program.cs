@@ -26,6 +26,7 @@ builder.Services.AddSingleton<IParserRegistry, ParserRegistry>();
 builder.Services.AddInternalParsers();
 //builder.Services.AddExternalPlugins(Path.Combine(builder.Environment.ContentRootPath, "plugins"));
 builder.Services.AddHealthChecks();
+builder.Services.AddRedisCache(builder.Configuration);
 
 TinyMapper.Bind<ParserDataPayload, DataCollectedEvent>();
 

@@ -17,6 +17,7 @@ builder.Services.AddAppMongoRepository<ParserUserConfig>(MongoCollections.Parser
 builder.Services.AddAppMongoRepository<ExecutionLog>(MongoCollections.ExecutionLogs);
 
 builder.Services.AddAppRabbit(builder.Configuration);
+builder.Services.AddRedisCache(builder.Configuration);
 builder.Services.AddGlobalExceptionHandler();
 builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddAuthorization();
