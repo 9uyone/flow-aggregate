@@ -13,24 +13,31 @@ public class RunParserConsumer(IParserRunner runner, ILogger<RunParserCommand> l
 
 			await runner.ExecuteAsync(msg);
 
-			if (msg.ConfigId is not null)
-				await context.Publish(new ParserStatusUpdatedEvent {
-					ConfigId = msg.ConfigId.Value,
-					IsSuccess = true,
-					FinishedAtUtc = DateTime.UtcNow
-				});
+			await context.Publish(new ParserStatusUpdatedEvent {
+				ConfigId = msg.ConfigId,
+				CorrelationId = msg.CorrelationId,
+				UserId = msg.UserId,
+				ParserName = msg.ParserName,
+				IsSuccess = true,
+				FinishedAtUtc = DateTime.UtcNow,
+				Options = msg.Options,
+			});
 
 			logger.LogInformation($"[Collector]; Parser {msg.ParserName} has been finished; Config ID {msg.ConfigId}");
 		}
 		catch (Exception ex) {
-			if (msg.ConfigId is not null)
-				await context.Publish(new ParserStatusUpdatedEvent {
-					ConfigId = msg.ConfigId.Value,
-					IsSuccess = false,
-					ErrorMessage = ex.Message,
-					FinishedAtUtc = DateTime.UtcNow
-				});
-			else throw;
+			await context.Publish(new ParserStatusUpdatedEvent {
+				ConfigId = msg.ConfigId,
+				CorrelationId = msg.CorrelationId,
+				UserId = msg.UserId,
+				ParserName = msg.ParserName,
+				IsSuccess = false,
+				ErrorMessage = ex.Message,
+				FinishedAtUtc = DateTime.UtcNow,
+				Options = msg.Options,
+			});
+
+			throw;
 		}
 	}
 }

@@ -16,7 +16,7 @@ public static class CorrelationExtensions {
 			? GenCorrelationId()
 			: correlationId;
 
-	extension(Guid guid) {
+	extension(Guid) {
 		public static Guid GenCorrelationId() => NewId.NextGuid();
 	}
 }

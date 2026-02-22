@@ -41,8 +41,6 @@ app.Use(async (context, next) => {
 
 app.UseCors("AllowFrontend");
 
-var ocelotConfig = builder.Configuration.GetSection("Routes").Get<List<RouteOptions>>();
-
 await app.UseOcelot();
 
 app.Run();

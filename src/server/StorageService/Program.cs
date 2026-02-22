@@ -4,6 +4,7 @@ using Common.Entities;
 using StorageService.Endpoints;
 using Common.Config;
 using Common.Contracts.Events;
+using StorageService.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ builder.Configuration.LoadFromEnvFile(builder.Environment);
 builder.Services.AddAppMongo(builder.Configuration);
 builder.Services.AddAppMongoRepository<DataCollectedEvent>(MongoCollections.CollectedData);
 builder.Services.AddAppMongoRepository<ParserUserConfig>(MongoCollections.ParserUserConfigs);
+builder.Services.AddAppMongoRepository<ExecutionLog>(MongoCollections.ExecutionLogs);
 
 builder.Services.AddAppRabbit(builder.Configuration);
 builder.Services.AddGlobalExceptionHandler();
@@ -35,5 +37,6 @@ app.UseAuthorization();
 
 app.MapParserConfigEndpoints();
 app.MapCollectedDataEndpoints();
+app.MapTasksEndpoints();
 
 app.Run();

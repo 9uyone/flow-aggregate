@@ -3,18 +3,33 @@ using Common.Entities;
 using MassTransit;
 using MongoDB.Driver;
 using Common.Contracts.Events;
+using StorageService.Entities;
+using Common.Enums;
 
 namespace ProcessorService.Consumers;
 
-public class ParserStatusUpdatedConsumer(IMongoRepository<ParserUserConfig> repo) : IConsumer<ParserStatusUpdatedEvent> {
+public class ParserStatusUpdatedConsumer(
+		IMongoRepository<ParserUserConfig> configRepo, 
+		IMongoRepository<ExecutionLog> logRepo) : IConsumer<ParserStatusUpdatedEvent> {
 	public async Task Consume(ConsumeContext<ParserStatusUpdatedEvent> context) {
 		var message = context.Message;
 
-		var update = Builders<ParserUserConfig>.Update
+		var updateConfig = Builders<ParserUserConfig>.Update
 			.Set(c => c.LastRunUtc, message.FinishedAtUtc)
 			.Set(c => c.LastStatus, message.IsSuccess)
 			.Set(c => c.LastErrorMessage, message.ErrorMessage);
 
-		await repo.UpdateOneAsync(c => c.Id == message.ConfigId, update);
+		await configRepo.UpdateOneAsync(c => c.Id == message.ConfigId, updateConfig);
+
+		await logRepo.CreateAsync(new ExecutionLog { 
+			ParserName = message.ParserName,
+			UserId = message.UserId,
+			CorrelationId = message.CorrelationId,
+			ConfigId = message.ConfigId,
+			Status = message.IsSuccess ? ExecutionStatus.Success : ExecutionStatus.Failed,
+			ErrorMessage = message.ErrorMessage,
+			FinishedAtUtc = message.FinishedAtUtc,
+			Options = message.Options,
+		});
 	}
 }

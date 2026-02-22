@@ -68,13 +68,19 @@ public class JwtAuthService(
 	}
 
 	public async Task<AuthResponse> RotateTokenAsync(string oldRefreshToken) {
-		var storedToken = (await rtRepo.FindAsync(x => x.Token == oldRefreshToken)).FirstOrDefault();
+		var storedToken = (await rtRepo.FindAsync(x => x.Token == oldRefreshToken && x.IsActive))
+			.items.FirstOrDefault();
 
-		if (storedToken == null || !storedToken.IsActive)
+		if (storedToken == null)
 			throw new UnauthorizedAccessException("Invalid refresh token attempt");
 
 		var updateDef = Builders<RefreshToken>.Update.Set(x => x.IsUsed, true);
-		await rtRepo.UpdateOneAsync(x => x.Id == storedToken.Id, updateDef);
+		var updateResult = await rtRepo.UpdateOneAsync(
+			x => x.Id == storedToken.Id && x.IsActive, 
+			updateDef);
+
+		if (updateResult.ModifiedCount == 0)
+			throw new UnauthorizedAccessException("Invalid refresh token attempt");
 
 		var user = await userRepo.GetByIdAsync(storedToken.UserId);
 		return await GenerateAuthResponseAsync(user);

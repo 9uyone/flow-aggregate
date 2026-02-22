@@ -45,9 +45,9 @@ public static partial class StorageEndpoints {
 			[FromQuery] int? pageSize,
 			[FromQuery] bool? oldFirst) => {
 				var userId = httpContext.User.GetUserId()!;
-				var configs = await repo.FindAsync(c => c.UserId == userId, page, pageSize, oldFirst);
+				var (configs, totalCount) = await repo.FindAsync(c => c.UserId == userId, page, pageSize, oldFirst);
 
-				return Results.Ok(configs);
+				return Results.Ok(configs.ToPagedResponse(totalCount, page, pageSize));
 			}).RequireAuthorization();
 
 		// Get by id
@@ -113,6 +113,7 @@ public static partial class StorageEndpoints {
 				return Results.NoContent();
 			}).RequireAuthorization();
 
+		// Run config
 		group.MapPost("/{id}/run", async (
 			Guid id,
 			IMongoRepository<ParserUserConfig> repo,

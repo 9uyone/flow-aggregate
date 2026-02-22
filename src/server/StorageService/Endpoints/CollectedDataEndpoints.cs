@@ -22,7 +22,7 @@ public static partial class StorageEndpoints {
 			[FromQuery] int? pageSize,
 			[FromQuery] bool? oldFirst,
 			IMongoRepository<DataCollectedEvent> repo) => {
-				var results = await repo.FindAsync(filter: x => 
+				var (results, totalCount) = await repo.FindAsync(filter: x => 
 					(x.UserId == httpContext.User.GetUserId()) &&
 					(configId == null || x.ConfigId == configId) &&
 					(correlationId == null || x.CorrelationId == correlationId),
@@ -30,6 +30,7 @@ public static partial class StorageEndpoints {
 
 				return Results.Ok(
 					TinyMapper.Map<List<DataResultDto>>(results)
+						.ToPagedResponse(totalCount, page, pageSize)
 				);
 			}).RequireAuthorization();
 

@@ -27,7 +27,7 @@ public class UserService(IMongoRepository<User> userRepo) : IUserService {
 
 	public async Task<User> HandleGoogleLoginAsync(GoogleJsonWebSignature.Payload payload) {
 		var user = (await userRepo.FindAsync(u => u.GoogleSub == payload.Subject))
-			.FirstOrDefault();
+			.items.FirstOrDefault();
 
 		if (user == null) {
 			user = new User {

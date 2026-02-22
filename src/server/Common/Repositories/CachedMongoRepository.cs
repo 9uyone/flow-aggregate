@@ -12,11 +12,8 @@ public class CachedMongoRepository<T>(
 	public Task<T> CreateAsync(T entity) =>
 		inner.CreateAsync(entity);
 
-	public Task<List<T>> FindAsync(Expression<Func<T, bool>> filter, int? page, int? pageSize, bool? oldFirst) =>
+	public Task<(List<T> items, int totalCount)> FindAsync(Expression<Func<T, bool>> filter, int? page, int? pageSize, bool? oldFirst) =>
 		inner.FindAsync(filter, page, pageSize, oldFirst);
-
-	public Task<List<T>> GetAllAsync() =>
-		inner.GetAllAsync();
 
 	public async Task<T> GetByIdAsync(Guid id) {
 		var key = $"{typeof(T).Name}:{id}";
@@ -33,37 +30,35 @@ public class CachedMongoRepository<T>(
 		return entity!;
 	}
 
-	public async Task ReplaceOneAsync(Expression<Func<T, bool>> filter, T entity) {
-		await inner.ReplaceOneAsync(filter, entity);
+	public async Task<ReplaceOneResult> ReplaceOneAsync(Expression<Func<T, bool>> filter, T entity) {
+		var result = await inner.ReplaceOneAsync(filter, entity);
 
 		var id = (entity as dynamic)?.Id?.ToString();
 		if (!string.IsNullOrEmpty(id)) {
 			await cache.RemoveAsync($"{typeof(T).Name}:{id}");
 		}
+		return result;
 	}
 
-	public async Task UpdateOneAsync(Expression<Func<T, bool>> filter, UpdateDefinition<T> update) {
-		var entity = await inner.FindAsync(filter);
+	public async Task<UpdateResult> UpdateOneAsync(Expression<Func<T, bool>> filter, UpdateDefinition<T> update) {
+		var (entity, _) = await inner.FindAsync(filter);
 		if (entity != null) {
 			var id = (entity as dynamic)?.Id?.ToString();
 			if (!string.IsNullOrEmpty(id)) {
 				await cache.RemoveAsync($"{typeof(T).Name}:{id}");
 			}
 		}
-		await inner.UpdateOneAsync(filter, update);
+		return await inner.UpdateOneAsync(filter, update);
 	}
 
-	public async Task DeleteAsync(Expression<Func<T, bool>> filter) {
-		var entities = await inner.FindAsync(filter);
+	public async Task<DeleteResult> DeleteAsync(Expression<Func<T, bool>> filter) {
+		var (entities, _) = await inner.FindAsync(filter);
 		foreach (var entity in entities) {
 			var id = (entity as dynamic)?.Id?.ToString();
 			if (!string.IsNullOrEmpty(id)) {
 				await cache.RemoveAsync($"{typeof(T).Name}:{id}");
 			}
 		}
-		await inner.DeleteAsync(filter);
+		return await inner.DeleteAsync(filter);
 	}
-
-	// ВАЖЛИВО: В методах Update/Delete додай await cache.RemoveAsync($"{typeof(T).Name}:{id}");
-	// Щоб у кеші не лишалися "протухлі" дані.
 }

@@ -5,4 +5,5 @@ public static class MongoCollections {
 	public const string RefreshTokens = "refresh_tokens";
 	public const string ParserUserConfigs = "parser_user_configs";
 	public const string CollectedData = "collected_data";
+	public const string ExecutionLogs = "execution_logs";
 }

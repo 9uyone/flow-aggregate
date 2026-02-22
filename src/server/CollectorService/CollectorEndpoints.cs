@@ -15,14 +15,13 @@ public static class CollectorEndpoints {
 
 		group.MapPost("/ingest", async (
 			ParserDataPayload dto,
-			[FromQuery] Guid? correlationId,
 			IIntegrationDispatcher dispatcher,
 			HttpContext httpContext) =>
 		{
 			var userId = httpContext.User.GetUserId();
 
 			var ev = TinyMapper.Map<DataCollectedEvent>(dto);
-			ev.CorrelationId = correlationId.EnsureCorrelationId();
+			ev.CorrelationId = Guid.GenCorrelationId();
 
 			await dispatcher.DispatchAsync(ev);
 			return Results.Accepted();
@@ -31,7 +30,6 @@ public static class CollectorEndpoints {
 
 		group.MapPost("/run/{name}", async (
 			string name,
-			[FromQuery] Guid? correlationId,
 			[FromBody] IDictionary<string, string>? options,
 			IParserRegistry registry,
 			IIntegrationDispatcher dispatcher,
