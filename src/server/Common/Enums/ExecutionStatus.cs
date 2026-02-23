@@ -1,7 +1,7 @@
 ﻿namespace Common.Enums;
 
 public enum ExecutionStatus {
-	Pending,
+	Running,
 	Success,
 	Failed
 }

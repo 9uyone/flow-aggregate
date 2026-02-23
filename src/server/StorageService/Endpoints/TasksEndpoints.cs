@@ -33,7 +33,7 @@ public static partial class StorageEndpoints {
 			var correlationIdsInDb = new HashSet<Guid>(configs.Select(c => c.CorrelationId).Cast<Guid>());
 			
 			var db = redis.GetDatabase();
-			var pendingSetKey = $"pending_tasks:{userId}";
+			var pendingSetKey = $"running_tasks:{userId}";
 			var pendingCorrelationIds = await db.SetMembersAsync(pendingSetKey);
 			
 			var pendingTasks = new List<TaskStatusDto>();
