@@ -1,5 +1,5 @@
 ﻿using CollectorService.Interfaces;
-using Common.Contracts;
+using Common.Contracts.Events;
 using Common.Contracts.Parser;
 using Common.Entities;
 using Common.Extensions;
@@ -121,7 +121,7 @@ public static partial class StorageEndpoints {
 				var config = await repo.GetByIdAsync(id);
 				if (config == null) return Results.NotFound();
 
-				var command = new RunParserCommand {
+				var command = new RunParserEvent {
 					ConfigId = config.Id,
 					ParserName = config.ParserName,
 					UserId = config.UserId,

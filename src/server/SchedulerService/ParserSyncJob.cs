@@ -1,5 +1,5 @@
 ﻿using CollectorService.Interfaces;
-using Common.Contracts;
+using Common.Contracts.Events;
 using Common.Entities;
 using Common.Interfaces;
 using Hangfire;
@@ -39,7 +39,7 @@ public class ParserSyncJob(
 	}
 
 	public async Task SendCommandAsync(ParserUserConfig config) {
-		await dispatcher.DispatchAsync(new RunParserCommand {
+		await dispatcher.DispatchAsync(new RunParserEvent {
 			ConfigId = config.Id!,
 			ParserName = config.ParserName,
 			UserId = config.UserId,

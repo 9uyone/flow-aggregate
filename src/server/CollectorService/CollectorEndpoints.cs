@@ -1,5 +1,4 @@
 ﻿using CollectorService.Interfaces;
-using Common.Contracts;
 using Common.Contracts.Events;
 using Common.Contracts.Parser;
 using Common.Extensions;
@@ -37,7 +36,7 @@ public static class CollectorEndpoints {
 		{
 			var userId = httpContext.User.GetUserId();
 
-			var command = new RunParserCommand {
+			var command = new RunParserEvent {
 				ParserName = name,
 				UserId = userId!,
 				Options = options,

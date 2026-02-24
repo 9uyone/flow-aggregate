@@ -1,5 +1,4 @@
 ﻿using CollectorService.Services;
-using Common.Contracts;
 using Common.Contracts.Events;
 using Common.Enums;
 using MassTransit;
@@ -8,10 +7,10 @@ using StackExchange.Redis;
 
 namespace ProcessorService.Consumers;
 
-public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IConnectionMultiplexer redis, ILogger<RunParserCommand> logger) : IConsumer<RunParserCommand> {
+public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IConnectionMultiplexer redis, ILogger<RunParserEvent> logger) : IConsumer<RunParserEvent> {
 	private const int CacheTtlMinutes = 60; // Кеш на 1 годину
 
-	public async Task Consume(ConsumeContext<RunParserCommand> context) {
+	public async Task Consume(ConsumeContext<RunParserEvent> context) {
 		var msg = context.Message;
 		try {
 			logger.LogInformation($"[Collector]; Parser {msg.ParserName} has been started; Config ID {msg.ConfigId}");

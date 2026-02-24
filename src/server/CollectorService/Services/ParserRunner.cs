@@ -1,6 +1,5 @@
 ﻿using CollectorService.Interfaces;
 using Common.Attributes;
-using Common.Contracts;
 using Common.Contracts.Events;
 using Common.Contracts.Parser;
 using Common.Exceptions;
@@ -17,7 +16,7 @@ public class ParserRunner(
 	IIntegrationDispatcher dispatcher) : IParserRunner 
 {
 	public async Task<IEnumerable<ParserDataPayload>> ExecuteAsync(
-		RunParserCommand command)
+		RunParserEvent command)
 	{
 		var parserType = registry.GetParserType(command.ParserName);
 		if (parserType == null)
