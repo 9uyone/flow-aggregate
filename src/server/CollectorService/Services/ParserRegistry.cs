@@ -26,7 +26,7 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 
 	public IEnumerable<ParserDescriptorDto> GetAvailableParsers() {
 		return _parsers.Values.Select(r =>
-			new ParserDescriptorDto(r.Info.Name, r.Info.DisplayName, r.Info.DataType));
+			new ParserDescriptorDto(r.Info.Name, r.Info.DisplayName, r.Info.Description));
 	}
 
 	public async Task<ParserDetailsDto?> GetParserDetailsAsync(string name) {
@@ -43,6 +43,6 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 		}
 
 		var info = reg.Info;
-		return new ParserDetailsDto(info.Name, info.DisplayName, info.Description, info.DataType, parameters);
+		return new ParserDetailsDto(info.Name, info.DisplayName, info.Description, parameters);
 	}
 }

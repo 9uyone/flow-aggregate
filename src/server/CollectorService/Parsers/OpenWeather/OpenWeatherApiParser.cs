@@ -8,7 +8,7 @@ using Common.Contracts.Parser;
 
 namespace CollectorService.Parsers.OpenWeather;
 
-[ParserInfo("openWeather", "Current weather by city name", DataType.Weather)]
+[ParserInfo("openWeather", "Current weather by city name")]
 [ParserParameter("city", "City name", isRequired: true)]
 [ParserParameter("units", "metric or imperial", false)]
 public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : IDataParser {
@@ -35,6 +35,7 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 			?? throw new ExternalServiceException("Failed to retrieve weather data from OpenWeather API.");
 
 		return [new ParserDataPayload {
+			Category = "Temperature",
 			Source = "openweathermap.org",
 			Metric = $"weather_{city.ToLower().Replace(" ", "_")}",
 			Value = (decimal)weather.Main.Temp,
@@ -48,7 +49,7 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 		}];
 	}
 
-	// Default cities
+	// Cities example
 	public Task<IEnumerable<LookupOptionDto>> GetParameterLookupsAsync(string parameterName) {
 		if (parameterName == "city") {
 			return Task.FromResult<IEnumerable<LookupOptionDto>>(new List<LookupOptionDto>

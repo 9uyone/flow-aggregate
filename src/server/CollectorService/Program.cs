@@ -1,5 +1,4 @@
 using CollectorService;
-using CollectorService.Extensions;
 using CollectorService.Interfaces;
 using CollectorService.Services;
 using Common.Extensions;
@@ -15,6 +14,12 @@ using Common.Entities;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.LoadFromEnvFile(builder.Environment);
+var pluginsPath = builder.Configuration.GetValue<string>("PluginsPath") ?? Path.Combine(builder.Environment.ContentRootPath, "Plugins");
+
+using var loggerFactory = LoggerFactory.Create(logging => logging.AddConsole());
+var logger = loggerFactory.CreateLogger("PluginLoader");
+builder.Services.AddInternalParsers();
+builder.Services.AddExternalPlugins(pluginsPath, logger);
 
 builder.Services.AddOpenApi();
 builder.Services.AddAuthorization();
@@ -25,8 +30,6 @@ builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddGlobalExceptionHandler();
 builder.Services.AddScoped<IParserRunner, ParserRunner>();
 builder.Services.AddSingleton<IParserRegistry, ParserRegistry>();
-builder.Services.AddInternalParsers();
-//builder.Services.AddExternalPlugins(Path.Combine(builder.Environment.ContentRootPath, "plugins"));
 builder.Services.AddHealthChecks();
 builder.Services.AddRedisCache(builder.Configuration);
 

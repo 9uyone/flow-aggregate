@@ -39,7 +39,7 @@ public static class CollectorEndpoints {
 				Metric = dto.Metric,
 				Value = dto.Value,
 				RawContent = dto.RawContent,
-				Type = DataType.Unknown, // Determine from parser or config
+				Category = dto.Category, // Determine from parser or config
 				Metadata = dto.Metadata,
 				CorrelationId = correlationId,
 				ConfigId = config.Id

@@ -13,7 +13,7 @@ public class ParserSyncJob(
 	ILogger<ParserSyncJob> logger)
 {
 	public async Task UpdateScheduleAsync() {
-		var (activeConfigs, _) = await repo.FindAsync(c => c.IsEnabled == true);
+		var (activeConfigs, _) = await repo.FindAsync(c => c.IsEnabled == true && c.SourceType == Common.Enums.ParserSourceType.Internal);
 		
 		foreach (var config in activeConfigs) {
 			if (CrontabSchedule.TryParse(config.Internal?.CronExpression) == null)

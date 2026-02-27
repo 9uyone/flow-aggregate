@@ -10,6 +10,7 @@ using MongoDB.Driver;
 using StorageService.Contracts.ParserUserConfig;
 using StorageService.Contracts.ParserUserConfig.Get;
 using StorageService.Validation;
+using System.Security.Cryptography;
 
 namespace StorageService;
 
@@ -168,7 +169,11 @@ internal class ParserConfigService(
 	}
 
 	private static string GenerateToken() {
-		return Guid.NewGuid().ToString("N");
+		byte[] randomNumber = new byte[32];
+		using (var rng = RandomNumberGenerator.Create()) {
+			rng.GetBytes(randomNumber);
+		}
+		return Convert.ToHexString(randomNumber);
 	}
 
 	private static UserConfigBaseDto MapToDto(ParserUserConfig config) {
