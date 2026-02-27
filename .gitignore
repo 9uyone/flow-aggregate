@@ -11,6 +11,8 @@
 *.sln.docstates
 *.env
 notes.md
+/src/server/CollectorService/Plugins/*
+!/src/server/CollectorService/Plugins/.gitkeep
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -417,4 +419,3 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
-/src/server/CollectorService/plugins/*
