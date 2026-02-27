@@ -21,5 +21,5 @@ public class DataCollectedEvent: BaseEntity, ICorrelatedMessage {
 	public required DataType Type { get; set; } // "Price", "Temperature", "Stock"
 	public Dictionary<string, string>? Metadata { get; init; } // Additional data
 
-	public Guid? ConfigId { get; set; } = null; // Related ParserUserConfig ID
+	public required Guid ConfigId { get; set; } // Related ParserUserConfig ID
 };

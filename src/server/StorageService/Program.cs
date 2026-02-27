@@ -2,9 +2,12 @@ using Common.Constants;
 using Common.Extensions;
 using Common.Entities;
 using StorageService.Endpoints;
+using StorageService;
 using Common.Config;
 using Common.Contracts.Events;
 using StorageService.Entities;
+using CollectorService.Interfaces;
+using Common.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +25,9 @@ builder.Services.AddGlobalExceptionHandler();
 builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks();
+
+builder.Services.AddScoped<ParserConfigService>();
+builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
 
 var app = builder.Build();
 

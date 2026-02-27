@@ -9,6 +9,8 @@ using Nelibur.ObjectMapper;
 using Common.Contracts.Parser;
 using Common.Config;
 using Common.Contracts.Events;
+using Common.Constants;
+using Common.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +29,9 @@ builder.Services.AddInternalParsers();
 //builder.Services.AddExternalPlugins(Path.Combine(builder.Environment.ContentRootPath, "plugins"));
 builder.Services.AddHealthChecks();
 builder.Services.AddRedisCache(builder.Configuration);
+
+builder.Services.AddAppMongo(builder.Configuration);
+builder.Services.AddAppMongoRepository<ParserUserConfig>(MongoCollections.ParserUserConfigs);
 
 TinyMapper.Bind<ParserDataPayload, DataCollectedEvent>();
 

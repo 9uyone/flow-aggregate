@@ -36,12 +36,12 @@ public static partial class StorageEndpoints {
 			var pendingSetKey = $"running_tasks:{userId}";
 			var pendingCorrelationIds = await db.SetMembersAsync(pendingSetKey);
 			
-			var pendingTasks = new List<TaskStatusDto>();
+			var runningTasks = new List<TaskStatusDto>();
 			foreach (var memberId in pendingCorrelationIds) {
 				if (Guid.TryParse(memberId.ToString(), out var correlationId) && !correlationIdsInDb.Contains(correlationId)) {
 					var status = await cache.GetStringAsync($"task_status:{correlationId}");
 					if (status != null) {
-						pendingTasks.Add(new TaskStatusDto { 
+						runningTasks.Add(new TaskStatusDto { 
 							CorrelationId = correlationId,
 							Status = status 
 						});
@@ -49,8 +49,8 @@ public static partial class StorageEndpoints {
 				}
 			}
 			
-			tasksFromDb.AddRange(pendingTasks); // from Mongo + Redis
-			var totalWithPending = totalCount + pendingTasks.Count;
+			tasksFromDb.AddRange(runningTasks); // from Mongo + Redis
+			var totalWithPending = totalCount + runningTasks.Count;
 			
 			return Results.Ok(
 				tasksFromDb.ToPagedResponse(totalWithPending, page, pageSize)

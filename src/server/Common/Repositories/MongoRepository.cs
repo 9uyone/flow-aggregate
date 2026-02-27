@@ -30,6 +30,9 @@ public class MongoRepository<T>(IMongoDatabase database, string collectionName) 
 		return (items, totalCount);
 	}
 
+	public async Task<bool> AnyAsync(Expression<Func<T, bool>> filter) =>
+		await _collection.Find(filter).AnyAsync();
+
 	public async Task<ReplaceOneResult> ReplaceOneAsync(Expression<Func<T, bool>> filter, T entity) =>
 		await _collection.ReplaceOneAsync(filter, entity);
 

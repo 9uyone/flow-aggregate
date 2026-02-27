@@ -1,13 +1,7 @@
-﻿using CollectorService.Interfaces;
-using Common.Contracts.Events;
-using Common.Contracts.Parser;
-using Common.Entities;
+﻿using Common.Enums;
 using Common.Extensions;
-using Common.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
-using StorageService.Contracts;
-using StorageService.Validation;
+using StorageService.Contracts.ParserUserConfig;
 
 namespace StorageService.Endpoints;
 
@@ -16,123 +10,81 @@ public static partial class StorageEndpoints {
 		var group = app.MapGroup("/storage/parser-cfg");
 
 		// Create
-		group.MapPost("/", async (
-			ParserUserConfigDto dto,
-			IMongoRepository<ParserUserConfig> repo,
-			HttpContext httpContext,
-			IConfiguration config) => 
-		{
-			var interval = config.GetValue<int>("ParserConfigs:minIntervalSeconds");
-			if (!CronValidator.TryValidate(dto.CronExpression, minIntervalSeconds: interval, out var error))
-				return Results.BadRequest(error);
+		group.MapPost("/internal", async (
+			UserConfigCreateInternalDto dto,
+			ParserConfigService service,
+			HttpContext httpContext) => {
+				var userId = httpContext.User.GetUserId()!;
+				await service.CreateInternalAsync(dto, userId);
+				return Results.Ok();
+			}).RequireAuthorization();
 
-			var created = await repo.CreateAsync(new ParserUserConfig {
-				UserId = httpContext.User.GetUserId()!,
-				ParserName = dto.ParserName,
-				CronExpression = dto.CronExpression,
-				IsEnabled = dto.IsEnabled,
-				Options = dto.Options,
-			});
-
-			return Results.Created($"/storage/parser-cfg/{created.Id}", created);
-		}).RequireAuthorization();
+		group.MapPost("/external", async (
+			UserConfigCreateExternalDto dto,
+			ParserConfigService service,
+			HttpContext httpContext) => {
+				var userId = httpContext.User.GetUserId()!;
+				var token = await service.CreateExternalAsync(dto, userId);
+				return Results.Ok(new { Token = token });
+			}).RequireAuthorization();
 
 		// Get all for user
 		group.MapGet("/", async (
-			IMongoRepository<ParserUserConfig> repo,
+			ParserConfigService service,
 			HttpContext httpContext,
 			[FromQuery] int? page,
 			[FromQuery] int? pageSize,
 			[FromQuery] bool? oldFirst) => {
 				var userId = httpContext.User.GetUserId()!;
-				var (configs, totalCount) = await repo.FindAsync(c => c.UserId == userId, page, pageSize, oldFirst);
-
+				var (configs, totalCount) = await service.GetAllForUserAsync(userId, page, pageSize, oldFirst);
 				return Results.Ok(configs.ToPagedResponse(totalCount, page, pageSize));
 			}).RequireAuthorization();
 
 		// Get by id
 		group.MapGet("/{id}", async (
 			Guid id,
-			IMongoRepository<ParserUserConfig> repo,
+			ParserConfigService service,
 			HttpContext httpContext) => {
 				var userId = httpContext.User.GetUserId()!;
-
-				var config = await repo.GetByIdAsync(id);
-				if (config == null || config.UserId != userId)
-					return Results.NotFound();
-
+				var config = await service.GetByIdAsync(id, userId);
 				return Results.Ok(config);
 			}).RequireAuthorization();
 
-		// Update
+		// Patch
 		group.MapPatch("/{id}", async (
 			Guid id,
-			ParserUserConfigPatchDto dto,
-			IMongoRepository<ParserUserConfig> repo,
-			HttpContext httpContext,
-			IConfiguration config) => 
-		{
-			var interval = config.GetValue<int>("ParserConfigs:minIntervalSeconds");
-			if (!CronValidator.TryValidate(dto.CronExpression, minIntervalSeconds: 60, out var error))
-				return Results.BadRequest(error);
+			UserConfigPatchDto dto,
+			ParserConfigService service,
+			HttpContext httpContext) => {
+				var userId = httpContext.User.GetUserId()!;
+				var config = await service.GetByIdAsync(id, userId);
+				
+				if (config.SourceType == ParserSourceType.Internal)
+					await service.UpdateInternalAsync(id, dto, userId);
+				else
+					await service.UpdateExternalAsync(id, dto, userId);
 
-			var userId = httpContext.User.GetUserId()!;
-
-			var existing = await repo.GetByIdAsync(id);
-			if (existing == null || existing.UserId != userId)
-				return Results.NotFound();
-
-			var updates = new List<UpdateDefinition<ParserUserConfig>>();
-			if (dto.CronExpression != null)
-				updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.CronExpression, dto.CronExpression));
-			if (dto.IsEnabled.HasValue)
-				updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.IsEnabled, dto.IsEnabled.Value));
-			if (dto.Options is not null)
-				updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.Options, dto.Options));
-
-			if (updates.Count == 0)
-				return Results.BadRequest("No fields to update");
-
-			var combinedUpdate = Builders<ParserUserConfig>.Update.Combine(updates);
-			await repo.UpdateOneAsync(c => c.Id == id, combinedUpdate);
-
-			return Results.NoContent();
-		}).RequireAuthorization();
+				return Results.NoContent();
+			}).RequireAuthorization();
 
 		// Delete
 		group.MapDelete("/{id}", async (
 			Guid id,
-			IMongoRepository<ParserUserConfig> repo,
+			ParserConfigService service,
 			HttpContext httpContext) => {
 				var userId = httpContext.User.GetUserId()!;
-				var existing = await repo.GetByIdAsync(id);
-				if (existing == null || existing.UserId != userId)
-					return Results.NotFound();
-
-				await repo.DeleteAsync(c => c.Id == id);
+				await service.DeleteAsync(id, userId);
 				return Results.NoContent();
 			}).RequireAuthorization();
 
 		// Run config
 		group.MapPost("/{id}/run", async (
 			Guid id,
-			IMongoRepository<ParserUserConfig> repo,
-			IIntegrationDispatcher dispatcher) => {
-				var config = await repo.GetByIdAsync(id);
-				if (config == null) return Results.NotFound();
-
-				var command = new RunParserEvent {
-					ConfigId = config.Id,
-					ParserName = config.ParserName,
-					UserId = config.UserId,
-					Options = config.Options,
-					CorrelationId = Guid.GenCorrelationId(),
-				};
-
-				await dispatcher.DispatchAsync(command);
-				return Results.Accepted(value: new RunParserResult { 
-					CorrelationId = command.CorrelationId.Value
-				});
+			ParserConfigService service,
+			HttpContext httpContext) => {
+				var userId = httpContext.User.GetUserId();
+				var result = await service.RunConfigAsync(id, userId!);
+				return Results.Accepted(value: result);
 			}).RequireAuthorization();
 	}
 }

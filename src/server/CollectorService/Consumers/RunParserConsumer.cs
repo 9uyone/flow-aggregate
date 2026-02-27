@@ -17,15 +17,15 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 			
 			var redisDb = redis.GetDatabase();
 			var statusKey = $"task_status:{msg.CorrelationId}";
-			var pendingSetKey = $"running_tasks:{msg.UserId}";
+			var runningSetKey = $"running_tasks:{msg.UserId}";
 			var ttl = TimeSpan.FromMinutes(CacheTtlMinutes);
 			
 			await cache.SetStringAsync(statusKey, ExecutionStatus.Running.ToString(), new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = ttl });
-			await redisDb.SetAddAsync(pendingSetKey, msg.CorrelationId.ToString());
+			await redisDb.SetAddAsync(runningSetKey, msg.CorrelationId.ToString());
 
 			await runner.ExecuteAsync(msg);
 
-			await redisDb.SetRemoveAsync(pendingSetKey, msg.CorrelationId.ToString());
+			await redisDb.SetRemoveAsync(runningSetKey, msg.CorrelationId.ToString());
 			await cache.RemoveAsync(statusKey);
 
 			await context.Publish(new ParserStatusUpdatedEvent {

@@ -1,20 +1,28 @@
-﻿namespace Common.Entities;
+﻿using Common.Enums;
+using MongoDB.Bson.Serialization.Attributes;
+
+namespace Common.Entities;
 
 public class ParserUserConfig: BaseEntity {
-	public Guid UserId { get; init; } = Guid.Empty;
-
-	// from /collector/run/{name}
-	public string ParserName { get; init; } = string.Empty;
-
-	public string TargetUrl { get; init; } = string.Empty;
-
-	public string CronExpression { get; init; } = string.Empty;
+	[BsonRepresentation(MongoDB.Bson.BsonType.String)]
+	public ParserSourceType SourceType { get; init; } = ParserSourceType.Internal;
+	public required Guid UserId { get; init; }
+	public required string ParserName { get; init; }
 	public bool IsEnabled { get; init; } = true;
-
-	// from body of /collector/run/{name}
-	public IDictionary<string, string> Options { get; init; } = new Dictionary<string, string>();
 
 	public DateTime? LastRunUtc { get; set; }
 	public bool? LastStatus { get; set; }
 	public string? LastErrorMessage { get; set; }
+
+	public InternalOptions? Internal { get; set; }
+	public ExternalOptions? External { get; set; }
+}
+
+public class InternalOptions {
+	public required string CronExpression { get; init; }
+	public IDictionary<string, string>? Options { get; init; }// = new Dictionary<string, string>();
+}
+
+public class ExternalOptions {
+	public required string TokenHash { get; init; }
 }

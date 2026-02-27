@@ -16,13 +16,13 @@ public class ParserSyncJob(
 		var (activeConfigs, _) = await repo.FindAsync(c => c.IsEnabled == true);
 		
 		foreach (var config in activeConfigs) {
-			if (CrontabSchedule.TryParse(config.CronExpression) == null)
-				logger.LogWarning("Invalid cron expression for ParserConfig {ConfigId}: {CronExpression}", config.Id, config.CronExpression);
+			if (CrontabSchedule.TryParse(config.Internal?.CronExpression) == null)
+				logger.LogWarning("Invalid cron expression for ParserConfig {ConfigId}: {CronExpression}", config.Id, config.Internal?.CronExpression);
 
 			RecurringJob.AddOrUpdate(
 				$"run-parser-{config.Id}",
 				() => SendCommandAsync(config),
-				config.CronExpression);
+				config.Internal.CronExpression);
 		}
 
 		/*// Remove jobs for configs that no longer exist in the database
@@ -43,7 +43,7 @@ public class ParserSyncJob(
 			ConfigId = config.Id!,
 			ParserName = config.ParserName,
 			UserId = config.UserId,
-			Options = config.Options,
+			Options = config.Internal?.Options,
 		});
 	}
 }

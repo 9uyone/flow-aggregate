@@ -1,9 +1,11 @@
 ﻿using CollectorService.Interfaces;
 using Common.Contracts.Events;
 using Common.Contracts.Parser;
+using Common.Entities;
+using Common.Enums;
 using Common.Extensions;
+using Common.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Nelibur.ObjectMapper;
 
 namespace CollectorService;
 
@@ -15,17 +17,50 @@ public static class CollectorEndpoints {
 		group.MapPost("/ingest", async (
 			ParserDataPayload dto,
 			IIntegrationDispatcher dispatcher,
-			HttpContext httpContext) =>
-		{
-			var userId = httpContext.User.GetUserId();
+			IMongoRepository<ParserUserConfig> repository,
+			HttpContext httpContext) => {
 
-			var ev = TinyMapper.Map<DataCollectedEvent>(dto);
-			ev.CorrelationId = Guid.GenCorrelationId();
+			var token = httpContext.Request.Headers["X-Parser-Token"].ToString();
+			if (string.IsNullOrEmpty(token))
+				return Results.Unauthorized();
 
-			await dispatcher.DispatchAsync(ev);
+			var (configs, _) = await repository.FindAsync(
+				c => c.External!.TokenHash == SecurityHelper.HashToken(token));
+			var config = configs.FirstOrDefault();
+			if (config == null || !config.IsEnabled)
+				return Results.Forbid();
+
+			var correlationId = Guid.GenCorrelationId();
+
+			var dataEvent = new DataCollectedEvent {
+				ParserName = config.ParserName,
+				UserId = config.UserId,
+				Source = dto.Source,
+				Metric = dto.Metric,
+				Value = dto.Value,
+				RawContent = dto.RawContent,
+				Type = DataType.Unknown, // Determine from parser or config
+				Metadata = dto.Metadata,
+				CorrelationId = correlationId,
+				ConfigId = config.Id
+			};
+
+			var statusEvent = new ParserStatusUpdatedEvent {
+				ConfigId = config.Id,
+				CorrelationId = correlationId,
+				UserId = config.UserId,
+				ParserName = config.ParserName,
+				IsSuccess = true,
+				ErrorMessage = null,
+				FinishedAtUtc = DateTime.UtcNow,
+				Options = config.External?.TokenHash != null ? new Dictionary<string, string>() : null
+			};
+
+			await dispatcher.DispatchAsync(dataEvent);
+			await dispatcher.DispatchAsync(statusEvent);
+
 			return Results.Accepted();
-		})
-		.RequireAuthorization();
+		});
 
 		group.MapPost("/run/{name}", async (
 			string name,

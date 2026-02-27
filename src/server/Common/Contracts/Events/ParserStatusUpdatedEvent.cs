@@ -1,7 +1,7 @@
 ﻿namespace Common.Contracts.Events;
 
 public record ParserStatusUpdatedEvent : ICorrelatedMessage {
-	public Guid? ConfigId { get; init; }
+	public required Guid ConfigId { get; init; }
 	public Guid? CorrelationId { get; set; }
 	public required Guid UserId { get; set; }
 
