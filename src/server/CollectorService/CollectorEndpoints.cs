@@ -2,7 +2,6 @@
 using Common.Contracts.Events;
 using Common.Contracts.Parser;
 using Common.Entities;
-using Common.Enums;
 using Common.Extensions;
 using Common.Interfaces;
 using Microsoft.AspNetCore.Mvc;

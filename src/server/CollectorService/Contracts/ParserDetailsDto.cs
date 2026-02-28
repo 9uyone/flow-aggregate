@@ -1,6 +1,4 @@
-﻿using Common.Enums;
-
-namespace CollectorService.Contracts;
+﻿namespace CollectorService.Contracts;
 
 public record ParserDetailsDto(
 	string Name,

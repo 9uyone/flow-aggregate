@@ -1,7 +1,4 @@
 ﻿using Common.Entities;
-using Common.Enums;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 
 namespace Common.Contracts.Events;
 
