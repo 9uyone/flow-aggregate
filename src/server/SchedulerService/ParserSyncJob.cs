@@ -3,6 +3,7 @@ using Common.Contracts.Events;
 using Common.Entities;
 using Common.Interfaces;
 using Hangfire;
+using Hangfire.Storage;
 using NCrontab;
 
 namespace SchedulerService;
@@ -13,29 +14,29 @@ public class ParserSyncJob(
 	ILogger<ParserSyncJob> logger)
 {
 	public async Task UpdateScheduleAsync() {
-		var (activeConfigs, _) = await repo.FindAsync(c => c.IsEnabled == true && c.SourceType == Common.Enums.ParserSourceType.Internal);
-		
-		foreach (var config in activeConfigs) {
-			if (CrontabSchedule.TryParse(config.Internal?.CronExpression) == null)
-				logger.LogWarning("Invalid cron expression for ParserConfig {ConfigId}: {CronExpression}", config.Id, config.Internal?.CronExpression);
+		var activeConfigs = await GetAllActiveInternalConfigsAsync();
+		var expectedJobIds = new HashSet<string>();
 
-			RecurringJob.AddOrUpdate(
-				$"run-parser-{config.Id}",
-				() => SendCommandAsync(config),
-				config.Internal.CronExpression);
+		foreach (var config in activeConfigs) {
+			if (CrontabSchedule.TryParse(config.Internal?.CronExpression) == null) {
+				logger.LogWarning("Invalid cron expression for ParserConfig {ConfigId}: {CronExpression}", config.Id, config.Internal?.CronExpression);
+				continue;
+			}
+
+			var jobId = $"run-parser-{config.Id}";
+			RecurringJob.AddOrUpdate(jobId, () => SendCommandAsync(config), config.Internal!.CronExpression);
+			expectedJobIds.Add(jobId);
 		}
 
-		/*// Remove jobs for configs that no longer exist in the database
-		var allConfigIds = (await repo.FindAsync(c => true)).Select(c => $"run-parser-{c.Id}").ToHashSet();
-		var monitoringApi = JobStorage.Current.GetMonitoringApi();
-		var existingJobIds = monitoringApi.ScheduledJobs(0, int.MaxValue).Select(j => j.Key).ToHashSet();
+		using var connection = JobStorage.Current.GetConnection();
+		var existingJobs = connection.GetRecurringJobs();
 
-		foreach (var jobId in existingJobIds) {
-			if (jobId.StartsWith("run-parser-") && !allConfigIds.Contains(jobId)) {
-				RecurringJob.RemoveIfExists(jobId);
-				logger.LogInformation("Removed recurring job {JobId} for deleted config", jobId);
+		foreach (var job in existingJobs) {
+			if (job.Id.StartsWith("run-parser-") && !expectedJobIds.Contains(job.Id)) {
+				RecurringJob.RemoveIfExists(job.Id);
+				logger.LogInformation("Removed stale recurring job {JobId}", job.Id);
 			}
-		}*/
+		}
 	}
 
 	public async Task SendCommandAsync(ParserUserConfig config) {
@@ -45,5 +46,23 @@ public class ParserSyncJob(
 			UserId = config.UserId,
 			Options = config.Internal?.Options,
 		});
+	}
+
+	private async Task<List<ParserUserConfig>> GetAllActiveInternalConfigsAsync() {
+		var result = new List<ParserUserConfig>();
+		int page = 1;
+		const int pageSize = 100;
+		int totalCount;
+
+		do {
+			var (items, total) = await repo.FindAsync(
+				c => c.IsEnabled == true && c.SourceType == Common.Enums.ParserSourceType.Internal,
+				page, pageSize);
+			result.AddRange(items);
+			totalCount = total;
+			page++;
+		} while (result.Count < totalCount);
+
+		return result;
 	}
 }
