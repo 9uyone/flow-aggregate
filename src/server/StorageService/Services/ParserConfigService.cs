@@ -6,36 +6,54 @@ using Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
 using Common.Interfaces;
+using Common.Interfaces.Parser;
 using MongoDB.Driver;
 using StorageService.Contracts.ParserUserConfig;
 using StorageService.Contracts.ParserUserConfig.Get;
 using StorageService.Validation;
 using System.Security.Cryptography;
 
-namespace StorageService;
+namespace StorageService.Services;
 
 internal class ParserConfigService(
 	IMongoRepository<ParserUserConfig> repo,
 	IConfiguration config,
-	IIntegrationDispatcher dispatcher)
+	IIntegrationDispatcher dispatcher,
+	IHttpRestClient restClient)
 {
 	public async Task CreateInternalAsync(UserConfigCreateInternalDto dto, Guid userId) {
+		var response = await restClient.GetAsync<bool>($"api/parser/{dto.ParserName}/exists_internal");
+		if (!response)
+			throw new BadRequestException($"Parser '{dto.ParserName}' not found");
+
 		var interval = config.GetValue<int>("ParserConfigs:minIntervalSeconds");
 		if (!CronValidator.TryValidate(dto.CronExpression, minIntervalSeconds: interval, out var error))
 			throw new BadRequestException(error);
 
-		if (await repo.AnyAsync(x => x.SourceType == ParserSourceType.Internal 
-			&& x.ParserName == dto.ParserName
-			&& x.Internal!.Options == dto.Options))
-				throw new BadRequestException("Parser with the same name and options already exists");
+		var isNameBusy = await repo.AnyAsync(x =>
+			x.SourceType == ParserSourceType.Internal &&
+			x.UserId == userId &&
+			x.Internal!.CustomName == dto.CustomName);
+		if (isNameBusy && !string.IsNullOrEmpty(dto.CustomName))
+			throw new BadRequestException("Parser with the same options already exists");
+
+		var (existingConfigs, _) = await repo.FindAsync(x =>
+			x.UserId == userId &&
+			x.SourceType == ParserSourceType.Internal &&
+			x.ParserName == dto.ParserName);
+		var isDuplicate = existingConfigs.Any(x =>
+			(x.Internal!.Options?.Count == dto.Options?.Count) &&
+			!(x.Internal.Options?.Except(dto.Options ?? Enumerable.Empty<KeyValuePair<string, string>>()).Any() ?? false));
+		if (isDuplicate)
+			throw new BadRequestException("Parser with the same options already exists");
 
 		await repo.CreateAsync(new ParserUserConfig {
 			UserId = userId,
 			ParserName = dto.ParserName,
 			IsEnabled = dto.IsEnabled,
 			SourceType = ParserSourceType.Internal,
-			Internal = new InternalOptions
-			{
+			Internal = new InternalOptions {
+				CustomName = dto.CustomName,
 				CronExpression = dto.CronExpression,
 				Options = dto.Options,
 			}
@@ -43,7 +61,7 @@ internal class ParserConfigService(
 	}
 
 	public async Task<string> CreateExternalAsync(UserConfigCreateExternalDto dto, Guid userId) {
-		if (await repo.AnyAsync(x => x.ParserName == dto.ParserName))
+		if (await repo.AnyAsync(x => x.UserId == userId && x.ParserName == dto.ParserName))
 			throw new BadRequestException("Parser name must be unique");
 
 		var token = GenerateToken();

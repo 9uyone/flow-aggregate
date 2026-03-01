@@ -8,6 +8,7 @@ internal class UserConfigCreateInternalDto {
 	public required string ParserName { get; init; }
 	public bool IsEnabled { get; init; } = true;
 
+	public string? CustomName { get; init; }
 	public required string CronExpression { get; init; }
-	public required IDictionary<string, string>? Options { get; init; }
+	public  IDictionary<string, string>? Options { get; init; }
 }

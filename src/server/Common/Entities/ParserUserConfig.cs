@@ -19,6 +19,7 @@ public class ParserUserConfig: BaseEntity {
 }
 
 public class InternalOptions {
+	public string? CustomName { get; init; }
 	public required string CronExpression { get; init; }
 	public IDictionary<string, string>? Options { get; init; }// = new Dictionary<string, string>();
 }

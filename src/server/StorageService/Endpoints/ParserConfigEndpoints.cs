@@ -2,6 +2,7 @@
 using Common.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using StorageService.Contracts.ParserUserConfig;
+using StorageService.Services;
 
 namespace StorageService.Endpoints;
 

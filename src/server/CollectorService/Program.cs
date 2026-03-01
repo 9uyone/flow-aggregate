@@ -10,6 +10,7 @@ using Common.Config;
 using Common.Contracts.Events;
 using Common.Constants;
 using Common.Entities;
+using Common;
 
 var builder = WebApplication.CreateBuilder(args);
 

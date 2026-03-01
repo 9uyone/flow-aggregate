@@ -91,5 +91,9 @@ public static class CollectorEndpoints {
 			var details = await registry.GetParserDetailsAsync(name);
 			return details != null ? Results.Ok(details) : Results.NotFound();
 		});
+
+		group.MapGet("/parser/{name}/exists_internal", async (string name, IParserRegistry registry) =>
+			Results.Ok( registry.GetParserType(name) != null )
+		);
 	}
 }
