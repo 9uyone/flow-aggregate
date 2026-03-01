@@ -45,6 +45,8 @@ services:
     build:
       context: ./src/server
       dockerfile: CollectorService/Dockerfile
+    volumes:
+      - ./plugins_data:/app/Plugins  # Монтуємо локальну папку в контейнер
     depends_on:
       rabbitmq:
         condition: service_healthy

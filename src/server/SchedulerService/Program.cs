@@ -24,10 +24,14 @@ app.UseExceptionHandler();
 app.UseHealthChecks("/health");
 app.UseHangfireDashboard();
 
-RecurringJob.AddOrUpdate<ParserSyncJob>(
-	"sync-all-parsers",
-	job => job.UpdateScheduleAsync(),
-	"*/5 * * * *" // every 5 minutes
-);
+using (var scope = app.Services.CreateScope()) {
+	var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+
+	recurringJobManager.AddOrUpdate<ParserSyncJob>(
+		"sync-all-parsers",
+		job => job.UpdateScheduleAsync(),
+		"*/5 * * * *"
+	);
+}
 
 app.Run();

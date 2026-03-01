@@ -32,7 +32,9 @@ WORKDIR /app
 
 # create non-root user
 RUN adduser -u 1001 -D appuser
-USER appuser
-
 COPY --from=publish /app/publish .
+# Створюємо папку Plugins та змінюємо власника для ВСІЄЇ директорії /app
+RUN mkdir -p /app/Plugins && chown -R appuser:appuser /app
+
+USER appuser
 ENTRYPOINT ["dotnet", "CollectorService.dll"]
