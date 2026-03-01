@@ -24,8 +24,10 @@ internal class ParserConfigService(
 		if (!CronValidator.TryValidate(dto.CronExpression, minIntervalSeconds: interval, out var error))
 			throw new BadRequestException(error);
 
-		if (await repo.AnyAsync(x => x.ParserName == dto.ParserName))
-			throw new BadRequestException("Parser name must be unique");
+		if (await repo.AnyAsync(x => x.SourceType == ParserSourceType.Internal 
+			&& x.ParserName == dto.ParserName
+			&& x.Internal!.Options == dto.Options))
+				throw new BadRequestException("Parser with the same name and options already exists");
 
 		await repo.CreateAsync(new ParserUserConfig {
 			UserId = userId,
