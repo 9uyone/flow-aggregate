@@ -1,6 +1,7 @@
 ﻿using CollectorService.Interfaces;
 using Common.Contracts.Events;
 using Common.Entities;
+using Common.Extensions;
 using Common.Interfaces;
 using Hangfire;
 using Hangfire.Storage;
@@ -45,6 +46,7 @@ public class ParserSyncJob(
 			ParserName = config.ParserName,
 			UserId = config.UserId,
 			Options = config.Internal?.Options,
+			CorrelationId = Guid.GenCorrelationId()
 		});
 	}
 
