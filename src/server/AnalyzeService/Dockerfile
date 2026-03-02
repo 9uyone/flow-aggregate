@@ -8,21 +8,21 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # copy csproj files (for caching)
-COPY ["ProcessorService/ProcessorService.csproj", "ProcessorService/"]
+COPY ["AnalyzeService/AnalyzeService.csproj", "AnalyzeService/"]
 COPY ["Common/Common.csproj", "Common/"]
 
-RUN dotnet restore "ProcessorService/ProcessorService.csproj"
+RUN dotnet restore "AnalyzeService/AnalyzeService.csproj"
 
 # copy everything else
 COPY . .
 
-RUN dotnet build "ProcessorService/ProcessorService.csproj" \
+RUN dotnet build "AnalyzeService/AnalyzeService.csproj" \
   -c $BUILD_CONFIGURATION \
   -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "ProcessorService/ProcessorService.csproj" \
+RUN dotnet publish "AnalyzeService/AnalyzeService.csproj" \
   -c $BUILD_CONFIGURATION \
   -o /app/publish \
   /p:UseAppHost=false
@@ -35,4 +35,4 @@ RUN adduser -u 1001 -D appuser
 USER appuser
 
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "ProcessorService.dll"]
+ENTRYPOINT ["dotnet", "AnalyzeService.dll"]

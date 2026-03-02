@@ -25,6 +25,18 @@ services:
       - internal
     env_file: .env
 
+  analyze:
+    container_name: diploma-analyze
+    build:
+      context: ./src/server
+      dockerfile: AnalyzeService/Dockerfile
+    depends_on:
+      
+    networks:
+      - internal
+    env_file: .env
+    healthcheck: *default-healthcheck
+
   auth:
     container_name: diploma-auth
     build:
@@ -54,19 +66,6 @@ services:
       - internal
     env_file: .env
     healthcheck: *default-healthcheck
-
-  # processor:
-  #   container_name: diploma-processor
-  #   build:
-  #     context: ./src/server
-  #     dockerfile: CollectorService/Dockerfile
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - internal
-  #   env_file: .env
-  #   healthcheck: *default-healthcheck
 
   scheduler:
     container_name: diploma-scheduler
