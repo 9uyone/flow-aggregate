@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
 WORKDIR /app
 EXPOSE 8080
-EXPOSE 8081
+EXPOSE 5005
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 ARG BUILD_CONFIGURATION=Release
@@ -30,9 +30,9 @@ RUN dotnet publish "Gateway/Gateway.csproj" \
 FROM base AS final
 WORKDIR /app
 
-# create non-root user
+ENV ASPNETCORE_URLS="http://+:8080;http://+:5005"
 RUN adduser -u 1001 -D appuser
 USER appuser
-
 COPY --from=publish /app/publish .
+
 ENTRYPOINT ["dotnet", "Gateway.dll"]

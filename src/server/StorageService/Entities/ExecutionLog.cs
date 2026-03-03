@@ -1,6 +1,6 @@
-﻿using Common.Contracts;
-using Common.Entities;
+﻿using Common.Entities;
 using Common.Enums;
+using Common.Interfaces;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 

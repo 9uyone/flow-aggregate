@@ -1,4 +1,6 @@
-﻿namespace Common.Contracts.Events;
+﻿using Common.Interfaces;
+
+namespace Common.Contracts.Events;
 
 public record ParserStatusUpdatedEvent : ICorrelatedMessage {
 	public Guid? ConfigId { get; init; }

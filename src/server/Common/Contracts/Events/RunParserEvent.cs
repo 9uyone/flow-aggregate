@@ -1,4 +1,6 @@
-﻿namespace Common.Contracts.Events;
+﻿using Common.Interfaces;
+
+namespace Common.Contracts.Events;
 
 public class RunParserEvent: ICorrelatedMessage {
 	public Guid? CorrelationId { get; set; }

@@ -5,10 +5,10 @@ using Ocelot.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// config
-builder.Configuration.AddOcelot();
-builder.Configuration.AddJsonFile($"ocelot.{builder.Environment.EnvironmentName}.json", optional: true);
-builder.Configuration.LoadFromEnvFile(builder.Environment);
+builder.Configuration
+	.AddOcelot(reloadOnChange: true)
+	.AddJsonFile($"ocelot.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+	.LoadFromEnvFile(builder.Environment);
 
 // Register services
 builder.Services.AddOcelot(builder.Configuration);
@@ -38,6 +38,25 @@ app.Use(async (context, next) => {
 		context.Request.Path = path.TrimEnd('/');
 	await next();
 });
+
+app.Use(async (context, next) => {
+if (context.Request.Path.StartsWithSegments("/internal")) {
+		var expectedPort = BackendDiscovery.InternalGateway.Port;
+		if (context.Connection.LocalPort != expectedPort) {
+			context.Response.StatusCode = StatusCodes.Status403Forbidden;
+			return;
+		}
+	}
+	await next();
+});
+
+/*app.Use(async (context, next) => {
+	// Копіюємо IP-адресу відправника в заголовок, який чекає Ocelot
+	if (!context.Request.Headers.ContainsKey("X-Client-Id")) {
+		context.Request.Headers.Add("X-Client-Id", context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+	}
+	await next();
+});*/
 
 app.UseCors("AllowFrontend");
 

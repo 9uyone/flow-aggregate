@@ -68,6 +68,17 @@
 			"UpstreamPathTemplate": "/api/storage/{everything}"
 		},
 
+		// Internal
+		{
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "localhost",
+					"Port": 5044
+				}
+			],
+			"UpstreamPathTemplate": "/internal/storage/{everything}"
+		},
+
 		// Local only
 		{
 			"DownstreamPathTemplate": "/hangfire/{everything}",

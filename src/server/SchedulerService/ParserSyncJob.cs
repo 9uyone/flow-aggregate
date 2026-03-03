@@ -1,8 +1,9 @@
 ﻿using CollectorService.Interfaces;
+using Common.Contracts;
 using Common.Contracts.Events;
-using Common.Entities;
+using Common.Contracts.ParserConfig;
 using Common.Extensions;
-using Common.Interfaces;
+using Common.Interfaces.Parser;
 using Hangfire;
 using Hangfire.Storage;
 using NCrontab;
@@ -10,7 +11,7 @@ using NCrontab;
 namespace SchedulerService;
 
 public class ParserSyncJob(
-	IMongoRepository<ParserUserConfig> repo,
+	IHttpRestClient httpClient,
 	IIntegrationDispatcher dispatcher,
 	ILogger<ParserSyncJob> logger)
 {
@@ -40,9 +41,9 @@ public class ParserSyncJob(
 		}
 	}
 
-	public async Task SendCommandAsync(ParserUserConfig config) {
+	public async Task SendCommandAsync(ParserConfigDto config) {
 		await dispatcher.DispatchAsync(new RunParserEvent {
-			ConfigId = config.Id!,
+			ConfigId = config.Id,
 			ParserName = config.ParserName,
 			UserId = config.UserId,
 			Options = config.Internal?.Options,
@@ -50,18 +51,18 @@ public class ParserSyncJob(
 		});
 	}
 
-	private async Task<List<ParserUserConfig>> GetAllActiveInternalConfigsAsync() {
-		var result = new List<ParserUserConfig>();
+	private async Task<List<ParserConfigDto>> GetAllActiveInternalConfigsAsync() {
+		var result = new List<ParserConfigDto>();
 		int page = 1;
 		const int pageSize = 100;
 		int totalCount;
 
 		do {
-			var (items, total) = await repo.FindAsync(
-				c => c.IsEnabled == true && c.SourceType == Common.Enums.ParserSourceType.Internal,
-				page, pageSize);
-			result.AddRange(items);
-			totalCount = total;
+			var response = await httpClient.GetAsync<PagedResponse<ParserConfigDto>>(
+				$"/internal/storage/parser-cfg/active-internal?page={page}&pageSize={pageSize}");
+			if (response == null) break;
+			result.AddRange(response.Items);
+			totalCount = response.TotalCount;
 			page++;
 		} while (result.Count < totalCount);
 

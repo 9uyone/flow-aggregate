@@ -8,8 +8,6 @@ using StorageService.Entities;
 using CollectorService.Interfaces;
 using Common.Messaging;
 using StorageService.Services;
-using Common.Interfaces.Parser;
-using Common;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,8 +27,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks();
 
 builder.Services.AddScoped<ParserConfigService>();
+builder.Services.AddScoped<ParserConfigInternalService>();
 builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
-builder.Services.AddHttpClient<IHttpRestClient, HttpRestClient>();
+builder.Services.AddMyHttpClient();
 
 var app = builder.Build();
 
@@ -38,7 +37,6 @@ if (app.Environment.IsDevelopment()) {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
 app.UseExceptionHandler();
 app.UseHealthChecks("/health");
 
@@ -46,6 +44,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapParserConfigEndpoints();
+app.MapInternalParserConfigEndpoints();
 app.MapCollectedDataEndpoints();
 app.MapTasksEndpoints();
 

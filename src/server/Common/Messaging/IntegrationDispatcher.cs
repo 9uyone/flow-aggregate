@@ -1,7 +1,7 @@
 ﻿using CollectorService.Interfaces;
-using Common.Contracts;
 using Common.Exceptions;
 using Common.Extensions;
+using Common.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 

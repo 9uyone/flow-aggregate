@@ -2,15 +2,11 @@ using CollectorService;
 using CollectorService.Interfaces;
 using CollectorService.Services;
 using Common.Extensions;
-using Common.Interfaces.Parser;
 using Common.Messaging;
 using Nelibur.ObjectMapper;
 using Common.Contracts.Parser;
 using Common.Config;
 using Common.Contracts.Events;
-using Common.Constants;
-using Common.Entities;
-using Common;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,16 +22,13 @@ builder.Services.AddOpenApi();
 builder.Services.AddAuthorization();
 builder.Services.AddAppRabbit(builder.Configuration);
 builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
-builder.Services.AddHttpClient<IHttpRestClient, HttpRestClient>();
+builder.Services.AddMyHttpClient();
 builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddGlobalExceptionHandler();
 builder.Services.AddScoped<IParserRunner, ParserRunner>();
 builder.Services.AddSingleton<IParserRegistry, ParserRegistry>();
 builder.Services.AddHealthChecks();
 builder.Services.AddRedisCache(builder.Configuration);
-
-builder.Services.AddAppMongo(builder.Configuration);
-builder.Services.AddAppMongoRepository<ParserUserConfig>(MongoCollections.ParserUserConfigs);
 
 TinyMapper.Bind<ParserDataPayload, DataCollectedEvent>();
 

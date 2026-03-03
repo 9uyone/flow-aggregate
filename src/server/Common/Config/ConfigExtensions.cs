@@ -22,6 +22,7 @@ public static class ConfigExtensions {
 		if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
 			configuration.AddDotNetEnv(".env.local", LoadOptions.TraversePath());
 
+		configuration.AddEnvironmentVariables();
 		return configuration;
 	}
 }

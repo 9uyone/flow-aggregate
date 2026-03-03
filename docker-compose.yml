@@ -1,3 +1,6 @@
+x-common-env: &common-env
+    ASPNETCORE_ENVIRONMENT: Docker
+
 x-healthcheck: &default-healthcheck
   test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
   interval: 30s
@@ -13,7 +16,6 @@ services:
       dockerfile: Gateway/Dockerfile
     ports:
       - "5050:8080"
-      - "5051:8081"
     depends_on:
       - auth
       - collector
@@ -24,18 +26,22 @@ services:
       - public
       - internal
     env_file: .env
+    environment:
+      <<: *common-env
 
   analyze:
     container_name: diploma-analyze
     build:
       context: ./src/server
       dockerfile: AnalyzeService/Dockerfile
-    depends_on:
+    # depends_on:
       
     networks:
       - internal
-    env_file: .env
     healthcheck: *default-healthcheck
+    env_file: .env
+    environment:
+      <<: *common-env
 
   auth:
     container_name: diploma-auth
@@ -49,8 +55,10 @@ services:
         condition: service_healthy
     networks:
       - internal
-    env_file: .env
     healthcheck: *default-healthcheck
+    env_file: .env
+    environment:
+      <<: *common-env
 
   collector:
     container_name: diploma-collector
@@ -64,8 +72,10 @@ services:
         condition: service_healthy
     networks:
       - internal
-    env_file: .env
     healthcheck: *default-healthcheck
+    env_file: .env
+    environment:
+      <<: *common-env
 
   scheduler:
     container_name: diploma-scheduler
@@ -79,8 +89,10 @@ services:
         condition: service_healthy
     networks:
       - internal
-    env_file: .env
     healthcheck: *default-healthcheck
+    env_file: .env
+    environment:
+      <<: *common-env
 
   storage:
     container_name: diploma-storage
@@ -94,8 +106,10 @@ services:
         condition: service_healthy
     networks:
       - internal
-    env_file: .env
     healthcheck: *default-healthcheck
+    env_file: .env
+    environment:
+      <<: *common-env
 
   # --- Others ---
   rabbitmq:

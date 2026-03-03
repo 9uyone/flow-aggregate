@@ -1,4 +1,4 @@
-﻿using Common.Contracts;
+﻿using Common.Interfaces;
 
 namespace Storage.Contracts;
 

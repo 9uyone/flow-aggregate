@@ -90,9 +90,31 @@
 				"AuthenticationProviderKey": "Bearer",
 				"AllowedScopes": []
 			}
+		},
+
+		// Internal
+		{
+			"DownstreamPathTemplate": "/internal/storage/{everything}",
+			"DownstreamScheme": "http",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "storage",
+					"Port": 8080
+				}
+			],
+			"UpstreamPathTemplate": "/internal/storage/{everything}",
+			"UpstreamHttpMethod": [ "GET" ]
+			//"RateLimitOptions": {  }
 		}
 	],
 	"GlobalConfiguration": {
-		"BaseUrl": "https://localhost:8081"
+		"BaseUrl": "https://localhost:8081",
+		"RateLimitOptions": {
+			"EnableRateLimiting": false,
+			"DisableRateLimitHeaders": false,
+			"QuotaExceededMessage": "Too many requests!",
+			"HttpStatusCode": 429,
+			"ClientIdHeader": "X-Client-Id"
+		}
 	}
 }

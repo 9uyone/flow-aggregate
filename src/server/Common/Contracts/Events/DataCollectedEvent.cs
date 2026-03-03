@@ -1,4 +1,5 @@
 ﻿using Common.Entities;
+using Common.Interfaces;
 
 namespace Common.Contracts.Events;
 
