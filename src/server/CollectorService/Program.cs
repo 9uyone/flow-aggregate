@@ -7,6 +7,9 @@ using Nelibur.ObjectMapper;
 using Common.Contracts.Parser;
 using Common.Config;
 using Common.Contracts.Events;
+using CollectorService.Workers;
+using CollectorService.Extensions;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +32,12 @@ builder.Services.AddScoped<IParserRunner, ParserRunner>();
 builder.Services.AddSingleton<IParserRegistry, ParserRegistry>();
 builder.Services.AddHealthChecks();
 builder.Services.AddRedisCache(builder.Configuration);
+builder.Services.AddHostedService<ParserDiscoveryWorker>();
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
+});
 
 TinyMapper.Bind<ParserDataPayload, DataCollectedEvent>();
 

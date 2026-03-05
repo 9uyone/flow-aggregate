@@ -4,11 +4,13 @@ using Common.Attributes;
 using Common.Exceptions;
 using Common.Interfaces.Parser;
 using System.Reflection;
+using Common.Enums;
+using CollectorService.Extensions;
 
 namespace CollectorService.Services;
 
 public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
-	private sealed record ParserRegistration(Type ParserType, ParserInfoAttribute Info);
+	private sealed record ParserRegistration(Type ParserType, ParserInfoAttribute Info, ParserSourceType SourceType, IEnumerable<string>? MetricFields);
 
 	private readonly Dictionary<string, ParserRegistration> _parsers = new(StringComparer.OrdinalIgnoreCase);
 
@@ -16,22 +18,32 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 		foreach (var parser in allParsers) {
 			var type = parser.GetType();
 			var info = type.GetCustomAttribute<ParserInfoAttribute>();
-			if (info != null)
-				_parsers[info.Name] = new ParserRegistration(type, info);
+			if (info == null) continue;
+
+			var source = type.Assembly == typeof(ParserRegistry).Assembly 
+				? ParserSourceType.Internal 
+				: ParserSourceType.Plugin;
+
+			var metricFields = type.GetCustomAttributes<ParserMetricsAttribute>()
+				.SelectMany(a => a.MetricFields)
+				.Distinct()
+				.ToList();
+
+			_parsers[info.Slug] = new ParserRegistration(type, info, source, metricFields);
 		}
 	}
 
-	public Type? GetParserType(string name) =>
-		_parsers.TryGetValue(name, out var reg) ? reg.ParserType : null;
+	public Type? GetParserType(string slug) =>
+		_parsers.TryGetValue(slug, out var reg) ? reg.ParserType : null;
 
 	public IEnumerable<ParserDescriptorDto> GetAvailableParsers() {
 		return _parsers.Values.Select(r =>
-			new ParserDescriptorDto(r.Info.Name, r.Info.DisplayName, r.Info.Description));
+			new ParserDescriptorDto(r.Info.Slug.ToSlug(), r.Info.DisplayName, r.Info.Description, r.SourceType, r.MetricFields));
 	}
 
-	public async Task<ParserDetailsDto?> GetParserDetailsAsync(string name) {
-		if (!_parsers.TryGetValue(name, out var reg))
-			throw new ParserNotFoundException(name);
+	public async Task<ParserDetailsDto?> GetParserDetailsAsync(string slug) {
+		if (!_parsers.TryGetValue(slug, out var reg))
+			throw new ParserNotFoundException(slug);
 
 		var paramsAttr = reg.ParserType.GetCustomAttributes<ParserParameterAttribute>();
 		var parser = sp.GetRequiredService(reg.ParserType) as IDataParser;
@@ -43,6 +55,6 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 		}
 
 		var info = reg.Info;
-		return new ParserDetailsDto(info.Name, info.DisplayName, info.Description, parameters);
+		return new ParserDetailsDto(info.Slug, info.DisplayName, info.Description, parameters);
 	}
 }

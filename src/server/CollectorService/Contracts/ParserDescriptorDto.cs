@@ -1,3 +1,11 @@
-﻿namespace CollectorService.Contracts;
+﻿using Common.Enums;
 
-public record ParserDescriptorDto(string Name, string DisplayName, string Description);
+namespace CollectorService.Contracts;
+
+public record ParserDescriptorDto(
+	string Slug, 
+	string DisplayName, 
+	string Description,
+	ParserSourceType SourceType,
+	IEnumerable<string>? MetricFields
+);

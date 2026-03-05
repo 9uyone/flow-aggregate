@@ -29,7 +29,7 @@ public class ParserRunner(
 		foreach (var entry in data) {
 			var ev = TinyMapper.Map<DataCollectedEvent>(entry);
 			ev.UserId = command.UserId;
-			ev.ParserName = info.Name;
+			ev.ParserSlug = info.Slug;
 			ev.Category = entry.Category;
 			ev.CorrelationId = command.CorrelationId.EnsureCorrelationId();
 			ev.ConfigId = command.ConfigId;

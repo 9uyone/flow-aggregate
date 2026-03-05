@@ -3,10 +3,11 @@ using Common.Constants;
 using Common.Extensions;
 using Common.Interfaces.Parser;
 using Common.Contracts.Parser;
+using System.Globalization;
 
 namespace CollectorService.Parsers.NbuUsd;
 
-[ParserInfo("nbuExchangeRate", "NBU Currency Exchange Rates", "Parses currency exchange rates to UAH from the National Bank of Ukraine")]
+[ParserInfo("nbu-exchange", "NBU Currency Exchange Rates", "Parses currency exchange rates to UAH from the National Bank of Ukraine")]
 [ParserParameter("valcode", "Requested currency\nBy default is USD", false)]
 [ParserParameter("date", "Requested date in format YYYYMMDD.\nBy default is current", false)]
 public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyParser> logger) : IDataParser {
@@ -24,13 +25,13 @@ public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyPa
 			Category = "Currency",
 			Source = "bank.gov.ua",
 			Metric = $"{valcode.ToUpper()}_UAH",
+			CapturedAtUtc = DateTime.ParseExact(rate.ExchangeDate, "YYYYMMDD", CultureInfo.InvariantCulture).ToUniversalTime(),
 			Value = rate.Rate,
 			Metadata = new Dictionary<string, string>
 			{
-				["exchangeDate"] = rate.ExchangeDate,
 				[MetadataKeys.Unit] = "UAH per " + valcode.ToUpper(),
 				[MetadataKeys.Provider] = "National bank of Ukraine"
-			}
+			},
 		}];
 	}
 

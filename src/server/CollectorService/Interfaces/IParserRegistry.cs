@@ -3,7 +3,7 @@
 namespace CollectorService.Interfaces;
 
 public interface IParserRegistry {
-	Type? GetParserType(string name);
+	Type? GetParserType(string slug);
 	IEnumerable<ParserDescriptorDto> GetAvailableParsers();
-	Task<ParserDetailsDto?> GetParserDetailsAsync(string name);
+	Task<ParserDetailsDto?> GetParserDetailsAsync(string slug);
 }

@@ -31,7 +31,7 @@ public static class CollectorEndpoints {
 				var correlationId = Guid.GenCorrelationId();
 
 				var dataEvent = new DataCollectedEvent {
-					ParserName = config.ParserName,
+					ParserSlug = config.ParserName,
 					UserId = config.UserId,
 					Source = dto.Source,
 					Metric = dto.Metric,
@@ -60,8 +60,8 @@ public static class CollectorEndpoints {
 				return Results.Accepted();
 			});
 
-		group.MapPost("/run/{name}", async (
-			string name,
+		group.MapPost("/run/{slug}", async (
+			string slug,
 			[FromBody] IDictionary<string, string>? options,
 			IParserRegistry registry,
 			IIntegrationDispatcher dispatcher,
@@ -70,7 +70,7 @@ public static class CollectorEndpoints {
 			var userId = httpContext.User.GetUserId();
 
 			var command = new RunParserEvent {
-				ParserName = name,
+				ParserName = slug,
 				UserId = userId!,
 				Options = options,
 				CorrelationId = Guid.GenCorrelationId(),
@@ -86,13 +86,13 @@ public static class CollectorEndpoints {
 			Results.Ok(registry.GetAvailableParsers())
 		);
 
-		group.MapGet("/parser/{name}", async (string name, IParserRegistry registry) => {
-			var details = await registry.GetParserDetailsAsync(name);
+		group.MapGet("/parser/{slug}", async (string slug, IParserRegistry registry) => {
+			var details = await registry.GetParserDetailsAsync(slug);
 			return details != null ? Results.Ok(details) : Results.NotFound();
 		});
 
-		group.MapGet("/parser/{name}/exists_internal", async (string name, IParserRegistry registry) =>
-			Results.Ok( registry.GetParserType(name) != null )
+		group.MapGet("/parser/{slug}/exists_internal", async (string slug, IParserRegistry registry) =>
+			Results.Ok( registry.GetParserType(slug) != null )
 		);
 	}
 }

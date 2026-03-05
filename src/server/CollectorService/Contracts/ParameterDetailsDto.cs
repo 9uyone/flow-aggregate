@@ -3,7 +3,7 @@
 namespace CollectorService.Contracts;
 
 public record ParameterDetailsDto(
-	string Name,
+	string Slug,
 	string Description,
 	bool IsRequired,
 	IEnumerable<LookupOptionDto> Options);

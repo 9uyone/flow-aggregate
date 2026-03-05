@@ -1,7 +1,8 @@
 ﻿namespace CollectorService.Contracts;
 
 public record ParserDetailsDto(
-	string Name,
+	string Slug,
 	string DisplayName,
 	string Description,
-	List<ParameterDetailsDto> Parameters);
+	IEnumerable<ParameterDetailsDto> Parameters
+);

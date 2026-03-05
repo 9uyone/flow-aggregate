@@ -18,6 +18,7 @@ builder.Services.AddAppMongo(builder.Configuration);
 builder.Services.AddAppMongoRepository<DataCollectedEvent>(MongoCollections.CollectedData);
 builder.Services.AddAppMongoRepository<ParserUserConfig>(MongoCollections.ParserUserConfigs);
 builder.Services.AddAppMongoRepository<ExecutionLog>(MongoCollections.ExecutionLogs);
+builder.Services.AddAppMongoRepository<ParserDefinition>(MongoCollections.ParserDefinitions);
 
 builder.Services.AddAppRabbit(builder.Configuration);
 builder.Services.AddRedisCache(builder.Configuration);

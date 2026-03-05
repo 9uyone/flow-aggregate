@@ -2,7 +2,7 @@ using Common.Attributes;
 using Common.Interfaces.Parser;
 using System.Reflection;
 
-namespace CollectorService;
+namespace CollectorService.Extensions;
 
 public static class ParsersPluginsExtensions {
 	public static IServiceCollection AddInternalParsers(this IServiceCollection services) {

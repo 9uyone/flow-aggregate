@@ -22,9 +22,9 @@ internal class ParserConfigService(
 	IHttpRestClient restClient)
 {
 	public async Task CreateInternalAsync(UserConfigCreateInternalDto dto, Guid userId) {
-		var response = await restClient.GetAsync<bool>($"api/parser/{dto.ParserName}/exists_internal");
+		var response = await restClient.GetAsync<bool>($"/api/collector/parser/{dto.ParserSlug}/exists_internal");
 		if (!response)
-			throw new BadRequestException($"Parser '{dto.ParserName}' not found");
+			throw new BadRequestException($"Parser '{dto.ParserSlug}' not found");
 
 		var interval = config.GetValue<int>("ParserConfigs:minIntervalSeconds");
 		if (!CronValidator.TryValidate(dto.CronExpression, minIntervalSeconds: interval, out var error))
@@ -40,7 +40,7 @@ internal class ParserConfigService(
 		var (existingConfigs, _) = await repo.FindAsync(x =>
 			x.UserId == userId &&
 			x.SourceType == ParserSourceType.Internal &&
-			x.ParserName == dto.ParserName);
+			x.ParserSlug == dto.ParserSlug);
 		var isDuplicate = existingConfigs.Any(x =>
 			(x.Internal!.Options?.Count == dto.Options?.Count) &&
 			!(x.Internal.Options?.Except(dto.Options ?? Enumerable.Empty<KeyValuePair<string, string>>()).Any() ?? false));
@@ -49,7 +49,7 @@ internal class ParserConfigService(
 
 		await repo.CreateAsync(new ParserUserConfig {
 			UserId = userId,
-			ParserName = dto.ParserName,
+			ParserSlug = dto.ParserSlug,
 			IsEnabled = dto.IsEnabled,
 			SourceType = ParserSourceType.Internal,
 			Internal = new InternalOptions {
@@ -61,7 +61,7 @@ internal class ParserConfigService(
 	}
 
 	public async Task<string> CreateExternalAsync(UserConfigCreateExternalDto dto, Guid userId) {
-		if (await repo.AnyAsync(x => x.UserId == userId && x.ParserName == dto.ParserName))
+		if (await repo.AnyAsync(x => x.UserId == userId && x.ParserSlug == dto.ParserSlug))
 			throw new BadRequestException("Parser name must be unique");
 
 		var token = GenerateToken();
@@ -69,7 +69,7 @@ internal class ParserConfigService(
 
 		await repo.CreateAsync(new ParserUserConfig {
 			UserId = userId,
-			ParserName = dto.ParserName,
+			ParserSlug = dto.ParserSlug,
 			IsEnabled = dto.IsEnabled,
 			SourceType = ParserSourceType.External,
 			External = new ExternalOptions
@@ -178,7 +178,7 @@ internal class ParserConfigService(
 		var command = new RunParserEvent
 		{
 			ConfigId = config.Id,
-			ParserName = config.ParserName,
+			ParserName = config.ParserSlug,
 			UserId = config.UserId,
 			Options = config.Internal.Options,
 			CorrelationId = Guid.GenCorrelationId(),
@@ -206,7 +206,7 @@ internal class ParserConfigService(
 			ParserSourceType.Internal =>
 				new UserInternalConfigDto
 				{
-					ParserName = config.ParserName,
+					ParserSlug = config.ParserSlug,
 					IsEnabled = config.IsEnabled,
 					LastRunUtc = config.LastRunUtc,
 					LastStatus = baseStatus,
@@ -217,7 +217,7 @@ internal class ParserConfigService(
 			ParserSourceType.External =>
 				new UserExternalConfigDto
 				{
-					ParserName = config.ParserName,
+					ParserSlug = config.ParserSlug,
 					IsEnabled = config.IsEnabled,
 					LastRunUtc = config.LastRunUtc,
 					LastStatus = baseStatus,

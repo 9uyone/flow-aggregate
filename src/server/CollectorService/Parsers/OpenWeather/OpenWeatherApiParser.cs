@@ -7,9 +7,10 @@ using Common.Contracts.Parser;
 
 namespace CollectorService.Parsers.OpenWeather;
 
-[ParserInfo("openWeather", "Current weather by city name")]
+[ParserInfo("open-weather", "Current weather by city name")]
 [ParserParameter("city", "City name", isRequired: true)]
 [ParserParameter("units", "metric or imperial", false)]
+[ParserMetrics("humidityPercent")]
 public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : IDataParser {
 	private string ApiKey {
 		get => config["Parsers:OpenWeather:ApiKey"]
@@ -41,8 +42,8 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 			Metadata = new Dictionary<string, string> {
 				[MetadataKeys.Provider] = "OpenWeatherMap",
 				["description"] = weather.Weather.FirstOrDefault()?.Description ?? "No description",
-				["humidity"] = $"{weather.Main.Humidity}%",
-				["windSpeed"] = $"{weather.Wind.Speed} m/s",
+				["humidityPercent"] = $"{weather.Main.Humidity}",
+				["windSpeed"] = $"{weather.Wind.Speed}",
 				["location"] = $"{location.Name}, {location.Country}"
 			}
 		}];
