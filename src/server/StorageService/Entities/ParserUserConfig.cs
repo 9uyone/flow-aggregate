@@ -12,7 +12,7 @@ public class ParserUserConfig: BaseEntity {
 
 	public bool IsEnabled { get; init; } = true;
 
-	public DateTime? LastRunUtc { get; set; }
+	public DateTime? LastRunAt { get; set; }
 	public bool? LastStatus { get; set; }
 	public string? LastErrorMessage { get; set; }
 

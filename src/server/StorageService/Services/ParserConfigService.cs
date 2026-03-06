@@ -208,7 +208,7 @@ internal class ParserConfigService(
 				{
 					ParserSlug = config.ParserSlug,
 					IsEnabled = config.IsEnabled,
-					LastRunUtc = config.LastRunUtc,
+					LastRunAt = config.LastRunAt,
 					LastStatus = baseStatus,
 					LastErrorMessage = config.LastErrorMessage,
 					Options = config.Internal?.Options,
@@ -219,7 +219,7 @@ internal class ParserConfigService(
 				{
 					ParserSlug = config.ParserSlug,
 					IsEnabled = config.IsEnabled,
-					LastRunUtc = config.LastRunUtc,
+					LastRunAt = config.LastRunAt,
 					LastStatus = baseStatus,
 					LastErrorMessage = config.LastErrorMessage,
 					TokenHash = config.External?.TokenHash ?? string.Empty,

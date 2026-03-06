@@ -50,7 +50,7 @@ public static class CollectorEndpoints {
 					ParserName = config.ParserName,
 					IsSuccess = true,
 					ErrorMessage = null,
-					FinishedAtUtc = DateTime.UtcNow,
+					FinishedAt = DateTime.UtcNow,
 					Options = config.External?.TokenHash != null ? new Dictionary<string, string>() : null
 				};
 

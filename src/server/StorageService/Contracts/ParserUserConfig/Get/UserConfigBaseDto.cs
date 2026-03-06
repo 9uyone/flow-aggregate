@@ -8,7 +8,7 @@ internal abstract class UserConfigBaseDto {
 	public required string ParserSlug { get; init; }
 
 	public required bool IsEnabled { get; init; }
-	public required DateTime? LastRunUtc { get; init; }
+	public required DateTime? LastRunAt { get; init; }
 	public required string? LastStatus { get; init; }
 	public required string? LastErrorMessage { get; init; }
 }

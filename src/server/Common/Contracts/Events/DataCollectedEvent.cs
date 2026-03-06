@@ -10,7 +10,7 @@ public class DataCollectedEvent: BaseEntity, ICorrelatedMessage {
 	public required string Category { get; set; } // "Price", "Temperature", "Stock"
 	public required string Source { get; init; } // e.g. api.openweathermap.org
 	public required string Metric { get; set; }
-	public DateTime CapturedAtUtc { get; set; } = DateTime.UtcNow;
+	public DateTime CapturedAt { get; set; } = DateTime.UtcNow;
 
 	public decimal? Value { get; init; } // Numeric value (if applicable)
 	public string? RawContent { get; init; } // Text content (if applicable)

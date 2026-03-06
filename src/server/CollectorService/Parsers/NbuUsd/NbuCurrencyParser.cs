@@ -25,7 +25,7 @@ public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyPa
 			Category = "Currency",
 			Source = "bank.gov.ua",
 			Metric = $"{valcode.ToUpper()}_UAH",
-			CapturedAtUtc = DateTime.ParseExact(rate.ExchangeDate, "YYYYMMDD", CultureInfo.InvariantCulture).ToUniversalTime(),
+			CapturedAt = DateTime.Parse(rate.ExchangeDate).ToUniversalTime(),
 			Value = rate.Rate,
 			Metadata = new Dictionary<string, string>
 			{

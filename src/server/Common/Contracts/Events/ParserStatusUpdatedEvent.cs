@@ -12,7 +12,7 @@ public record ParserStatusUpdatedEvent : ICorrelatedMessage {
 
 	public required bool IsSuccess { get; init; }
 	public string? ErrorMessage { get; init; }
-	public required DateTime FinishedAtUtc { get; init; }
+	public required DateTime FinishedAt { get; init; }
 
 	public IDictionary<string, string>? Options { get; init; }
 }

@@ -1,14 +1,14 @@
 using CollectorService;
+using CollectorService.Extensions;
 using CollectorService.Interfaces;
 using CollectorService.Services;
+using CollectorService.Workers;
+using Common.Config;
+using Common.Contracts.Events;
+using Common.Contracts.Parser;
 using Common.Extensions;
 using Common.Messaging;
 using Nelibur.ObjectMapper;
-using Common.Contracts.Parser;
-using Common.Config;
-using Common.Contracts.Events;
-using CollectorService.Workers;
-using CollectorService.Extensions;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +33,7 @@ builder.Services.AddSingleton<IParserRegistry, ParserRegistry>();
 builder.Services.AddHealthChecks();
 builder.Services.AddRedisCache(builder.Configuration);
 builder.Services.AddHostedService<ParserDiscoveryWorker>();
+builder.Services.AddHostedService<NbuUsdSeederWorker>();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {

@@ -14,5 +14,5 @@ public class ParserDefinition: BaseEntity {
 	[BsonRepresentation(BsonType.String)]
 	public ParserSourceType SourceType { get; init; }
 	public Guid? OwnerUserId { get; set; } = null;
-	public DateTime UpdatedAtUtc { get; set; }
+	public DateTime UpdatedAt { get; set; }
 }

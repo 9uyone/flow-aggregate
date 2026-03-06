@@ -15,20 +15,20 @@ public class ParserStatusUpdatedConsumer(
 		var message = context.Message;
 
 		var updateConfig = Builders<ParserUserConfig>.Update
-			.Set(c => c.LastRunUtc, message.FinishedAtUtc)
+			.Set(c => c.LastRunAt, message.FinishedAt)
 			.Set(c => c.LastStatus, message.IsSuccess)
 			.Set(c => c.LastErrorMessage, message.ErrorMessage);
 
 		await configRepo.UpdateOneAsync(c => c.Id == message.ConfigId, updateConfig);
 
 		await logRepo.CreateAsync(new ExecutionLog { 
-			ParserName = message.ParserName,
+			ParserSlug = message.ParserName,
 			UserId = message.UserId,
 			CorrelationId = message.CorrelationId,
 			ConfigId = message.ConfigId,
 			Status = message.IsSuccess ? ExecutionStatus.Success : ExecutionStatus.Failed,
 			ErrorMessage = message.ErrorMessage,
-			FinishedAtUtc = message.FinishedAtUtc,
+			FinishedAt = message.FinishedAt,
 			Options = message.Options,
 		});
 	}

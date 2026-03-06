@@ -20,12 +20,12 @@ public class ParsersDiscoveredConsumer(IMongoDatabase db) : IConsumer<ParsersDis
 				.Set(x => x.DisplayName, dto.DisplayName)
 				.Set(x => x.Description, dto.Description)
 				.SetOnInsert(x => x.OwnerUserId, dto.OwnerUserId)
-				.SetOnInsert(x => x.UpdatedAtUtc, DateTime.UtcNow);
+				.SetOnInsert(x => x.UpdatedAt, DateTime.UtcNow);
 
 			var result = await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
 
 			if (result.ModifiedCount > 0) {
-				await collection.UpdateOneAsync(filter, Builders<ParserDefinition>.Update.Set(x => x.UpdatedAtUtc, DateTime.UtcNow));
+				await collection.UpdateOneAsync(filter, Builders<ParserDefinition>.Update.Set(x => x.UpdatedAt, DateTime.UtcNow));
 			}
 		}
 	}
