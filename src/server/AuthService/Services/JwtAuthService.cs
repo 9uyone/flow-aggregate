@@ -68,7 +68,11 @@ public class JwtAuthService(
 	}
 
 	public async Task<AuthResponse> RotateTokenAsync(string oldRefreshToken) {
-		var storedToken = (await rtRepo.FindAsync(x => x.Token == oldRefreshToken && x.IsActive))
+		var storedToken = (await rtRepo.FindAsync(x => 
+			x.Token == oldRefreshToken && 
+			!x.IsUsed && 
+			!x.IsRevoked && 
+			x.ExpiresAt > DateTime.UtcNow))
 			.items.FirstOrDefault();
 
 		if (storedToken == null)
@@ -76,7 +80,7 @@ public class JwtAuthService(
 
 		var updateDef = Builders<RefreshToken>.Update.Set(x => x.IsUsed, true);
 		var updateResult = await rtRepo.UpdateOneAsync(
-			x => x.Id == storedToken.Id && x.IsActive, 
+			x => x.Id == storedToken.Id && !x.IsUsed && !x.IsRevoked, 
 			updateDef);
 
 		if (updateResult.ModifiedCount == 0)
