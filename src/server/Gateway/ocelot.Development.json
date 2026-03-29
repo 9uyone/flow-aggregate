@@ -5,6 +5,15 @@
 			"DownstreamHostAndPorts": [
 				{
 					"Host": "localhost",
+					"Port": 5262
+				}
+			],
+			"UpstreamPathTemplate": "/health/analyze"
+		},
+		{
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "localhost",
 					"Port": 5065
 				}
 			],
@@ -39,6 +48,16 @@
 		},
 
 		// Other routes
+		{
+			"DownstreamPathTemplate": "/analyze/{everything}",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "localhost",
+					"Port": 5262
+				}
+			],
+			"UpstreamPathTemplate": "/api/analyze/{everything}"
+		},
 		{
 			"DownstreamPathTemplate": "/auth/{everything}",
 			"DownstreamHostAndPorts": [

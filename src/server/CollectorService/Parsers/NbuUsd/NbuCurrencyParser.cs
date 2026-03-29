@@ -3,7 +3,6 @@ using Common.Constants;
 using Common.Extensions;
 using Common.Interfaces.Parser;
 using Common.Contracts.Parser;
-using System.Globalization;
 
 namespace CollectorService.Parsers.NbuUsd;
 

@@ -44,7 +44,7 @@ public class ParserSyncJob(
 	public async Task SendCommandAsync(ParserConfigDto config) {
 		await dispatcher.DispatchAsync(new RunParserEvent {
 			ConfigId = config.Id,
-			ParserName = config.ParserName,
+			ParserSlug = config.ParserName,
 			UserId = config.UserId,
 			Options = config.Internal?.Options,
 			CorrelationId = Guid.GenCorrelationId()

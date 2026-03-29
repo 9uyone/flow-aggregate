@@ -178,7 +178,7 @@ internal class ParserConfigService(
 		var command = new RunParserEvent
 		{
 			ConfigId = config.Id,
-			ParserName = config.ParserSlug,
+			ParserSlug = config.ParserSlug,
 			UserId = config.UserId,
 			Options = config.Internal.Options,
 			CorrelationId = Guid.GenCorrelationId(),
@@ -206,6 +206,7 @@ internal class ParserConfigService(
 			ParserSourceType.Internal =>
 				new UserInternalConfigDto
 				{
+					Id = config.Id,
 					ParserSlug = config.ParserSlug,
 					IsEnabled = config.IsEnabled,
 					LastRunAt = config.LastRunAt,
@@ -217,6 +218,7 @@ internal class ParserConfigService(
 			ParserSourceType.External =>
 				new UserExternalConfigDto
 				{
+					Id = config.Id,
 					ParserSlug = config.ParserSlug,
 					IsEnabled = config.IsEnabled,
 					LastRunAt = config.LastRunAt,

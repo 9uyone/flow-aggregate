@@ -13,7 +13,7 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 	public async Task Consume(ConsumeContext<RunParserEvent> context) {
 		var msg = context.Message;
 		try {
-			logger.LogInformation($"[Collector] Parser {msg.ParserName} has been started; Config ID {msg.ConfigId}");
+			logger.LogInformation($"[Collector] Parser {msg.ParserSlug} has been started; Config ID {msg.ConfigId}");
 			
 			var redisDb = redis.GetDatabase();
 			var statusKey = $"task_status:{msg.CorrelationId}";
@@ -32,13 +32,13 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 				ConfigId = msg.ConfigId,
 				CorrelationId = msg.CorrelationId,
 				UserId = msg.UserId,
-				ParserName = msg.ParserName,
+				ParserName = msg.ParserSlug,
 				IsSuccess = true,
 				FinishedAt = DateTime.UtcNow,
 				Options = msg.Options,
 			});
 
-			logger.LogInformation($"[Collector] Parser {msg.ParserName} has been finished; Config ID {msg.ConfigId}");
+			logger.LogInformation($"[Collector] Parser {msg.ParserSlug} has been finished; Config ID {msg.ConfigId}");
 		}
 		catch (Exception ex) {
 			var redisDb = redis.GetDatabase();
@@ -52,7 +52,7 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 				ConfigId = msg.ConfigId,
 				CorrelationId = msg.CorrelationId,
 				UserId = msg.UserId,
-				ParserName = msg.ParserName,
+				ParserName = msg.ParserSlug,
 				IsSuccess = false,
 				ErrorMessage = ex.Message,
 				FinishedAt = DateTime.UtcNow,

@@ -10,7 +10,7 @@ namespace CollectorService.Parsers.OpenWeather;
 [ParserInfo("open-weather", "Current weather by city name")]
 [ParserParameter("city", "City name", isRequired: true)]
 [ParserParameter("units", "metric or imperial", false)]
-[ParserMetrics("humidityPercent")]
+[ParserMetrics("humidityPercent", "windSpeed")]
 public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : IDataParser {
 	private string ApiKey {
 		get => config["Parsers:OpenWeather:ApiKey"]

@@ -55,6 +55,6 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 		}
 
 		var info = reg.Info;
-		return new ParserDetailsDto(info.Slug, info.DisplayName, info.Description, parameters);
+		return new ParserDetailsDto(info.Slug, info.DisplayName, info.Description, reg.SourceType, reg.MetricFields, parameters);
 	}
 }

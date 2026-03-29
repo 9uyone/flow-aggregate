@@ -8,7 +8,7 @@ namespace StorageService.Endpoints;
 
 public static partial class StorageEndpoints {
 	public static void MapParserConfigEndpoints(this IEndpointRouteBuilder app) {
-		var group = app.MapGroup("/storage/parser-cfg");
+		var group = app.MapGroup("/storage/configs");
 
 		// Create
 		group.MapPost("/internal", async (

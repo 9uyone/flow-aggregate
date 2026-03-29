@@ -6,6 +6,18 @@
 			"DownstreamScheme": "http",
 			"DownstreamHostAndPorts": [
 				{
+					"Host": "analyze",
+					"Port": 8080
+				}
+			],
+			"UpstreamPathTemplate": "/health/analyze",
+			"UpstreamHttpMethod": [ "GET" ]
+		},
+		{
+			"DownstreamPathTemplate": "/health",
+			"DownstreamScheme": "http",
+			"DownstreamHostAndPorts": [
+				{
 					"Host": "auth",
 					"Port": 8080
 				}
@@ -51,6 +63,18 @@
 		},
 
 		// Other routes
+		{
+			"DownstreamPathTemplate": "/analyze/{everything}",
+			"DownstreamScheme": "http",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "analyze",
+					"Port": 8080
+				}
+			],
+			"UpstreamPathTemplate": "/api/analyze/{everything}",
+			"UpstreamHttpMethod": [ "POST", "GET" ]
+		},
 		{
 			"DownstreamPathTemplate": "/auth/{everything}",
 			"DownstreamScheme": "http",

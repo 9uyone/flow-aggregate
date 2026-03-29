@@ -70,7 +70,7 @@ public static class CollectorEndpoints {
 			var userId = httpContext.User.GetUserId();
 
 			var command = new RunParserEvent {
-				ParserName = slug,
+				ParserSlug = slug,
 				UserId = userId!,
 				Options = options,
 				CorrelationId = Guid.GenCorrelationId(),
@@ -86,7 +86,7 @@ public static class CollectorEndpoints {
 			Results.Ok(registry.GetAvailableParsers())
 		);
 
-		group.MapGet("/parser/{slug}", async (string slug, IParserRegistry registry) => {
+		group.MapGet("/parsers/{slug}", async (string slug, IParserRegistry registry) => {
 			var details = await registry.GetParserDetailsAsync(slug);
 			return details != null ? Results.Ok(details) : Results.NotFound();
 		});

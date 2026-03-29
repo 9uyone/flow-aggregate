@@ -18,9 +18,9 @@ public class ParserRunner(
 	public async Task<IEnumerable<ParserDataPayload>> ExecuteAsync(
 		RunParserEvent command)
 	{
-		var parserType = registry.GetParserType(command.ParserName);
+		var parserType = registry.GetParserType(command.ParserSlug);
 		if (parserType == null)
-			throw new ParserNotFoundException(command.ParserName);
+			throw new ParserNotFoundException(command.ParserSlug);
 
 		var parser = sp.GetRequiredService(parserType) as IDataParser;
 		var info = parserType.GetCustomAttribute<ParserInfoAttribute>();
