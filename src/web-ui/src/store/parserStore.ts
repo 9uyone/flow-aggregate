@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import { storageApi } from '../api';
-import type { ParserCatalogItem, ParserRunStatus, UserConfig } from '../types/storage';
+import type { ParserCatalogItem, ParserRunStatus, ParserSourceType, UserConfig } from '../types/storage';
 
 export interface Parser {
   slug: string;
   name: string;
   description?: string;
-  sourceType: 'internal' | 'external';
+  sourceType: ParserSourceType;
   metricFields: string[];
   hasConfig: boolean;
   url?: string;
@@ -22,7 +22,7 @@ export interface Parser {
 export interface ParserConfig {
   configId: string;
   slug: string;
-  sourceType: 'internal' | 'external';
+  sourceType: ParserSourceType;
   isActive: boolean;
   status: ParserRunStatus | null;
   lastRunAt?: string;
@@ -78,7 +78,9 @@ const mapUserConfigToParser = (config: UserConfig): Parser => ({
   description:
     config.$type === 'internal'
       ? `Internal parser · cron: ${config.cronExpression}`
-      : 'External parser · trigger via token',
+      : config.$type === 'plugin'
+        ? 'Plugin parser'
+        : 'External parser · trigger via token',
   sourceType: config.$type,
   metricFields: [],
   hasConfig: true,

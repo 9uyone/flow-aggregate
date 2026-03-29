@@ -54,7 +54,7 @@ DELETE /api/storage/configs/{configId}
 Response: 204 No Content
 ```
 
-### Run saved config
+### Run saved config (internal only)
 ```
 POST /api/storage/configs/{configId}/run
 Response: 202 Accepted { correlationId: string }
@@ -76,17 +76,28 @@ GET /api/collector/parsers/{slug}
 Response: ParserDetailsResponse
 {
   slug: string,
+  displayName: string,
+  description: string,
+  sourceType: "internal" | "plugin" | "external",
+  metricFields: string[],
+  parameters: ParserParameterDefinition[]
+}
+```
+
+ParserParameterDefinition:
+```
+{
   name: string,
   description: string,
-  parserType: "internal" | "external",
-  parameters: ParserParameterDefinition[]
+  isRequired: boolean,
+  options: Array<{ value: string, label: string }>
 }
 ```
 
 ### Run parser by slug (ad-hoc run without config)
 ```
 POST /api/collector/run/{slug}
-Body: { parameters: Record<string, string> }
+Body: { options?: Record<string, string> }
 Response: 202 Accepted { correlationId: string }
 ```
 

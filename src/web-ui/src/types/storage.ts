@@ -27,11 +27,16 @@ export interface ExternalParserConfig extends BaseParserConfig {
   tokenHash?: string;
 }
 
-export type UserConfig = InternalParserConfig | ExternalParserConfig;
+export interface PluginParserConfig extends BaseParserConfig {
+  $type: 'plugin';
+  pluginId: string;
+}
+
+export type UserConfig = InternalParserConfig | ExternalParserConfig | PluginParserConfig;
 
 export type PagedConfigsResponse = PagedResponse<UserConfig>;
 
-export type ParserSourceType = 'internal' | 'external';
+export type ParserSourceType = 'internal' | 'plugin' | 'external';
 
 export interface ParserCatalogItem {
   slug: string;
@@ -47,7 +52,7 @@ export interface ParserParameterOption {
 }
 
 export interface ParserParameterDefinition {
-  slug: string;
+  name: string;
   description: string;
   isRequired: boolean;
   options: ParserParameterOption[];

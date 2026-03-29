@@ -148,11 +148,11 @@ export const ParserList: React.FC = () => {
   const buildDefaultParameters = (details: ParserDetailsResponse): Record<string, string> => {
     return details.parameters.reduce<Record<string, string>>((acc, parameter) => {
       if (parameter.options.length > 0) {
-        acc[parameter.slug] = parameter.options[0].value;
+        acc[parameter.name] = parameter.options[0].value;
         return acc;
       }
 
-      acc[parameter.slug] = '';
+      acc[parameter.name] = '';
       return acc;
     }, {});
   };
@@ -182,7 +182,43 @@ export const ParserList: React.FC = () => {
     }
   };
 
-  const handleRunParser = async (slug: string, event: React.MouseEvent) => {
+  const handleRunSavedConfig = async (config: ParserConfig, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (config.sourceType === 'external') {
+      setNotification({
+        message: 'External parsers are triggered via ingest API and cannot be run manually',
+        severity: 'error',
+      });
+      return;
+    }
+
+    setRunningParsers((prev) => new Set(prev).add(config.slug));
+
+    try {
+      const response = await storageApi.runConfig(config.configId);
+      updateParser(config.slug, { status: 'Running' });
+      updateParserConfigsBySlug(config.slug, { status: 'Running' });
+      setTaskSlugMap((prev) => ({
+        ...prev,
+        [response.correlationId]: config.slug,
+      }));
+      setNotification({
+        message: `Config ${config.customName || config.slug} started. Task: ${response.correlationId}`,
+        severity: 'success',
+      });
+    } catch (runError) {
+      const message = runError instanceof Error ? runError.message : 'Failed to run saved config';
+      setNotification({ message, severity: 'error' });
+      setRunningParsers((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(config.slug);
+        return newSet;
+      });
+    }
+  };
+
+  const handleRunAvailableParser = async (slug: string, event: React.MouseEvent) => {
     event.stopPropagation();
 
     const parser = parsers.find((item) => item.slug === slug);
@@ -266,7 +302,7 @@ export const ParserList: React.FC = () => {
     }
 
     const missingRequired = parserDetails.parameters.some(
-      (parameter) => parameter.isRequired && !runParameterValues[parameter.slug]?.trim()
+      (parameter) => parameter.isRequired && !runParameterValues[parameter.name]?.trim()
     );
 
     if (missingRequired) {
@@ -476,8 +512,12 @@ export const ParserList: React.FC = () => {
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={(e) => handleRunParser(config.slug, e)}
-                        disabled={runningParsers.has(config.slug) || isPreparingRun || config.sourceType === 'external'}
+                        onClick={(e) => handleRunSavedConfig(config, e)}
+                        disabled={
+                          runningParsers.has(config.slug) ||
+                          isPreparingRun ||
+                          config.sourceType === 'external'
+                        }
                       >
                         {runningParsers.has(config.slug) || isPreparingRun ? (
                           <CircularProgress size={20} />
@@ -552,7 +592,7 @@ export const ParserList: React.FC = () => {
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={(e) => handleRunParser(parser.slug, e)}
+                        onClick={(e) => handleRunAvailableParser(parser.slug, e)}
                         disabled={runningParsers.has(parser.slug) || isPreparingRun || parser.sourceType === 'external'}
                       >
                         {runningParsers.has(parser.slug) || isPreparingRun ? (
@@ -596,11 +636,11 @@ export const ParserList: React.FC = () => {
           {parserDetails?.parameters.map((parameter) => {
             const hasOptions = parameter.options.length > 0;
             return (
-              <Box key={parameter.slug}>
+              <Box key={parameter.name}>
                 <TextField
                   fullWidth
                   margin="normal"
-                  label={parameter.slug}
+                  label={parameter.name}
                   helperText={
                     hasOptions
                       ? `${parameter.description} Suggested: ${parameter.options
@@ -610,13 +650,13 @@ export const ParserList: React.FC = () => {
                       : parameter.description
                   }
                   required={parameter.isRequired}
-                  value={runParameterValues[parameter.slug] ?? ''}
-                  onChange={(event) => handleParameterChange(parameter.slug, event.target.value)}
+                  value={runParameterValues[parameter.name] ?? ''}
+                  onChange={(event) => handleParameterChange(parameter.name, event.target.value)}
                   placeholder={hasOptions ? 'Enter your value or use suggested one' : undefined}
-                  inputProps={hasOptions ? { list: `${parameter.slug}-options` } : undefined}
+                  inputProps={hasOptions ? { list: `${parameter.name}-options` } : undefined}
                 />
                 {hasOptions && (
-                  <datalist id={`${parameter.slug}-options`}>
+                  <datalist id={`${parameter.name}-options`}>
                     {parameter.options.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label || option.value}

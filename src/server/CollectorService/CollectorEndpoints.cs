@@ -77,7 +77,7 @@ public static class CollectorEndpoints {
 			};
 
 			await dispatcher.DispatchAsync(command);
-			return Results.Ok(new RunParserResult { 
+			return Results.Accepted(value: new RunParserResult { 
 				CorrelationId = command.CorrelationId.Value
 			});
 		}).RequireAuthorization();

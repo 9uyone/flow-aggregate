@@ -157,7 +157,7 @@ const normalizeParserDetailsResponse = (payload: unknown): ParserDetailsResponse
           : [];
 
       return {
-        slug: String(row.slug ?? row.Slug ?? ''),
+        name: String(row.name ?? row.Name ?? row.slug ?? row.Slug ?? ''),
         description: String(row.description ?? row.Description ?? ''),
         isRequired: Boolean(row.isRequired ?? row.IsRequired ?? false),
         options: optionsRaw
@@ -175,12 +175,15 @@ const normalizeParserDetailsResponse = (payload: unknown): ParserDetailsResponse
           .filter((option): option is { value: string; label: string } => option !== null),
       };
     })
-    .filter((parameter): parameter is ParserParameterDefinition => parameter !== null && parameter.slug.length > 0);
+    .filter((parameter): parameter is ParserParameterDefinition => parameter !== null && parameter.name.length > 0);
 
   const sourceTypeRaw = raw.sourceType ?? raw.SourceType;
-  const sourceType = typeof sourceTypeRaw === 'string' && sourceTypeRaw.toLowerCase() === 'external'
+  const sourceTypeNormalized = typeof sourceTypeRaw === 'string' ? sourceTypeRaw.toLowerCase() : 'internal';
+  const sourceType = sourceTypeNormalized === 'external'
     ? 'external'
-    : 'internal';
+    : sourceTypeNormalized === 'plugin'
+      ? 'plugin'
+      : 'internal';
 
   const metricFieldsRaw = Array.isArray(raw.metricFields)
     ? raw.metricFields
@@ -289,11 +292,11 @@ export const storageApi = {
    */
   runParserBySlug: async (
     slug: string,
-    parameters: Record<string, string>
+    options?: Record<string, string>
   ): Promise<RunParserBySlugResponse> => {
     const { data } = await axiosInstance.post<RunParserBySlugResponse>(
       `/collector/run/${slug}`,
-      parameters
+      options && Object.keys(options).length > 0 ? { options } : undefined
     );
     return data;
   },
