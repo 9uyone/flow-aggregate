@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline, Box, Typography } from '@mui/material';
+import { CssBaseline } from '@mui/material';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { darkTheme } from './theme/theme';
-import { MainLayout } from './components/layout';
+import { AppShell } from './components/layout';
 import { LoadingSpinner } from './components';
-import { ParserList } from './features/parsers';
 import { LoginPage } from './features/auth';
 import { useAuthStore } from './store/authStore';
 import { googleConfig } from './config/google';
@@ -82,21 +81,7 @@ function App() {
           <Route
             path="/*"
             element={
-              isAuthenticated ? (
-                <MainLayout>
-                  <Box sx={{ mb: 4 }}>
-                    <Typography variant="h4" fontWeight={700} gutterBottom>
-                      Dashboard
-                    </Typography>
-                    <Typography color="text.secondary">
-                      Welcome to the Data Aggregation System
-                    </Typography>
-                  </Box>
-                  <ParserList />
-                </MainLayout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              isAuthenticated ? <AppShell /> : <Navigate to="/login" replace />
             }
           />
         </Routes>
