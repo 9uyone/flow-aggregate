@@ -28,6 +28,7 @@ public class ParserStatusUpdatedConsumer(
 			ConfigId = message.ConfigId,
 			Status = message.IsSuccess ? ExecutionStatus.Success : ExecutionStatus.Failed,
 			ErrorMessage = message.ErrorMessage,
+			StartedAt = message.StartedAt,
 			FinishedAt = message.FinishedAt,
 			Options = message.Options,
 		});

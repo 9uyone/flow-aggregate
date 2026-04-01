@@ -43,6 +43,7 @@ public static class CollectorEndpoints {
 					ConfigId = config.Id
 				};
 
+				var startedAt = DateTime.UtcNow;
 				var statusEvent = new ParserStatusUpdatedEvent {
 					ConfigId = config.Id,
 					CorrelationId = correlationId,
@@ -50,6 +51,7 @@ public static class CollectorEndpoints {
 					ParserName = config.ParserName,
 					IsSuccess = true,
 					ErrorMessage = null,
+					StartedAt = startedAt,
 					FinishedAt = DateTime.UtcNow,
 					Options = config.External?.TokenHash != null ? new Dictionary<string, string>() : null
 				};

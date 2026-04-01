@@ -4,6 +4,7 @@ using Common.Enums;
 using MassTransit;
 using Microsoft.Extensions.Caching.Distributed;
 using StackExchange.Redis;
+using System.Text.Json;
 
 namespace ProcessorService.Consumers;
 
@@ -12,6 +13,7 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 
 	public async Task Consume(ConsumeContext<RunParserEvent> context) {
 		var msg = context.Message;
+		var startedAt = DateTime.UtcNow;
 		try {
 			logger.LogInformation($"[Collector] Parser {msg.ParserSlug} has been started; Config ID {msg.ConfigId}");
 			
@@ -19,8 +21,13 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 			var statusKey = $"task_status:{msg.CorrelationId}";
 			var runningSetKey = $"running_tasks:{msg.UserId}";
 			var ttl = TimeSpan.FromMinutes(CacheTtlMinutes);
+			var runningStatus = JsonSerializer.Serialize(new TaskStatusCacheItem {
+				Status = ExecutionStatus.Running.ToString(),
+				ParserSlug = msg.ParserSlug,
+				StartedAt = startedAt
+			});
 			
-			await cache.SetStringAsync(statusKey, ExecutionStatus.Running.ToString(), new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = ttl });
+			await cache.SetStringAsync(statusKey, runningStatus, new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = ttl });
 			await redisDb.SetAddAsync(runningSetKey, msg.CorrelationId.ToString());
 
 			await runner.ExecuteAsync(msg);
@@ -34,6 +41,7 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 				UserId = msg.UserId,
 				ParserName = msg.ParserSlug,
 				IsSuccess = true,
+				StartedAt = startedAt,
 				FinishedAt = DateTime.UtcNow,
 				Options = msg.Options,
 			});
@@ -43,9 +51,9 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 		catch (Exception ex) {
 			var redisDb = redis.GetDatabase();
 			var statusKey = $"task_status:{msg.CorrelationId}";
-			var pendingSetKey = $"pending_tasks:{msg.UserId}";
+			var runningSetKey = $"running_tasks:{msg.UserId}";
 			
-			await redisDb.SetRemoveAsync(pendingSetKey, msg.CorrelationId.ToString());
+			await redisDb.SetRemoveAsync(runningSetKey, msg.CorrelationId.ToString());
 			await cache.RemoveAsync(statusKey);
 
 			await context.Publish(new ParserStatusUpdatedEvent {
@@ -55,11 +63,18 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 				ParserName = msg.ParserSlug,
 				IsSuccess = false,
 				ErrorMessage = ex.Message,
+				StartedAt = startedAt,
 				FinishedAt = DateTime.UtcNow,
 				Options = msg.Options,
 			});
 
 			throw;
 		}
+	}
+
+	private sealed class TaskStatusCacheItem {
+		public required string Status { get; init; }
+		public string? ParserSlug { get; init; }
+		public required DateTime StartedAt { get; init; }
 	}
 }

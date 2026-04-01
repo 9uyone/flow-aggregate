@@ -17,6 +17,7 @@ public class ExecutionLog : BaseEntity, ICorrelatedMessage {
 	public string? ErrorMessage { get; set; }
 
 	//public string? Source { get; set; } // "api.openweathermap.org"
+	public DateTime StartedAt { get; set; } = DateTime.UtcNow;
 	public DateTime FinishedAt { get; set; } = DateTime.UtcNow;
 
 	public IDictionary<string, string>? Options { get; set; }
