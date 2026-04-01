@@ -56,6 +56,32 @@ const getConfigStatusLabel = (status: ParserConfig['status']) => {
   }
 };
 
+const getParserTypeLabel = (sourceType: 'internal' | 'plugin' | 'external') => {
+  switch (sourceType) {
+    case 'internal':
+      return 'Internal';
+    case 'plugin':
+      return 'Plugin';
+    case 'external':
+      return 'External';
+    default:
+      return sourceType;
+  }
+};
+
+const getParserTypeChipProps = (sourceType: 'internal' | 'plugin' | 'external') => {
+  switch (sourceType) {
+    case 'internal':
+      return { color: 'primary' as const };
+    case 'plugin':
+      return { color: 'secondary' as const };
+    case 'external':
+      return { color: 'default' as const };
+    default:
+      return { color: 'default' as const };
+  }
+};
+
 export const ParserList: React.FC = () => {
   const {
     parsers,
@@ -419,16 +445,27 @@ export const ParserList: React.FC = () => {
                         justifyContent: 'space-between',
                         alignItems: 'flex-start',
                         mb: 2,
+                        gap: 1.5,
                       }}
                     >
-                      <Typography variant="h6" fontWeight={600}>
-                        {parserName}
-                      </Typography>
-                      <Chip
-                        label={getConfigStatusLabel(config.status)}
-                        color={getConfigStatusColor(config.status)}
-                        size="small"
-                      />
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="h6" fontWeight={600}>
+                          {parserName}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                          <Chip
+                            label={getParserTypeLabel(config.sourceType)}
+                            size="small"
+                            variant="outlined"
+                            {...getParserTypeChipProps(config.sourceType)}
+                          />
+                          <Chip
+                            label={getConfigStatusLabel(config.status)}
+                            color={getConfigStatusColor(config.status)}
+                            size="small"
+                          />
+                        </Box>
+                      </Box>
                     </Box>
 
                     <Typography
@@ -573,10 +610,20 @@ export const ParserList: React.FC = () => {
                 >
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography variant="h6" fontWeight={600}>
-                        {parser.name}
-                      </Typography>
-                      <Chip label={parser.hasConfig ? 'Has saved configs' : 'No saved config'} size="small" />
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="h6" fontWeight={600}>
+                          {parser.name}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                          <Chip
+                            label={getParserTypeLabel(parser.sourceType)}
+                            size="small"
+                            variant="outlined"
+                            {...getParserTypeChipProps(parser.sourceType)}
+                          />
+                          <Chip label={parser.hasConfig ? 'Has saved configs' : 'No saved config'} size="small" />
+                        </Box>
+                      </Box>
                     </Box>
 
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
