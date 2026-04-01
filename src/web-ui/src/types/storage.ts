@@ -127,8 +127,12 @@ export interface ParserTaskItem {
 }
 
 export interface TaskStatusResponse {
+  correlationId: string;
+  parserSlug: string;
   status: ParserRunStatus;
   errorMessage?: string;
+  startedAt: string;
+  finishedAt: string | null;
 }
 
 export type PagedTasksResponse = PagedResponse<ParserTaskItem>;

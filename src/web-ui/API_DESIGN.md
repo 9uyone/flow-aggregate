@@ -128,7 +128,14 @@ Note: list is composed from MongoDB (finished tasks) + Redis/cache (running task
 ### Get task status by correlationId
 ```
 GET /api/storage/tasks/status/{correlationId}
-Response: { status: "Running" | "Success" | "Failed", errorMessage?: string }
+Response: {
+  correlationId: string,
+  parserSlug: string,
+  status: "Running" | "Success" | "Failed",
+  errorMessage?: string | null,
+  startedAt: string,
+  finishedAt: string | null
+}
 ```
 
 ---

@@ -266,14 +266,30 @@ const normalizeTaskStatusResponse = (payload: unknown): TaskStatusResponse | nul
 
   const raw = payload as Record<string, unknown>;
   const status = toStatusOrNull(raw.status ?? raw.Status);
+  const correlationId = raw.correlationId ?? raw.CorrelationId;
+  const parserSlug = raw.parserSlug ?? raw.ParserSlug;
+  const startedAt = raw.startedAt ?? raw.StartedAt;
+  const finishedAtRaw = raw.finishedAt ?? raw.FinishedAt;
   if (!status) {
     return null;
   }
 
   const errorMessageRaw = raw.errorMessage ?? raw.ErrorMessage;
+  if (
+    typeof correlationId !== 'string' ||
+    typeof parserSlug !== 'string' ||
+    typeof startedAt !== 'string'
+  ) {
+    return null;
+  }
+
   return {
+    correlationId,
+    parserSlug,
     status,
     errorMessage: typeof errorMessageRaw === 'string' ? errorMessageRaw : undefined,
+    startedAt,
+    finishedAt: typeof finishedAtRaw === 'string' ? finishedAtRaw : null,
   };
 };
 
