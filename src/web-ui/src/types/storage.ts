@@ -119,8 +119,16 @@ export interface UpdateConfigDto {
 
 export interface ParserTaskItem {
   correlationId: string;
+  parserSlug: string;
   status: ParserRunStatus;
   errorMessage: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+export interface TaskStatusResponse {
+  status: ParserRunStatus;
+  errorMessage?: string;
 }
 
 export type PagedTasksResponse = PagedResponse<ParserTaskItem>;

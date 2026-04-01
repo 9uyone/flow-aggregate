@@ -13,6 +13,7 @@ import type {
   CreateExternalConfigDto,
   CreateExternalConfigResponse,
   UpdateConfigDto,
+  TaskStatusResponse,
   UserConfig,
 } from '../types/storage';
 
@@ -219,15 +220,27 @@ const normalizePagedTasksResponse = (payload: unknown): PagedTasksResponse => {
       const row = item as Record<string, unknown>;
       const status = toStatusOrNull(row.status ?? row.Status);
       const correlationId = row.correlationId ?? row.CorrelationId;
-      if (!status || typeof correlationId !== 'string') {
+      const parserSlug = row.parserSlug ?? row.ParserSlug;
+      const startedAt = row.startedAt ?? row.StartedAt;
+      const finishedAtRaw = row.finishedAt ?? row.FinishedAt;
+
+      if (
+        !status ||
+        typeof correlationId !== 'string' ||
+        typeof parserSlug !== 'string' ||
+        typeof startedAt !== 'string'
+      ) {
         return null;
       }
 
       const errorMessageRaw = row.errorMessage ?? row.ErrorMessage;
       return {
         correlationId,
+        parserSlug,
         status,
         errorMessage: typeof errorMessageRaw === 'string' ? errorMessageRaw : null,
+        startedAt,
+        finishedAt: typeof finishedAtRaw === 'string' ? finishedAtRaw : null,
       };
     })
     .filter((task): task is PagedTasksResponse['items'][number] => task !== null);
@@ -243,6 +256,24 @@ const normalizePagedTasksResponse = (payload: unknown): PagedTasksResponse => {
     page: typeof pageRaw === 'number' ? pageRaw : 1,
     totalPages: typeof totalPagesRaw === 'number' ? totalPagesRaw : 1,
     pageSize: typeof pageSizeRaw === 'number' ? pageSizeRaw : items.length,
+  };
+};
+
+const normalizeTaskStatusResponse = (payload: unknown): TaskStatusResponse | null => {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const raw = payload as Record<string, unknown>;
+  const status = toStatusOrNull(raw.status ?? raw.Status);
+  if (!status) {
+    return null;
+  }
+
+  const errorMessageRaw = raw.errorMessage ?? raw.ErrorMessage;
+  return {
+    status,
+    errorMessage: typeof errorMessageRaw === 'string' ? errorMessageRaw : undefined,
   };
 };
 
@@ -296,7 +327,7 @@ export const storageApi = {
   ): Promise<RunParserBySlugResponse> => {
     const { data } = await axiosInstance.post<RunParserBySlugResponse>(
       `/collector/run/${slug}`,
-      options && Object.keys(options).length > 0 ? { options } : undefined
+      options && Object.keys(options).length > 0 ? options : undefined
     );
     return data;
   },
@@ -364,10 +395,26 @@ export const storageApi = {
   /**
    * Get parser task list with execution status
    */
-  getTasks: async (page: number = 1, pageSize: number = 50): Promise<PagedTasksResponse> => {
+  getTasks: async (
+    page: number = 1,
+    pageSize: number = 50,
+    oldFirst?: boolean
+  ): Promise<PagedTasksResponse> => {
     const { data } = await axiosInstance.get('/storage/tasks', {
-      params: { page, pageSize },
+      params: { page, pageSize, oldFirst },
     });
     return normalizePagedTasksResponse(data);
+  },
+
+  /**
+   * Get status for a specific task by correlation ID
+   */
+  getTaskStatus: async (correlationId: string): Promise<TaskStatusResponse> => {
+    const { data } = await axiosInstance.get(`/storage/tasks/status/${correlationId}`);
+    const normalized = normalizeTaskStatusResponse(data);
+    if (!normalized) {
+      throw new Error('Invalid task status response');
+    }
+    return normalized;
   },
 };

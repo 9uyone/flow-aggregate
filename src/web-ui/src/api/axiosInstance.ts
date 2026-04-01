@@ -45,22 +45,14 @@ const redirectToLogin = () => {
 };
 
 /**
- * Attaches auth header and correlation ID to outgoing requests.
+ * Attaches auth header to outgoing requests.
  *
- * Why: ensures authenticated calls include Bearer token, and collector calls
- * carry correlation IDs for traceability across microservices.
+ * Why: ensures authenticated calls include Bearer token.
  */
-const attachAuthAndCorrelationId = (config: InternalAxiosRequestConfig) => {
+const attachAuthHeader = (config: InternalAxiosRequestConfig) => {
   const { accessToken } = useAuthStore.getState();
   if (accessToken) {
     config.headers['Authorization'] = `Bearer ${accessToken}`;
-  }
-
-  const trackedEndpoints = ['/collector/run', '/collector/ingest'];
-  if (trackedEndpoints.some((ep) => config.url?.includes(ep))) {
-    const correlationId = crypto.randomUUID();
-    config.params = { ...config.params, correlationId };
-    config.headers['X-Correlation-ID'] = correlationId;
   }
 
   return config;
@@ -154,7 +146,7 @@ const handleAuthError = async (error: AxiosError) => {
   }
 };
 
-axiosInstance.interceptors.request.use(attachAuthAndCorrelationId);
+axiosInstance.interceptors.request.use(attachAuthHeader);
 axiosInstance.interceptors.response.use((response) => response, handleAuthError);
 
 export default axiosInstance;

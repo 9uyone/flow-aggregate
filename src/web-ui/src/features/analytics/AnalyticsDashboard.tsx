@@ -12,6 +12,7 @@ import {
   Skeleton,
   CircularProgress,
   Alert,
+  Chip,
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
@@ -25,7 +26,7 @@ import {
 import { LineChart } from '@mui/x-charts/LineChart';
 import { useParserStore } from '../../store/parserStore';
 import { storageApi } from '../../api';
-import type { AnalyticsResponse } from '../../types/storage';
+import type { AnalyticsResponse, ParserTaskItem } from '../../types/storage';
 
 // TypeScript Interfaces
 interface QuickStat {
@@ -47,6 +48,8 @@ export const AnalyticsDashboard: React.FC = () => {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recentTasks, setRecentTasks] = useState<ParserTaskItem[]>([]);
+  const [recentTasksLoading, setRecentTasksLoading] = useState(false);
 
   // Fetch overall stats on mount
   useEffect(() => {
@@ -92,6 +95,23 @@ export const AnalyticsDashboard: React.FC = () => {
 
     fetchAnalytics();
   }, [selectedParserSlug]);
+
+  useEffect(() => {
+    const fetchRecentTasks = async () => {
+      setRecentTasksLoading(true);
+      try {
+        const response = await storageApi.getTasks(1, 5, false);
+        setRecentTasks(response.items);
+      } catch (err) {
+        console.error('Error fetching recent tasks:', err);
+        setRecentTasks([]);
+      } finally {
+        setRecentTasksLoading(false);
+      }
+    };
+
+    void fetchRecentTasks();
+  }, []);
 
   // Prepare quick stats cards
   const quickStats: QuickStat[] = [
@@ -411,6 +431,77 @@ export const AnalyticsDashboard: React.FC = () => {
             Run All Now
           </Button>
         </Stack>
+      </Paper>
+
+      <Paper
+        sx={{
+          p: 3,
+          borderRadius: 2,
+          boxShadow: 3,
+          mt: 3,
+        }}
+      >
+        <Typography variant="h6" fontWeight="600" gutterBottom>
+          Recent Tasks (Last 5)
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Latest parser execution logs
+        </Typography>
+
+        {recentTasksLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : recentTasks.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No recent tasks yet
+          </Typography>
+        ) : (
+          <Stack spacing={1.25}>
+            {recentTasks.map((task) => (
+              <Box
+                key={task.correlationId}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  px: 1.5,
+                  py: 1,
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" fontWeight={600}>
+                    {task.parserSlug}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontFamily: 'monospace',
+                      display: 'block',
+                      maxWidth: { xs: 180, sm: 340 },
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {task.correlationId}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {new Date(task.startedAt).toLocaleString()}
+                    {task.finishedAt ? ` -> ${new Date(task.finishedAt).toLocaleTimeString()}` : ''}
+                  </Typography>
+                </Box>
+                <Chip
+                  size="small"
+                  label={task.status}
+                  color={task.status === 'Success' ? 'success' : task.status === 'Failed' ? 'error' : 'info'}
+                />
+              </Box>
+            ))}
+          </Stack>
+        )}
       </Paper>
     </Box>
   );

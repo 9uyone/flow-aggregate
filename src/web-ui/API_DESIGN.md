@@ -107,20 +107,28 @@ Response: 202 Accepted { correlationId: string }
 
 ### Get all tasks (paginated)
 ```
-GET /api/storage/tasks?page=1&pageSize=20&status=Running|Success|Failed&slug=weather
+GET /api/storage/tasks?page=1&pageSize=20&oldFirst=true|false
 Response: PagedResponse<ParserTaskItem>
 ```
 
-### Get task by ID
+ParserTaskItem:
 ```
-GET /api/storage/tasks/{taskId}
-Response: ParserTaskItem
+{
+  correlationId: string,
+  parserSlug: string,
+  status: "Running" | "Success" | "Failed",
+  errorMessage?: string,
+  startedAt: string,
+  finishedAt?: string
+}
 ```
 
-### Get task logs
+Note: list is composed from MongoDB (finished tasks) + Redis/cache (running tasks not yet persisted).
+
+### Get task status by correlationId
 ```
-GET /api/storage/tasks/{taskId}/logs
-Response: { logs: string, errorMessage?: string }
+GET /api/storage/tasks/status/{correlationId}
+Response: { status: "Running" | "Success" | "Failed", errorMessage?: string }
 ```
 
 ---
@@ -181,4 +189,6 @@ Response: { timestamp: string, value: number }
 4. ✅ **PATCH** замість PUT - часткове оновлення конфігів
 5. ✅ **POST /api/storage/configs/{configId}/run** - окремий endpoint для запуску збереженого конфігу
 6. ✅ **CustomName** - можливість давати власні назви конфігам
-7. ⏳ **Stop task** - поки немає на бекенді (correlationId може використовуватись як taskId в майбутньому)
+7. ✅ **Tasks list = Mongo + Redis** - в одному paged response
+8. ✅ **GET /api/storage/tasks/status/{correlationId}** - точковий статус задачі для polling
+9. ⏳ **Stop task** - поки немає на бекенді (correlationId може використовуватись як taskId в майбутньому)

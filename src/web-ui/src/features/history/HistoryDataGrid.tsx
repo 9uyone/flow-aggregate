@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -15,89 +15,64 @@ import {
   Tooltip,
   TextField,
   InputAdornment,
+  Alert,
+  CircularProgress,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import {
-  Visibility as ViewIcon,
-  Download as DownloadIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import { storageApi } from '../../api';
+import type { ParserRunStatus, ParserTaskItem } from '../../types/storage';
 
-interface HistoryRecord {
-  id: string;
-  parserName: string;
-  status: 'success' | 'partial' | 'failed';
-  itemsCollected: number;
-  duration: string;
-  startedAt: string;
-  completedAt: string;
-  correlationId: string;
-}
-
-// Mock data for demonstration
-const mockHistory: HistoryRecord[] = [
-  {
-    id: '1',
-    parserName: 'Amazon Products',
-    status: 'success',
-    itemsCollected: 150,
-    duration: '2m 35s',
-    startedAt: '2026-01-28T10:00:00Z',
-    completedAt: '2026-01-28T10:02:35Z',
-    correlationId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  },
-  {
-    id: '2',
-    parserName: 'eBay Listings',
-    status: 'partial',
-    itemsCollected: 89,
-    duration: '1m 45s',
-    startedAt: '2026-01-28T09:30:00Z',
-    completedAt: '2026-01-28T09:31:45Z',
-    correlationId: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
-  },
-  {
-    id: '3',
-    parserName: 'News Articles',
-    status: 'failed',
-    itemsCollected: 0,
-    duration: '0m 12s',
-    startedAt: '2026-01-28T09:00:00Z',
-    completedAt: '2026-01-28T09:00:12Z',
-    correlationId: 'c3d4e5f6-a7b8-9012-cdef-345678901234',
-  },
-];
-
-const getStatusColor = (status: HistoryRecord['status']) => {
+const getStatusColor = (status: ParserRunStatus) => {
   switch (status) {
-    case 'success':
+    case 'Success':
       return 'success';
-    case 'partial':
-      return 'warning';
-    case 'failed':
+    case 'Failed':
       return 'error';
+    case 'Running':
+      return 'info';
     default:
       return 'default';
   }
 };
 
-const getStatusLabel = (status: HistoryRecord['status']) => {
-  switch (status) {
-    case 'success':
-      return 'Success';
-    case 'partial':
-      return 'Partial';
-    case 'failed':
-      return 'Failed';
-    default:
-      return 'Unknown';
-  }
-};
+type StatusFilter = 'all' | ParserRunStatus;
 
 export const HistoryDataGrid: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
+  const [tasks, setTasks] = useState<ParserTaskItem[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  const fetchTasks = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await storageApi.getTasks(page + 1, rowsPerPage, false);
+      setTasks(response.items);
+      setTotalCount(response.totalCount);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load tasks';
+      setError(message);
+      setTasks([]);
+      setTotalCount(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, rowsPerPage]);
+
+  useEffect(() => {
+    void fetchTasks();
+  }, [fetchTasks]);
 
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
@@ -110,9 +85,15 @@ export const HistoryDataGrid: React.FC = () => {
     setPage(0);
   };
 
-  const filteredHistory = mockHistory.filter((record) =>
-    record.parserName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const byStatus = statusFilter === 'all' || task.status === statusFilter;
+      const bySearch =
+        task.correlationId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.parserSlug.toLowerCase().includes(searchQuery.toLowerCase());
+      return byStatus && bySearch;
+    });
+  }, [tasks, searchQuery, statusFilter]);
 
   return (
     <Box>
@@ -126,19 +107,37 @@ export const HistoryDataGrid: React.FC = () => {
         }}
       >
         <Typography variant="h4" fontWeight={700}>
-          Run History
+          Task Logs
         </Typography>
         <Tooltip title="Refresh">
-          <IconButton>
+          <IconButton onClick={() => void fetchTasks()} disabled={isLoading}>
             <RefreshIcon />
           </IconButton>
         </Tooltip>
       </Box>
 
+      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <ToggleButtonGroup
+          value={statusFilter}
+          exclusive
+          onChange={(_, value: StatusFilter | null) => {
+            if (value !== null) {
+              setStatusFilter(value);
+            }
+          }}
+          size="small"
+        >
+          <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="Running">Running</ToggleButton>
+          <ToggleButton value="Success">Success</ToggleButton>
+          <ToggleButton value="Failed">Failed</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+
       {/* Search */}
       <Box sx={{ mb: 3 }}>
         <TextField
-          placeholder="Search by parser name..."
+          placeholder="Search by correlation ID or parser slug..."
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -157,46 +156,42 @@ export const HistoryDataGrid: React.FC = () => {
 
       {/* Data Table */}
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
+        {isLoading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+            <CircularProgress size={28} />
+          </Box>
+        )}
         <TableContainer>
           <Table stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell>Parser</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell align="right">Items</TableCell>
-                <TableCell>Duration</TableCell>
+                <TableCell sx={{ minWidth: 320 }}>Correlation ID</TableCell>
                 <TableCell>Started</TableCell>
-                <TableCell>Correlation ID</TableCell>
-                <TableCell align="center">Actions</TableCell>
+                <TableCell>Finished</TableCell>
+                <TableCell>Error</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredHistory
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((record) => (
+              {filteredTasks.map((record) => (
                   <TableRow
-                    key={record.id}
+                    key={record.correlationId}
                     hover
                     sx={{ '&:last-child td': { border: 0 } }}
                   >
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {record.parserName}
+                        {record.parserSlug}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={getStatusLabel(record.status)}
+                        label={record.status}
                         color={getStatusColor(record.status)}
                         size="small"
                       />
-                    </TableCell>
-                    <TableCell align="right">
-                      {record.itemsCollected.toLocaleString()}
-                    </TableCell>
-                    <TableCell>{record.duration}</TableCell>
-                    <TableCell>
-                      {new Date(record.startedAt).toLocaleString()}
                     </TableCell>
                     <TableCell>
                       <Tooltip title={record.correlationId}>
@@ -204,10 +199,7 @@ export const HistoryDataGrid: React.FC = () => {
                           variant="caption"
                           sx={{
                             fontFamily: 'monospace',
-                            maxWidth: 150,
                             display: 'block',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -215,25 +207,31 @@ export const HistoryDataGrid: React.FC = () => {
                         </Typography>
                       </Tooltip>
                     </TableCell>
-                    <TableCell align="center">
-                      <Tooltip title="View Details">
-                        <IconButton size="small">
-                          <ViewIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Download Results">
-                        <IconButton size="small">
-                          <DownloadIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                    <TableCell>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(record.startedAt).toLocaleString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption" color="text.secondary">
+                        {record.finishedAt ? new Date(record.finishedAt).toLocaleString() : '—'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography
+                        variant="caption"
+                        color={record.errorMessage ? 'error.main' : 'text.secondary'}
+                      >
+                        {record.errorMessage || '—'}
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 ))}
-              {filteredHistory.length === 0 && (
+              {filteredTasks.length === 0 && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                     <Typography variant="body2" color="text.secondary">
-                      No history records found
+                      No task logs found
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -244,7 +242,7 @@ export const HistoryDataGrid: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25, 50]}
           component="div"
-          count={filteredHistory.length}
+          count={totalCount}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

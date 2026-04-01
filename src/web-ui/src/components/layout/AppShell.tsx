@@ -24,15 +24,17 @@ import {
   Menu as MenuIcon,
   Assessment as AssessmentIcon,
   Storage as StorageIcon,
+  History as HistoryIcon,
 } from '@mui/icons-material';
 import { AnalyticsDashboard } from '../../features/analytics';
+import { HistoryDataGrid } from '../../features/history';
 import { ParserList } from '../../features/parsers';
 import { useAuthStore } from '../../store/authStore';
 import { useParserStore } from '../../store/parserStore';
 import { useNavigate } from 'react-router-dom';
 import { UserProfileMenu } from './UserProfileMenu';
 
-type ViewType = 'overview' | 'management';
+type ViewType = 'overview' | 'history' | 'management';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -80,6 +82,7 @@ export const AppShell: React.FC = () => {
 
   const navigationItems = [
     { label: 'Overview', value: 'overview' as ViewType, icon: <AssessmentIcon /> },
+    { label: 'History', value: 'history' as ViewType, icon: <HistoryIcon /> },
     { label: 'Management', value: 'management' as ViewType, icon: <StorageIcon /> },
   ];
 
@@ -210,6 +213,12 @@ export const AppShell: React.FC = () => {
                   iconPosition="start"
                 />
                 <Tab
+                  label="History"
+                  value="history"
+                  icon={<HistoryIcon />}
+                  iconPosition="start"
+                />
+                <Tab
                   label="Management"
                   value="management"
                   icon={<StorageIcon />}
@@ -268,18 +277,28 @@ export const AppShell: React.FC = () => {
           {/* Page Header */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="h4" fontWeight="bold" gutterBottom>
-              {currentView === 'overview' ? 'Analytics Overview' : 'Parser Management'}
+              {currentView === 'overview'
+                ? 'Analytics Overview'
+                : currentView === 'history'
+                  ? 'Task History'
+                  : 'Parser Management'}
             </Typography>
             <Typography variant="body1" color="text.secondary">
               {currentView === 'overview'
                 ? 'Monitor your data parsing platform performance and activity'
-                : 'Configure and manage your data collection parsers'}
+                : currentView === 'history'
+                  ? 'Browse and filter execution logs for parser tasks'
+                  : 'Configure and manage your data collection parsers'}
             </Typography>
           </Box>
 
           {/* View Panels */}
           <TabPanel value={currentView} index="overview">
             <AnalyticsDashboard />
+          </TabPanel>
+
+          <TabPanel value={currentView} index="history">
+            <HistoryDataGrid />
           </TabPanel>
 
           <TabPanel value={currentView} index="management">

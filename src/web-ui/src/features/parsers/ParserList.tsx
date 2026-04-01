@@ -88,48 +88,60 @@ export const ParserList: React.FC = () => {
 
     const pollTasks = async () => {
       try {
-        const response = await storageApi.getTasks(1, 100);
-        response.items.forEach((task) => {
-          const parserSlug = taskSlugMap[task.correlationId];
-          if (!parserSlug) {
-            return;
-          }
+        const statusResults = await Promise.all(
+          correlationIds.map(async (correlationId) => {
+            try {
+              const status = await storageApi.getTaskStatus(correlationId);
+              return { correlationId, status };
+            } catch {
+              return null;
+            }
+          })
+        );
 
-          if (task.status === 'Running') {
-            updateParser(parserSlug, { status: 'Running' });
-            updateParserConfigsBySlug(parserSlug, { status: 'Running' });
-            return;
-          }
+        statusResults
+          .filter((result): result is { correlationId: string; status: { status: 'Running' | 'Success' | 'Failed'; errorMessage?: string } } => result !== null)
+          .forEach(({ correlationId, status }) => {
+            const parserSlug = taskSlugMap[correlationId];
+            if (!parserSlug) {
+              return;
+            }
 
-          updateParser(parserSlug, {
-            status: task.status,
-            lastRunAt: new Date().toISOString(),
-          });
-          updateParserConfigsBySlug(parserSlug, {
-            status: task.status,
-            lastRunAt: new Date().toISOString(),
-            lastErrorMessage: task.errorMessage ?? undefined,
-          });
+            if (status.status === 'Running') {
+              updateParser(parserSlug, { status: 'Running' });
+              updateParserConfigsBySlug(parserSlug, { status: 'Running' });
+              return;
+            }
 
-          setRunningParsers((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(parserSlug);
-            return newSet;
-          });
-
-          setTaskSlugMap((prev) => {
-            const next = { ...prev };
-            delete next[task.correlationId];
-            return next;
-          });
-
-          if (task.status === 'Failed') {
-            setNotification({
-              message: task.errorMessage || `Parser ${parserSlug} failed`,
-              severity: 'error',
+            updateParser(parserSlug, {
+              status: status.status,
+              lastRunAt: new Date().toISOString(),
             });
-          }
-        });
+            updateParserConfigsBySlug(parserSlug, {
+              status: status.status,
+              lastRunAt: new Date().toISOString(),
+              lastErrorMessage: status.errorMessage ?? undefined,
+            });
+
+            setRunningParsers((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(parserSlug);
+              return newSet;
+            });
+
+            setTaskSlugMap((prev) => {
+              const next = { ...prev };
+              delete next[correlationId];
+              return next;
+            });
+
+            if (status.status === 'Failed') {
+              setNotification({
+                message: status.errorMessage || `Parser ${parserSlug} failed`,
+                severity: 'error',
+              });
+            }
+          });
       } catch (pollError) {
         console.error('Failed to poll task statuses:', pollError);
       }
