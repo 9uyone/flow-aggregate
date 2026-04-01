@@ -9,13 +9,11 @@ namespace CollectorService.Parsers.OpenWeather;
 
 [ParserInfo("open-weather", "Current weather by city name")]
 [ParserParameter("city", "City name", isRequired: true)]
-[ParserParameter("units", "metric or imperial", false)]
+[ParserParameter("units", "metric (default) or imperial", false)]
 [ParserMetrics("humidityPercent", "windSpeed")]
 public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : IDataParser {
-	private string ApiKey {
-		get => config["Parsers:OpenWeather:ApiKey"]
-			?? throw new InvalidOperationException("OpenWeather API Key is missing in configuration.");
-	}
+	private string ApiKey => config["Parsers:OpenWeather:ApiKey"]
+		?? throw new InvalidOperationException("OpenWeather API Key is missing in configuration.");
 
 	public async Task<IEnumerable<ParserDataPayload>> ParseAsync(IDictionary<string, string> parameters) {
 		var units = parameters.GetValueOrDefault("units", "metric");
