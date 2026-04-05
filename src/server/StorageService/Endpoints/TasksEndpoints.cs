@@ -15,26 +15,15 @@ public static partial class StorageEndpoints {
 			[FromQuery] bool? oldFirst,
 			[FromQuery] string? status,
 			[FromQuery] string? parserSlug,
+			[FromQuery] string? correlationId,
 			[FromQuery] DateTime? from,
 			[FromQuery] DateTime? to,
 			TaskStatusService service,
 			HttpContext httpContext) =>
 		{
 			var userId = httpContext.User.GetUserId()!;
-			var result = await service.GetTasksAsync(userId, page, pageSize, oldFirst, status, parserSlug, from, to);
+			var result = await service.GetTasksAsync(userId, page, pageSize, oldFirst, status, parserSlug, correlationId, from, to);
 			return Results.Ok(result);
-		}).RequireAuthorization();
-
-		group.MapGet("/status/{correlationId}", async (
-			[FromRoute] Guid correlationId,
-			TaskStatusService service,
-			HttpContext httpContext) =>
-		{
-			var userId = httpContext.User.GetUserId()!;
-			var result = await service.GetTaskStatusAsync(userId, correlationId);
-			return result != null
-				? Results.Ok(result)
-				: Results.NotFound(new { message = "Task not found" });
 		}).RequireAuthorization();
 	}
 }
