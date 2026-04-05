@@ -31,41 +31,46 @@ import { HistoryDataGrid } from '../../features/history';
 import { ParserList } from '../../features/parsers';
 import { useAuthStore } from '../../store/authStore';
 import { useParserStore } from '../../store/parserStore';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { UserProfileMenu } from './UserProfileMenu';
 
 type ViewType = 'overview' | 'history' | 'management';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: ViewType;
-  value: ViewType;
-}
-
-const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
-  return (
-    <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box>{children}</Box>}
-    </div>
-  );
+const pathToView: Record<string, ViewType> = {
+  '/overview': 'overview',
+  '/history': 'history',
+  '/management': 'management',
 };
 
 export const AppShell: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [currentView, setCurrentView] = useState<ViewType>('overview');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   
   const { user, logout } = useAuthStore();
   const { fetchConfigs } = useParserStore();
+  const location = useLocation();
   const navigate = useNavigate();
+
+  const currentView = pathToView[location.pathname] ?? 'overview';
 
   useEffect(() => {
     void fetchConfigs();
   }, [fetchConfigs]);
 
+  useEffect(() => {
+    if (location.pathname === '/') {
+      navigate('/overview', { replace: true });
+      return;
+    }
+
+    if (!pathToView[location.pathname]) {
+      navigate('/overview', { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
   const handleViewChange = (_event: React.SyntheticEvent, newView: ViewType) => {
-    setCurrentView(newView);
+    navigate(`/${newView}`);
     if (isMobile) {
       setMobileDrawerOpen(false);
     }
@@ -101,7 +106,7 @@ export const AppShell: React.FC = () => {
             <ListItemButton
               selected={currentView === item.value}
               onClick={() => {
-                setCurrentView(item.value);
+                navigate(`/${item.value}`);
                 setMobileDrawerOpen(false);
               }}
             >
@@ -293,17 +298,9 @@ export const AppShell: React.FC = () => {
           </Box>
 
           {/* View Panels */}
-          <TabPanel value={currentView} index="overview">
-            <AnalyticsDashboard />
-          </TabPanel>
-
-          <TabPanel value={currentView} index="history">
-            <HistoryDataGrid />
-          </TabPanel>
-
-          <TabPanel value={currentView} index="management">
-            <ParserList />
-          </TabPanel>
+          {currentView === 'overview' && <AnalyticsDashboard />}
+          {currentView === 'history' && <HistoryDataGrid />}
+          {currentView === 'management' && <ParserList />}
         </Container>
       </Box>
     </Box>
