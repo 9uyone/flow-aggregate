@@ -126,7 +126,7 @@ export const ParserList: React.FC = () => {
         );
 
         statusResults
-          .filter((result): result is { correlationId: string; status: { correlationId: string; parserSlug: string; status: 'Running' | 'Success' | 'Failed'; errorMessage?: string; startedAt: string; finishedAt: string | null } } => result !== null)
+          .filter((result): result is { correlationId: string; status: NonNullable<typeof result>['status'] } => result !== null)
           .forEach(({ correlationId, status }) => {
             const parserSlug = status.parserSlug;
             if (!parserSlug) {

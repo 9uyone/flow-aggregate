@@ -223,6 +223,8 @@ const normalizePagedTasksResponse = (payload: unknown): PagedTasksResponse => {
       const parserSlug = row.parserSlug ?? row.ParserSlug;
       const startedAt = row.startedAt ?? row.StartedAt;
       const finishedAtRaw = row.finishedAt ?? row.FinishedAt;
+      const recordsCountRaw = row.recordsCount ?? row.RecordsCount;
+      const recordsCount = typeof recordsCountRaw === 'number' ? recordsCountRaw : 0;
 
       if (
         !status ||
@@ -241,6 +243,7 @@ const normalizePagedTasksResponse = (payload: unknown): PagedTasksResponse => {
         errorMessage: typeof errorMessageRaw === 'string' ? errorMessageRaw : null,
         startedAt,
         finishedAt: typeof finishedAtRaw === 'string' ? finishedAtRaw : null,
+        recordsCount,
       };
     })
     .filter((task): task is PagedTasksResponse['items'][number] => task !== null);
@@ -270,6 +273,8 @@ const normalizeTaskStatusResponse = (payload: unknown): TaskStatusResponse | nul
   const parserSlug = raw.parserSlug ?? raw.ParserSlug;
   const startedAt = raw.startedAt ?? raw.StartedAt;
   const finishedAtRaw = raw.finishedAt ?? raw.FinishedAt;
+  const recordsCountRaw = raw.recordsCount ?? raw.RecordsCount;
+  const recordsCount = typeof recordsCountRaw === 'number' ? recordsCountRaw : 0;
   if (!status) {
     return null;
   }
@@ -290,6 +295,7 @@ const normalizeTaskStatusResponse = (payload: unknown): TaskStatusResponse | nul
     errorMessage: typeof errorMessageRaw === 'string' ? errorMessageRaw : undefined,
     startedAt,
     finishedAt: typeof finishedAtRaw === 'string' ? finishedAtRaw : null,
+    recordsCount,
   };
 };
 
@@ -414,10 +420,24 @@ export const storageApi = {
   getTasks: async (
     page: number = 1,
     pageSize: number = 50,
-    oldFirst?: boolean
+    options?: {
+      oldFirst?: boolean;
+      status?: ParserRunStatus;
+      parserSlug?: string;
+      from?: string;
+      to?: string;
+    }
   ): Promise<PagedTasksResponse> => {
     const { data } = await axiosInstance.get('/storage/tasks', {
-      params: { page, pageSize, oldFirst },
+      params: {
+        page,
+        pageSize,
+        oldFirst: options?.oldFirst,
+        status: options?.status,
+        parserSlug: options?.parserSlug,
+        from: options?.from,
+        to: options?.to,
+      },
     });
     return normalizePagedTasksResponse(data);
   },

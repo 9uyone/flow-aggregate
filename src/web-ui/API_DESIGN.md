@@ -107,7 +107,7 @@ Response: 202 Accepted { correlationId: string }
 
 ### Get all tasks (paginated)
 ```
-GET /api/storage/tasks?page=1&pageSize=20&oldFirst=true|false
+GET /api/storage/tasks?page=1&pageSize=20&oldFirst=true|false&status=Running|Success|Failed&parserSlug=open-weather&from=2026-04-01T00:00:00Z&to=2026-04-02T00:00:00Z
 Response: PagedResponse<ParserTaskItem>
 ```
 
@@ -119,7 +119,8 @@ ParserTaskItem:
   status: "Running" | "Success" | "Failed",
   errorMessage?: string,
   startedAt: string,
-  finishedAt?: string
+  finishedAt: string | null,
+  recordsCount: number
 }
 ```
 
@@ -134,7 +135,8 @@ Response: {
   status: "Running" | "Success" | "Failed",
   errorMessage?: string | null,
   startedAt: string,
-  finishedAt: string | null
+  finishedAt: string | null,
+  recordsCount: number
 }
 ```
 

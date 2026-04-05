@@ -100,7 +100,7 @@ export const AnalyticsDashboard: React.FC = () => {
     const fetchRecentTasks = async () => {
       setRecentTasksLoading(true);
       try {
-        const response = await storageApi.getTasks(1, 5, false);
+        const response = await storageApi.getTasks(1, 5, { oldFirst: false });
         setRecentTasks(response.items);
       } catch (err) {
         console.error('Error fetching recent tasks:', err);
@@ -491,6 +491,9 @@ export const AnalyticsDashboard: React.FC = () => {
                   <Typography variant="caption" color="text.secondary" display="block">
                     {new Date(task.startedAt).toLocaleString()}
                     {task.finishedAt ? ` -> ${new Date(task.finishedAt).toLocaleTimeString()}` : ''}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Records: {task.recordsCount.toLocaleString()}
                   </Typography>
                 </Box>
                 <Chip

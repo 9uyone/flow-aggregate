@@ -3,6 +3,7 @@ import {
   Box,
   Typography,
   Paper,
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -52,12 +53,21 @@ export const HistoryDataGrid: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [parserSlugFilter, setParserSlugFilter] = useState('');
+  const [fromFilter, setFromFilter] = useState('');
+  const [toFilter, setToFilter] = useState('');
 
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await storageApi.getTasks(page + 1, rowsPerPage, false);
+      const response = await storageApi.getTasks(page + 1, rowsPerPage, {
+        oldFirst: false,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        parserSlug: parserSlugFilter.trim() || undefined,
+        from: fromFilter || undefined,
+        to: toFilter || undefined,
+      });
       setTasks(response.items);
       setTotalCount(response.totalCount);
     } catch (err) {
@@ -68,7 +78,7 @@ export const HistoryDataGrid: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, statusFilter, parserSlugFilter, fromFilter, toFilter]);
 
   useEffect(() => {
     void fetchTasks();
@@ -85,15 +95,22 @@ export const HistoryDataGrid: React.FC = () => {
     setPage(0);
   };
 
+  const handleClearFilters = () => {
+    setPage(0);
+    setSearchQuery('');
+    setStatusFilter('all');
+    setParserSlugFilter('');
+    setFromFilter('');
+    setToFilter('');
+  };
+
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      const byStatus = statusFilter === 'all' || task.status === statusFilter;
       const bySearch =
-        task.correlationId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.parserSlug.toLowerCase().includes(searchQuery.toLowerCase());
-      return byStatus && bySearch;
+        task.correlationId.toLowerCase().includes(searchQuery.toLowerCase());
+      return bySearch;
     });
-  }, [tasks, searchQuery, statusFilter]);
+  }, [tasks, searchQuery]);
 
   return (
     <Box>
@@ -135,9 +152,9 @@ export const HistoryDataGrid: React.FC = () => {
       </Stack>
 
       {/* Search */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
         <TextField
-          placeholder="Search by correlation ID or parser slug..."
+          placeholder="Search by correlation ID..."
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -152,6 +169,45 @@ export const HistoryDataGrid: React.FC = () => {
           }}
           sx={{ minWidth: 300 }}
         />
+        <TextField
+          placeholder="Filter by parser slug"
+          size="small"
+          value={parserSlugFilter}
+          onChange={(e) => {
+            setPage(0);
+            setParserSlugFilter(e.target.value);
+          }}
+          sx={{ minWidth: 220 }}
+        />
+        <TextField
+          label="From"
+          type="datetime-local"
+          size="small"
+          value={fromFilter}
+          onChange={(e) => {
+            setPage(0);
+            setFromFilter(e.target.value);
+          }}
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <TextField
+          label="To"
+          type="datetime-local"
+          size="small"
+          value={toFilter}
+          onChange={(e) => {
+            setPage(0);
+            setToFilter(e.target.value);
+          }}
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <Button
+          variant="text"
+          onClick={handleClearFilters}
+          sx={{ alignSelf: 'center', height: 40 }}
+        >
+          Clear filters
+        </Button>
       </Box>
 
       {/* Data Table */}
@@ -169,6 +225,7 @@ export const HistoryDataGrid: React.FC = () => {
                 <TableCell>Parser</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell sx={{ minWidth: 320 }}>Correlation ID</TableCell>
+                <TableCell align="right">Records</TableCell>
                 <TableCell>Started</TableCell>
                 <TableCell>Finished</TableCell>
                 <TableCell>Error</TableCell>
@@ -207,6 +264,11 @@ export const HistoryDataGrid: React.FC = () => {
                         </Typography>
                       </Tooltip>
                     </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" fontWeight={600}>
+                        {record.recordsCount.toLocaleString()}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       <Typography variant="caption" color="text.secondary">
                         {new Date(record.startedAt).toLocaleString()}
@@ -229,7 +291,7 @@ export const HistoryDataGrid: React.FC = () => {
                 ))}
               {filteredTasks.length === 0 && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                     <Typography variant="body2" color="text.secondary">
                       No task logs found
                     </Typography>
