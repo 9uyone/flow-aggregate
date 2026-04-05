@@ -32,6 +32,8 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 		var weather = await httpClient.GetAsync<WeatherResponse>(weatherUrl)
 			?? throw new ExternalServiceException("Failed to retrieve weather data from OpenWeather API.");
 
+		//await Task.Delay(20000);
+
 		return [new ParserDataPayload {
 			Category = "Temperature",
 			Source = "openweathermap.org",
@@ -56,7 +58,14 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 				new("Kyiv", "Київ"),
 				new("Odesa", "Одеса")
 			});
+		} else if (parameterName == "units") {
+			return Task.FromResult<IEnumerable<LookupOptionDto>>(new List<LookupOptionDto>
+			{
+				new("metric", "Metric (°C, m/s)"),
+				new("imperial", "Imperial (°F, mph)")
+			});
 		}
+
 		return Task.FromResult(Enumerable.Empty<LookupOptionDto>());
 	}
 }
