@@ -7,4 +7,5 @@ public class TaskStatusDto {
 	public string? ErrorMessage { get; init; }
 	public DateTime? StartedAt { get; init; }
 	public DateTime? FinishedAt { get; init; }
+	public int RecordsCount { get; set; }
 }
