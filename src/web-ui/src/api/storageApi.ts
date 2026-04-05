@@ -424,6 +424,7 @@ export const storageApi = {
       oldFirst?: boolean;
       status?: ParserRunStatus;
       parserSlug?: string;
+      correlationId?: string;
       from?: string;
       to?: string;
     }
@@ -435,6 +436,7 @@ export const storageApi = {
         oldFirst: options?.oldFirst,
         status: options?.status,
         parserSlug: options?.parserSlug,
+        correlationId: options?.correlationId,
         from: options?.from,
         to: options?.to,
       },

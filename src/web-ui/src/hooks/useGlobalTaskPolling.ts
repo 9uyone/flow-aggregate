@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { storageApi } from '../api';
 import { useParserStore } from '../store/parserStore';
-import type { ParserTaskItem, PagedTasksResponse } from '../types/storage';
+import type { ParserTaskItem } from '../types/storage';
 
 /**
  * Global task polling hook that runs at app level.
@@ -15,9 +14,17 @@ import type { ParserTaskItem, PagedTasksResponse } from '../types/storage';
  * then invalidates or updates the getTasks query cache.
  */
 export const useGlobalTaskPolling = () => {
-  const queryClient = useQueryClient();
   const runningTaskIds = useParserStore((state) => state.runningTaskIds);
-  const { updateParser, updateParserConfigsBySlug, removeRunningTaskId } = useParserStore();
+  const taskSlugByCorrelationId = useParserStore((state) => state.taskSlugByCorrelationId);
+  const {
+    updateParser,
+    updateParserConfigsBySlug,
+    removeRunningTaskId,
+    removeTaskSlugForCorrelationId,
+    setTaskStatus,
+    removeTaskStatus,
+    bumpTaskCompletionVersion,
+  } = useParserStore();
 
   useEffect(() => {
     const activeCorrelationIds = Array.from(runningTaskIds.values());
@@ -27,70 +34,65 @@ export const useGlobalTaskPolling = () => {
 
     const pollTasks = async () => {
       try {
-        const statusResults = await Promise.all(
+        const taskResults = await Promise.all(
           activeCorrelationIds.map(async (correlationId) => {
             try {
-              const status = await storageApi.getTaskStatus(correlationId);
-              return { correlationId, status };
+              const response = await storageApi.getTasks(1, 1, { correlationId });
+              return {
+                correlationId,
+                task: response.items[0] ?? null,
+              };
             } catch {
               return null;
             }
           })
         );
 
-        statusResults
-          .filter((result): result is { correlationId: string; status: NonNullable<typeof result>['status'] } => result !== null)
-          .forEach(({ correlationId, status }) => {
-            const parserSlug = status.parserSlug;
+        taskResults
+          .filter((result): result is { correlationId: string; task: ParserTaskItem } => result !== null && result.task !== null)
+          .forEach(({ correlationId, task }) => {
+            const parserSlug = taskSlugByCorrelationId[correlationId] ?? task.parserSlug;
+
+            setTaskStatus({
+              correlationId: task.correlationId,
+              parserSlug: task.parserSlug,
+              status: task.status,
+              errorMessage: task.errorMessage ?? undefined,
+              startedAt: task.startedAt,
+              finishedAt: task.finishedAt,
+              recordsCount: task.recordsCount,
+            });
+
+            if (task.status !== 'Running') {
+              removeRunningTaskId(correlationId);
+              removeTaskStatus(correlationId);
+              removeTaskSlugForCorrelationId(correlationId);
+              bumpTaskCompletionVersion();
+            }
+
             if (!parserSlug) {
               return;
             }
 
             // Update parser store for ParserList
-            if (status.status === 'Running') {
+            if (task.status === 'Running') {
               updateParser(parserSlug, { status: 'Running' });
               updateParserConfigsBySlug(parserSlug, { status: 'Running' });
             } else {
               // Task completed (Success or Failed)
               updateParser(parserSlug, {
-                status: status.status,
-                lastRunAt: status.finishedAt ?? new Date().toISOString(),
+                status: task.status,
+                lastRunAt: task.finishedAt ?? new Date().toISOString(),
               });
               updateParserConfigsBySlug(parserSlug, {
-                status: status.status,
-                lastRunAt: status.finishedAt ?? new Date().toISOString(),
-                lastErrorMessage: status.errorMessage ?? undefined,
+                status: task.status,
+                lastRunAt: task.finishedAt ?? new Date().toISOString(),
+                lastErrorMessage: task.errorMessage ?? undefined,
               });
 
-              // Remove from running tasks
-              removeRunningTaskId(correlationId);
-            }
-
-            // Update React Query cache for getTasks queries
-            // This ensures History and Analytics see fresh data without refetching
-            const cacheKey = ['getTasks'];
-            const cachedData = queryClient.getQueryData<PagedTasksResponse>(cacheKey);
-            if (cachedData) {
-              const updatedItems = cachedData.items.map((item: ParserTaskItem) => {
-                if (item.correlationId === status.correlationId) {
-                  return {
-                    ...item,
-                    status: status.status,
-                    parserSlug: status.parserSlug,
-                    startedAt: status.startedAt,
-                    finishedAt: status.finishedAt,
-                    errorMessage: status.errorMessage,
-                    recordsCount: status.recordsCount,
-                  };
-                }
-                return item;
-              });
-              queryClient.setQueryData(cacheKey, {
-                ...cachedData,
-                items: updatedItems,
-              });
             }
           });
+
       } catch (pollError) {
         console.error('[GlobalTaskPolling] Failed to poll task statuses:', pollError);
       }
@@ -104,5 +106,15 @@ export const useGlobalTaskPolling = () => {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [runningTaskIds, queryClient, updateParser, updateParserConfigsBySlug, removeRunningTaskId]);
+  }, [
+    runningTaskIds,
+    taskSlugByCorrelationId,
+    updateParser,
+    updateParserConfigsBySlug,
+    removeRunningTaskId,
+    removeTaskSlugForCorrelationId,
+    setTaskStatus,
+    removeTaskStatus,
+    bumpTaskCompletionVersion,
+  ]);
 };

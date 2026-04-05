@@ -27,6 +27,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { storageApi } from '../../api';
+import { useParserStore } from '../../store/parserStore';
 import type { ParserRunStatus, ParserTaskItem } from '../../types/storage';
 
 const getStatusColor = (status: ParserRunStatus) => {
@@ -45,6 +46,8 @@ const getStatusColor = (status: ParserRunStatus) => {
 type StatusFilter = 'all' | ParserRunStatus;
 
 export const HistoryDataGrid: React.FC = () => {
+  const taskStatusesByCorrelationId = useParserStore((state) => state.taskStatusesByCorrelationId);
+  const taskCompletionVersion = useParserStore((state) => state.taskCompletionVersion);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,7 +85,7 @@ export const HistoryDataGrid: React.FC = () => {
 
   useEffect(() => {
     void fetchTasks();
-  }, [fetchTasks]);
+  }, [fetchTasks, taskCompletionVersion]);
 
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
@@ -111,6 +114,24 @@ export const HistoryDataGrid: React.FC = () => {
       return bySearch;
     });
   }, [tasks, searchQuery]);
+
+  const displayedTasks = useMemo(() => {
+    return filteredTasks.map((task) => {
+      const liveStatus = taskStatusesByCorrelationId[task.correlationId];
+      if (!liveStatus) {
+        return task;
+      }
+
+      return {
+        ...task,
+        status: liveStatus.status,
+        errorMessage: liveStatus.errorMessage ?? null,
+        startedAt: liveStatus.startedAt,
+        finishedAt: liveStatus.finishedAt,
+        recordsCount: liveStatus.recordsCount,
+      };
+    });
+  }, [filteredTasks, taskStatusesByCorrelationId]);
 
   return (
     <Box>
@@ -232,7 +253,7 @@ export const HistoryDataGrid: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredTasks.map((record) => (
+              {displayedTasks.map((record) => (
                   <TableRow
                     key={record.correlationId}
                     hover
@@ -289,7 +310,7 @@ export const HistoryDataGrid: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-              {filteredTasks.length === 0 && !isLoading && (
+              {displayedTasks.length === 0 && !isLoading && (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                     <Typography variant="body2" color="text.secondary">

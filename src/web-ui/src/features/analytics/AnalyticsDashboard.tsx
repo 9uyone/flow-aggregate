@@ -39,7 +39,7 @@ interface QuickStat {
 
 export const AnalyticsDashboard: React.FC = () => {
   const theme = useTheme();
-  const { selectedParserSlug, parsers } = useParserStore();
+  const { selectedParserSlug, parsers, taskStatusesByCorrelationId, taskCompletionVersion } = useParserStore();
   const [analyticsData, setAnalyticsData] = useState<AnalyticsResponse | null>(null);
   const [overallStats, setOverallStats] = useState<{
     totalRecords: number;
@@ -111,7 +111,23 @@ export const AnalyticsDashboard: React.FC = () => {
     };
 
     void fetchRecentTasks();
-  }, []);
+  }, [taskCompletionVersion]);
+
+  const displayedRecentTasks = recentTasks.map((task) => {
+    const liveStatus = taskStatusesByCorrelationId[task.correlationId];
+    if (!liveStatus) {
+      return task;
+    }
+
+    return {
+      ...task,
+      status: liveStatus.status,
+      errorMessage: liveStatus.errorMessage ?? null,
+      startedAt: liveStatus.startedAt,
+      finishedAt: liveStatus.finishedAt,
+      recordsCount: liveStatus.recordsCount,
+    };
+  });
 
   // Prepare quick stats cards
   const quickStats: QuickStat[] = [
@@ -458,7 +474,7 @@ export const AnalyticsDashboard: React.FC = () => {
           </Typography>
         ) : (
           <Stack spacing={1.25}>
-            {recentTasks.map((task) => (
+                      {displayedRecentTasks.map((task) => (
               <Box
                 key={task.correlationId}
                 sx={{

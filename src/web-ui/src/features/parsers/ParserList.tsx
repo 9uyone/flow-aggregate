@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -94,8 +94,11 @@ export const ParserList: React.FC = () => {
     updateParser,
     updateParserConfigsBySlug,
     addRunningTaskId,
+    setTaskSlugForCorrelationId,
+    runningTaskIds,
+    taskSlugByCorrelationId,
+    taskStatusesByCorrelationId,
   } = useParserStore();
-  const [runningParsers, setRunningParsers] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
   const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [parserDetails, setParserDetails] = useState<ParserDetailsResponse | null>(null);
@@ -106,36 +109,39 @@ export const ParserList: React.FC = () => {
   const availableParsers = parsers;
   const parserBySlug = new Map(parsers.map((parser) => [parser.slug, parser]));
 
+  const runningSlugs = useMemo(() => {
+    const liveRunningSlugs = Object.values(taskStatusesByCorrelationId)
+      .filter((status) => status.status === 'Running' && status.parserSlug)
+      .map((status) => status.parserSlug);
+
+    const mappedRunningSlugs = Object.entries(taskSlugByCorrelationId)
+      .filter(([correlationId]) => runningTaskIds.has(correlationId))
+      .map(([, slug]) => slug);
+
+    return new Set([...liveRunningSlugs, ...mappedRunningSlugs]);
+  }, [runningTaskIds, taskSlugByCorrelationId, taskStatusesByCorrelationId]);
+
+  const isSlugRunning = (slug: string) => runningSlugs.has(slug);
+
+  const liveStatusBySlug = useMemo(() => {
+    const statusMap = new Map<string, ParserConfig['status']>();
+
+    Object.values(taskStatusesByCorrelationId).forEach((status) => {
+      if (status.parserSlug) {
+        statusMap.set(status.parserSlug, status.status);
+      }
+    });
+
+    return statusMap;
+  }, [taskStatusesByCorrelationId]);
+
+  const getDisplayedConfigStatus = (config: ParserConfig) => {
+    return liveStatusBySlug.get(config.slug) ?? config.status;
+  };
+
   useEffect(() => {
     void fetchConfigs();
   }, [fetchConfigs]);
-
-  useEffect(() => {
-    setRunningParsers((prev) => {
-      if (prev.size === 0) {
-        return prev;
-      }
-
-      const activeRunningSlugs = new Set<string>([
-        ...parsers.filter((parser) => parser.status === 'Running').map((parser) => parser.slug),
-        ...parserConfigs.filter((config) => config.status === 'Running').map((config) => config.slug),
-      ]);
-
-      let hasChanges = false;
-      const next = new Set<string>();
-
-      prev.forEach((slug) => {
-        if (activeRunningSlugs.has(slug)) {
-          next.add(slug);
-          return;
-        }
-
-        hasChanges = true;
-      });
-
-      return hasChanges ? next : prev;
-    });
-  }, [parsers, parserConfigs]);
 
   const buildDefaultParameters = (details: ParserDetailsResponse): Record<string, string> => {
     return details.parameters.reduce<Record<string, string>>((acc, parameter) => {
@@ -150,12 +156,11 @@ export const ParserList: React.FC = () => {
   };
 
   const runParserWithParams = async (slug: string, parameters: Record<string, string>) => {
-    setRunningParsers((prev) => new Set(prev).add(slug));
-
     try {
       const response = await storageApi.runParserBySlug(slug, parameters);
       updateParser(slug, { status: 'Running' });
       addRunningTaskId(response.correlationId);
+      setTaskSlugForCorrelationId(response.correlationId, slug);
       setNotification({
         message: `Parser ${slug} started. Task: ${response.correlationId}`,
         severity: 'success',
@@ -163,11 +168,6 @@ export const ParserList: React.FC = () => {
     } catch (runError) {
       const message = runError instanceof Error ? runError.message : 'Failed to run parser';
       setNotification({ message, severity: 'error' });
-      setRunningParsers((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(slug);
-        return newSet;
-      });
     }
   };
 
@@ -182,13 +182,12 @@ export const ParserList: React.FC = () => {
       return;
     }
 
-    setRunningParsers((prev) => new Set(prev).add(config.slug));
-
     try {
       const response = await storageApi.runConfig(config.configId);
       updateParser(config.slug, { status: 'Running' });
       updateParserConfigsBySlug(config.slug, { status: 'Running' });
       addRunningTaskId(response.correlationId);
+      setTaskSlugForCorrelationId(response.correlationId, config.slug);
       setNotification({
         message: `Config ${config.customName || config.slug} started. Task: ${response.correlationId}`,
         severity: 'success',
@@ -196,11 +195,6 @@ export const ParserList: React.FC = () => {
     } catch (runError) {
       const message = runError instanceof Error ? runError.message : 'Failed to run saved config';
       setNotification({ message, severity: 'error' });
-      setRunningParsers((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(config.slug);
-        return newSet;
-      });
     }
   };
 
@@ -237,7 +231,7 @@ export const ParserList: React.FC = () => {
     }
   };
 
-  const handleStopParser = async (slug: string, event: React.MouseEvent) => {
+  const handleStopParser = async (_slug: string, event: React.MouseEvent) => {
     event.stopPropagation();
     
     try {
@@ -252,12 +246,6 @@ export const ParserList: React.FC = () => {
       const message = error instanceof Error ? error.message : 'Failed to stop parser';
       setNotification({ message, severity: 'error' });
       console.error('Error stopping parser:', error);
-    } finally {
-      setRunningParsers((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(slug);
-        return newSet;
-      });
     }
   };
 
@@ -414,8 +402,8 @@ export const ParserList: React.FC = () => {
                             {...getParserTypeChipProps(config.sourceType)}
                           />
                           <Chip
-                            label={getConfigStatusLabel(config.status)}
-                            color={getConfigStatusColor(config.status)}
+                            label={getConfigStatusLabel(getDisplayedConfigStatus(config))}
+                            color={getConfigStatusColor(getDisplayedConfigStatus(config))}
                             size="small"
                           />
                         </Box>
@@ -489,15 +477,15 @@ export const ParserList: React.FC = () => {
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                  {runningParsers.has(config.slug) || config.status === 'Running' ? (
+                  {isSlugRunning(config.slug) || getDisplayedConfigStatus(config) === 'Running' ? (
                     <Tooltip title="Stop">
                       <IconButton
                         size="small"
                         color="warning"
                         onClick={(e) => handleStopParser(config.slug, e)}
-                        disabled={runningParsers.has(config.slug)}
+                        disabled={isSlugRunning(config.slug)}
                       >
-                        {runningParsers.has(config.slug) ? (
+                        {isSlugRunning(config.slug) ? (
                           <CircularProgress size={20} />
                         ) : (
                           <StopIcon fontSize="small" />
@@ -511,12 +499,12 @@ export const ParserList: React.FC = () => {
                         color="primary"
                         onClick={(e) => handleRunSavedConfig(config, e)}
                         disabled={
-                          runningParsers.has(config.slug) ||
+                          isSlugRunning(config.slug) ||
                           isPreparingRun ||
                           config.sourceType === 'external'
                         }
                       >
-                        {runningParsers.has(config.slug) || isPreparingRun ? (
+                        {isSlugRunning(config.slug) || isPreparingRun ? (
                           <CircularProgress size={20} />
                         ) : (
                           <PlayIcon fontSize="small" />
@@ -600,9 +588,9 @@ export const ParserList: React.FC = () => {
                         size="small"
                         color="primary"
                         onClick={(e) => handleRunAvailableParser(parser.slug, e)}
-                        disabled={runningParsers.has(parser.slug) || isPreparingRun || parser.sourceType === 'external'}
+                        disabled={isSlugRunning(parser.slug) || isPreparingRun || parser.sourceType === 'external'}
                       >
-                        {runningParsers.has(parser.slug) || isPreparingRun ? (
+                        {isSlugRunning(parser.slug) || isPreparingRun ? (
                           <CircularProgress size={20} />
                         ) : (
                           <PlayIcon fontSize="small" />

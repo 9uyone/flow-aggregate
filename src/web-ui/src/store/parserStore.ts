@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { storageApi } from '../api';
-import type { ParserCatalogItem, ParserRunStatus, ParserSourceType, UserConfig } from '../types/storage';
+import type { ParserCatalogItem, ParserRunStatus, ParserSourceType, TaskStatusResponse, UserConfig } from '../types/storage';
 
 export interface Parser {
   slug: string;
@@ -50,6 +50,9 @@ interface ParserState {
   selectedParserSlug: string | null;
   parserRuns: ParserRun[];
   runningTaskIds: Set<string>;
+  taskSlugByCorrelationId: Record<string, string>;
+  taskStatusesByCorrelationId: Record<string, TaskStatusResponse>;
+  taskCompletionVersion: number;
   isLoading: boolean;
   error: string | null;
 
@@ -68,6 +71,11 @@ interface ParserState {
   addRunningTaskId: (correlationId: string) => void;
   removeRunningTaskId: (correlationId: string) => void;
   setRunningTaskIds: (ids: Set<string>) => void;
+  setTaskSlugForCorrelationId: (correlationId: string, slug: string) => void;
+  removeTaskSlugForCorrelationId: (correlationId: string) => void;
+  setTaskStatus: (status: TaskStatusResponse) => void;
+  removeTaskStatus: (correlationId: string) => void;
+  bumpTaskCompletionVersion: () => void;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -180,6 +188,9 @@ export const useParserStore = create<ParserState>()((set) => ({
   selectedParserSlug: null,
   parserRuns: [],
   runningTaskIds: new Set(),
+  taskSlugByCorrelationId: {},
+  taskStatusesByCorrelationId: {},
+  taskCompletionVersion: 0,
   isLoading: false,
   error: null,
 
@@ -293,4 +304,47 @@ export const useParserStore = create<ParserState>()((set) => ({
     set({
       runningTaskIds: ids,
     }),
+
+  setTaskSlugForCorrelationId: (correlationId, slug) =>
+    set((state) => ({
+      taskSlugByCorrelationId: {
+        ...state.taskSlugByCorrelationId,
+        [correlationId]: slug,
+      },
+    })),
+
+  removeTaskSlugForCorrelationId: (correlationId) =>
+    set((state) => {
+      if (!(correlationId in state.taskSlugByCorrelationId)) {
+        return state;
+      }
+
+      const next = { ...state.taskSlugByCorrelationId };
+      delete next[correlationId];
+      return { taskSlugByCorrelationId: next };
+    }),
+
+  setTaskStatus: (status) =>
+    set((state) => ({
+      taskStatusesByCorrelationId: {
+        ...state.taskStatusesByCorrelationId,
+        [status.correlationId]: status,
+      },
+    })),
+
+  removeTaskStatus: (correlationId) =>
+    set((state) => {
+      if (!(correlationId in state.taskStatusesByCorrelationId)) {
+        return state;
+      }
+
+      const next = { ...state.taskStatusesByCorrelationId };
+      delete next[correlationId];
+      return { taskStatusesByCorrelationId: next };
+    }),
+
+  bumpTaskCompletionVersion: () =>
+    set((state) => ({
+      taskCompletionVersion: state.taskCompletionVersion + 1,
+    })),
 }));
