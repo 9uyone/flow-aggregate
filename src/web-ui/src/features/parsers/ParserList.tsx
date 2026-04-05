@@ -93,6 +93,7 @@ export const ParserList: React.FC = () => {
     selectedParserSlug,
     updateParser,
     updateParserConfigsBySlug,
+    addRunningTaskId,
   } = useParserStore();
   const [runningParsers, setRunningParsers] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
@@ -100,88 +101,41 @@ export const ParserList: React.FC = () => {
   const [parserDetails, setParserDetails] = useState<ParserDetailsResponse | null>(null);
   const [runParameterValues, setRunParameterValues] = useState<Record<string, string>>({});
   const [isPreparingRun, setIsPreparingRun] = useState(false);
-  const [runningTaskIds, setRunningTaskIds] = useState<Set<string>>(new Set());
 
   const configuredParsers = parserConfigs;
   const availableParsers = parsers;
   const parserBySlug = new Map(parsers.map((parser) => [parser.slug, parser]));
 
   useEffect(() => {
-    const activeCorrelationIds = Array.from(runningTaskIds.values());
-    if (activeCorrelationIds.length === 0) {
-      return;
-    }
+    void fetchConfigs();
+  }, [fetchConfigs]);
 
-    const pollTasks = async () => {
-      try {
-        const statusResults = await Promise.all(
-          activeCorrelationIds.map(async (correlationId) => {
-            try {
-              const status = await storageApi.getTaskStatus(correlationId);
-              return { correlationId, status };
-            } catch {
-              return null;
-            }
-          })
-        );
-
-        statusResults
-          .filter((result): result is { correlationId: string; status: NonNullable<typeof result>['status'] } => result !== null)
-          .forEach(({ correlationId, status }) => {
-            const parserSlug = status.parserSlug;
-            if (!parserSlug) {
-              return;
-            }
-
-            if (status.status === 'Running') {
-              updateParser(parserSlug, { status: 'Running' });
-              updateParserConfigsBySlug(parserSlug, { status: 'Running' });
-              return;
-            }
-
-            updateParser(parserSlug, {
-              status: status.status,
-              lastRunAt: status.finishedAt ?? new Date().toISOString(),
-            });
-            updateParserConfigsBySlug(parserSlug, {
-              status: status.status,
-              lastRunAt: status.finishedAt ?? new Date().toISOString(),
-              lastErrorMessage: status.errorMessage ?? undefined,
-            });
-
-            setRunningParsers((prev) => {
-              const newSet = new Set(prev);
-              newSet.delete(parserSlug);
-              return newSet;
-            });
-
-            if (status.status === 'Failed') {
-              setNotification({
-                message: status.errorMessage || `Parser ${parserSlug} failed`,
-                severity: 'error',
-              });
-            }
-
-            setRunningTaskIds((prev) => {
-              const next = new Set(prev);
-              next.delete(correlationId);
-              return next;
-            });
-          });
-      } catch (pollError) {
-        console.error('Failed to poll task statuses:', pollError);
+  useEffect(() => {
+    setRunningParsers((prev) => {
+      if (prev.size === 0) {
+        return prev;
       }
-    };
 
-    void pollTasks();
-    const intervalId = window.setInterval(() => {
-      void pollTasks();
-    }, 5000);
+      const activeRunningSlugs = new Set<string>([
+        ...parsers.filter((parser) => parser.status === 'Running').map((parser) => parser.slug),
+        ...parserConfigs.filter((config) => config.status === 'Running').map((config) => config.slug),
+      ]);
 
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [runningTaskIds, updateParser, updateParserConfigsBySlug]);
+      let hasChanges = false;
+      const next = new Set<string>();
+
+      prev.forEach((slug) => {
+        if (activeRunningSlugs.has(slug)) {
+          next.add(slug);
+          return;
+        }
+
+        hasChanges = true;
+      });
+
+      return hasChanges ? next : prev;
+    });
+  }, [parsers, parserConfigs]);
 
   const buildDefaultParameters = (details: ParserDetailsResponse): Record<string, string> => {
     return details.parameters.reduce<Record<string, string>>((acc, parameter) => {
@@ -201,7 +155,7 @@ export const ParserList: React.FC = () => {
     try {
       const response = await storageApi.runParserBySlug(slug, parameters);
       updateParser(slug, { status: 'Running' });
-      setRunningTaskIds((prev) => new Set(prev).add(response.correlationId));
+      addRunningTaskId(response.correlationId);
       setNotification({
         message: `Parser ${slug} started. Task: ${response.correlationId}`,
         severity: 'success',
@@ -234,7 +188,7 @@ export const ParserList: React.FC = () => {
       const response = await storageApi.runConfig(config.configId);
       updateParser(config.slug, { status: 'Running' });
       updateParserConfigsBySlug(config.slug, { status: 'Running' });
-      setRunningTaskIds((prev) => new Set(prev).add(response.correlationId));
+      addRunningTaskId(response.correlationId);
       setNotification({
         message: `Config ${config.customName || config.slug} started. Task: ${response.correlationId}`,
         severity: 'success',

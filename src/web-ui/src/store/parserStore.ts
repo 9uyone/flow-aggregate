@@ -49,6 +49,7 @@ interface ParserState {
   selectedParser: Parser | null;
   selectedParserSlug: string | null;
   parserRuns: ParserRun[];
+  runningTaskIds: Set<string>;
   isLoading: boolean;
   error: string | null;
 
@@ -64,6 +65,9 @@ interface ParserState {
   setParserRuns: (runs: ParserRun[]) => void;
   addParserRun: (run: ParserRun) => void;
   updateParserRun: (id: string, updates: Partial<ParserRun>) => void;
+  addRunningTaskId: (correlationId: string) => void;
+  removeRunningTaskId: (correlationId: string) => void;
+  setRunningTaskIds: (ids: Set<string>) => void;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -175,6 +179,7 @@ export const useParserStore = create<ParserState>()((set) => ({
   selectedParser: null,
   selectedParserSlug: null,
   parserRuns: [],
+  runningTaskIds: new Set(),
   isLoading: false,
   error: null,
 
@@ -268,5 +273,24 @@ export const useParserStore = create<ParserState>()((set) => ({
   clearError: () =>
     set({
       error: null,
+    }),
+
+  addRunningTaskId: (correlationId) =>
+    set((state) => {
+      const newSet = new Set(state.runningTaskIds);
+      newSet.add(correlationId);
+      return { runningTaskIds: newSet };
+    }),
+
+  removeRunningTaskId: (correlationId) =>
+    set((state) => {
+      const newSet = new Set(state.runningTaskIds);
+      newSet.delete(correlationId);
+      return { runningTaskIds: newSet };
+    }),
+
+  setRunningTaskIds: (ids) =>
+    set({
+      runningTaskIds: ids,
     }),
 }));

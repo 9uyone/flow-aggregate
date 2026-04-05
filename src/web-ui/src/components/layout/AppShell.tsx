@@ -32,6 +32,7 @@ import { ParserList } from '../../features/parsers';
 import { useAuthStore } from '../../store/authStore';
 import { useParserStore } from '../../store/parserStore';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useGlobalTaskPolling } from '../../hooks';
 import { UserProfileMenu } from './UserProfileMenu';
 
 type ViewType = 'overview' | 'history' | 'management';
@@ -51,6 +52,9 @@ export const AppShell: React.FC = () => {
   const { fetchConfigs } = useParserStore();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Global polling for task statuses across all pages
+  useGlobalTaskPolling();
 
   const currentView = pathToView[location.pathname] ?? 'overview';
 
