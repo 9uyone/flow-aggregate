@@ -51,7 +51,7 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 		var parameters = new List<ParameterDetailsDto>();
 		foreach (var p in paramsAttr) {
 			var lookups = await parser.GetParameterLookupsAsync(p.Name);
-			parameters.Add(new ParameterDetailsDto(p.Name, p.Description, p.IsRequired, lookups));
+			parameters.Add(new ParameterDetailsDto(p.Name, p.Description, p.IsRequired, p.AllowCustomValues, lookups));
 		}
 
 		var info = reg.Info;

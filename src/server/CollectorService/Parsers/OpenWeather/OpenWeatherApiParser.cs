@@ -8,8 +8,8 @@ using Common.Contracts.Parser;
 namespace CollectorService.Parsers.OpenWeather;
 
 [ParserInfo("open-weather", "Current weather by city name")]
-[ParserParameter("city", "City name", isRequired: true)]
-[ParserParameter("units", "metric (default) or imperial", false)]
+[ParserParameter("city", "City name", isRequired: true, allowCustomValues: true)]
+[ParserParameter("units", "metric (default) or imperial", isRequired: false, allowCustomValues: false)]
 [ParserMetrics("humidityPercent", "windSpeed")]
 public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : IDataParser {
 	private string ApiKey => config["Parsers:OpenWeather:ApiKey"]
@@ -32,7 +32,7 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 		var weather = await httpClient.GetAsync<WeatherResponse>(weatherUrl)
 			?? throw new ExternalServiceException("Failed to retrieve weather data from OpenWeather API.");
 
-		//await Task.Delay(20000);
+		//await Task.Delay(5000);
 
 		return [new ParserDataPayload {
 			Category = "Temperature",
