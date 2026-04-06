@@ -165,10 +165,54 @@ export const HistoryDataGrid: React.FC = () => {
           }}
           size="small"
         >
-          <ToggleButton value="all">All</ToggleButton>
-          <ToggleButton value="Running">Running</ToggleButton>
-          <ToggleButton value="Success">Success</ToggleButton>
-          <ToggleButton value="Failed">Failed</ToggleButton>
+          <ToggleButton
+            value="all"
+            sx={{
+              px: 2,
+              color: 'text.primary',
+              '&.Mui-selected, &.Mui-selected:hover': {
+                color: 'text.primary',
+              },
+            }}
+          >
+            All
+          </ToggleButton>
+          <ToggleButton
+            value="Running"
+            sx={{
+              px: 2,
+              color: 'info.main',
+              '&.Mui-selected, &.Mui-selected:hover': {
+                color: 'info.main',
+              },
+            }}
+          >
+            Running
+          </ToggleButton>
+          <ToggleButton
+            value="Success"
+            sx={{
+              px: 2,
+              color: 'success.main',
+              '&.Mui-selected, &.Mui-selected:hover': {
+                color: 'success.main',
+              },
+            }}
+          >
+            Success
+          </ToggleButton>
+          <ToggleButton
+            value="Failed"
+            sx={{
+              px: 2,
+              color: 'error.main',
+              '&.Mui-selected, &.Mui-selected:hover': {
+                color: 'error.main',
+              },
+            }}
+          >
+            Failed
+          </ToggleButton>
         </ToggleButtonGroup>
       </Stack>
 
