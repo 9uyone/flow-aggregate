@@ -55,6 +55,7 @@ export interface ParserParameterDefinition {
   name: string;
   description: string;
   isRequired: boolean;
+  allowCustomValues: boolean;
   options: ParserParameterOption[];
 }
 

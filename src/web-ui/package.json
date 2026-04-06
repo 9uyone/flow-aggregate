@@ -19,6 +19,7 @@
     "@tanstack/react-query": "^5.90.20",
     "@types/uuid": "^10.0.0",
     "axios": "^1.13.4",
+    "cronstrue": "^3.14.0",
     "jwt-decode": "^4.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

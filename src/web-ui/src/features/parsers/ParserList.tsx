@@ -13,11 +13,6 @@ import {
   CardActionArea,
   Alert,
   Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
@@ -29,58 +24,15 @@ import {
 import { useParserStore, type ParserConfig } from '../../store/parserStore';
 import { storageApi } from '../../api';
 import type { ParserDetailsResponse } from '../../types/storage';
-
-const getConfigStatusColor = (status: ParserConfig['status']) => {
-  switch (status) {
-    case 'Running':
-      return 'info';
-    case 'Success':
-      return 'success';
-    case 'Failed':
-      return 'error';
-    default:
-      return 'default';
-  }
-};
-
-const getConfigStatusLabel = (status: ParserConfig['status']) => {
-  switch (status) {
-    case 'Running':
-      return 'Running';
-    case 'Success':
-      return 'Success';
-    case 'Failed':
-      return 'Failed';
-    default:
-      return 'Idle';
-  }
-};
-
-const getParserTypeLabel = (sourceType: 'internal' | 'plugin' | 'external') => {
-  switch (sourceType) {
-    case 'internal':
-      return 'Internal';
-    case 'plugin':
-      return 'Plugin';
-    case 'external':
-      return 'External';
-    default:
-      return sourceType;
-  }
-};
-
-const getParserTypeChipProps = (sourceType: 'internal' | 'plugin' | 'external') => {
-  switch (sourceType) {
-    case 'internal':
-      return { color: 'primary' as const };
-    case 'plugin':
-      return { color: 'secondary' as const };
-    case 'external':
-      return { color: 'default' as const };
-    default:
-      return { color: 'default' as const };
-  }
-};
+import { RunParserDialog } from './RunParserDialog';
+import { CreateConfigDialog } from './CreateConfigDialog';
+import {
+  CRON_PRESETS,
+  getConfigStatusColor,
+  getConfigStatusLabel,
+  getParserTypeChipProps,
+  getParserTypeLabel,
+} from './parserUiHelpers';
 
 export const ParserList: React.FC = () => {
   const {
@@ -104,10 +56,28 @@ export const ParserList: React.FC = () => {
   const [parserDetails, setParserDetails] = useState<ParserDetailsResponse | null>(null);
   const [runParameterValues, setRunParameterValues] = useState<Record<string, string>>({});
   const [isPreparingRun, setIsPreparingRun] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createConfigType, setCreateConfigType] = useState<'internal' | 'external'>('internal');
+  const [createParserSlug, setCreateParserSlug] = useState('');
+  const [createIsEnabled, setCreateIsEnabled] = useState(true);
+  const [createCustomName, setCreateCustomName] = useState('');
+  const [createCronExpression, setCreateCronExpression] = useState('');
+  const [createParameterValues, setCreateParameterValues] = useState<Record<string, string>>({});
+  const [createParserDetails, setCreateParserDetails] = useState<ParserDetailsResponse | null>(null);
+  const [createParserDetailsLoading, setCreateParserDetailsLoading] = useState(false);
+  const [cronPreset, setCronPreset] = useState('');
+  const [createdExternalToken, setCreatedExternalToken] = useState<string | null>(null);
+  const [isCreatingConfig, setIsCreatingConfig] = useState(false);
 
   const configuredParsers = parserConfigs;
   const availableParsers = parsers;
+  const displayedAvailableParsers = availableParsers.filter((parser) => parser.sourceType !== 'external');
   const parserBySlug = new Map(parsers.map((parser) => [parser.slug, parser]));
+  const internalParsers = useMemo(
+    () => availableParsers.filter((parser) => parser.sourceType === 'internal'),
+    [availableParsers]
+  );
+
 
   const runningSlugs = useMemo(() => {
     const liveRunningSlugs = Object.values(taskStatusesByCorrelationId)
@@ -140,11 +110,114 @@ export const ParserList: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!createDialogOpen) {
+      return;
+    }
+
+    const nextParser = internalParsers[0];
+    if (createConfigType === 'internal' && nextParser && !internalParsers.some((parser) => parser.slug === createParserSlug)) {
+      setCreateParserSlug(nextParser.slug);
+    }
+  }, [createDialogOpen, internalParsers, createConfigType, createParserSlug]);
+
+  useEffect(() => {
+    if (!createDialogOpen || createConfigType !== 'internal' || !createParserSlug) {
+      setCreateParserDetails(null);
+      setCreateParameterValues({});
+      return;
+    }
+
+    const loadParserDetails = async () => {
+      setCreateParserDetailsLoading(true);
+      try {
+        const details = await storageApi.getParserDetails(createParserSlug);
+        setCreateParserDetails(details);
+
+        const initialValues = details.parameters.reduce<Record<string, string>>((acc, parameter) => {
+          const isConfigurable = parameter.allowCustomValues || parameter.options.length > 0;
+          if (!isConfigurable) {
+            return acc;
+          }
+
+          if (parameter.options.length > 0) {
+            acc[parameter.name] = parameter.options[0].value;
+          } else {
+            acc[parameter.name] = '';
+          }
+
+          return acc;
+        }, {});
+        setCreateParameterValues(initialValues);
+      } catch (detailsError) {
+        const message = detailsError instanceof Error ? detailsError.message : 'Failed to load parser parameters';
+        setNotification({ message, severity: 'error' });
+        setCreateParserDetails(null);
+        setCreateParameterValues({});
+      } finally {
+        setCreateParserDetailsLoading(false);
+      }
+    };
+
+    void loadParserDetails();
+  }, [createDialogOpen, createConfigType, createParserSlug]);
+
+  const handleOpenCreateDialog = () => {
+    setCreateDialogOpen(true);
+    setCreateConfigType('internal');
+    setCreatedExternalToken(null);
+
+    const defaultParser = internalParsers[0];
+    setCreateParserSlug(defaultParser?.slug ?? '');
+  };
+
+  const handleCloseCreateDialog = () => {
+    setCreateDialogOpen(false);
+    setCreatedExternalToken(null);
+    setCreateParserSlug('');
+    setCreateIsEnabled(true);
+    setCreateCustomName('');
+    setCreateCronExpression('');
+    setCreateParameterValues({});
+    setCreateParserDetails(null);
+    setCreateParserDetailsLoading(false);
+    setCronPreset('');
+    setIsCreatingConfig(false);
+  };
+
+  const handleCreateConfigTypeChange = (value: 'internal' | 'external') => {
+    setCreateConfigType(value);
+    const nextParser = value === 'internal' ? internalParsers[0] : null;
+    setCreateParserSlug(nextParser?.slug ?? '');
+    setCreatedExternalToken(null);
+  };
+
+  const handleCronPresetChange = (value: string) => {
+    setCronPreset(value);
+    if (value) {
+      setCreateCronExpression(value);
+    }
+  };
+
+  const handleCopyExternalToken = async () => {
+    if (!createdExternalToken) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(createdExternalToken);
+    setNotification({ message: 'Token copied to clipboard', severity: 'success' });
+  };
+
+  useEffect(() => {
     void fetchConfigs();
   }, [fetchConfigs]);
 
   const buildDefaultParameters = (details: ParserDetailsResponse): Record<string, string> => {
     return details.parameters.reduce<Record<string, string>>((acc, parameter) => {
+      const isConfigurable = parameter.allowCustomValues || parameter.options.length > 0;
+      if (!isConfigurable) {
+        return acc;
+      }
+
       if (parameter.options.length > 0) {
         acc[parameter.name] = parameter.options[0].value;
         return acc;
@@ -276,7 +349,10 @@ export const ParserList: React.FC = () => {
     }
 
     const missingRequired = parserDetails.parameters.some(
-      (parameter) => parameter.isRequired && !runParameterValues[parameter.name]?.trim()
+      (parameter) =>
+        parameter.isRequired &&
+        (parameter.allowCustomValues || parameter.options.length > 0) &&
+        !runParameterValues[parameter.name]?.trim()
     );
 
     if (missingRequired) {
@@ -286,6 +362,84 @@ export const ParserList: React.FC = () => {
 
     await runParserWithParams(parserDetails.slug, runParameterValues);
     handleRunDialogClose();
+  };
+
+  const handleCreateParameterChange = (parameterName: string, value: string) => {
+    setCreateParameterValues((prev) => ({
+      ...prev,
+      [parameterName]: value,
+    }));
+  };
+
+  const handleCreateConfig = async () => {
+    if (!createParserSlug) {
+      setNotification({ message: 'Select a parser slug', severity: 'error' });
+      return;
+    }
+
+    setIsCreatingConfig(true);
+
+    try {
+      if (createConfigType === 'internal') {
+        if (!createCronExpression.trim()) {
+          setNotification({ message: 'Cron expression is required for internal configs', severity: 'error' });
+          return;
+        }
+
+        if (createParserDetails) {
+          const missingRequired = createParserDetails.parameters.some(
+            (parameter) =>
+              parameter.isRequired &&
+              (parameter.allowCustomValues || parameter.options.length > 0) &&
+              !createParameterValues[parameter.name]?.trim()
+          );
+
+          if (missingRequired) {
+            setNotification({ message: 'Fill all required parser parameters', severity: 'error' });
+            return;
+          }
+        }
+
+        const options = Object.fromEntries(
+          (createParserDetails?.parameters ?? [])
+            .filter((parameter) => parameter.allowCustomValues || parameter.options.length > 0)
+            .map((parameter) => [parameter.name, createParameterValues[parameter.name] ?? ''])
+            .filter(([, value]) => value.trim().length > 0)
+            .map(([key, value]) => [key, value.trim()])
+        );
+
+        await storageApi.createInternalConfig({
+          parserSlug: createParserSlug,
+          isEnabled: createIsEnabled,
+          customName: createCustomName.trim() || undefined,
+          cronExpression: createCronExpression.trim(),
+          options: Object.keys(options).length > 0 ? options : undefined,
+        });
+
+        setNotification({
+          message: `Internal config created for ${createParserSlug}`,
+          severity: 'success',
+        });
+      } else {
+        const response = await storageApi.createExternalConfig({
+          parserSlug: createParserSlug,
+          isEnabled: createIsEnabled,
+        });
+
+        setCreatedExternalToken(response.token);
+        setNotification({
+          message: `External config created for ${createParserSlug}`,
+          severity: 'success',
+        });
+      }
+
+      await fetchConfigs();
+    } catch (createError) {
+      const message = createError instanceof Error ? createError.message : 'Failed to create config';
+      setNotification({ message, severity: 'error' });
+    } finally {
+      setIsCreatingConfig(false);
+    }
   };
 
   if (isLoading) {
@@ -311,23 +465,21 @@ export const ParserList: React.FC = () => {
         </Alert>
       )}
 
-      {/* Action Header */}
+      {/* Saved Configurations */}
       <Box
         sx={{
           display: 'flex',
-          justifyContent: 'flex-end',
-          mb: 3,
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 2,
+          gap: 2,
         }}
       >
-        <Button variant="contained" startIcon={<AddIcon />}>
-          Add Parser
+        <Typography variant="h6">Saved configs</Typography>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreateDialog}>
+          Add Config
         </Button>
       </Box>
-
-      {/* Saved Configurations */}
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Saved Configurations
-      </Typography>
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {configuredParsers.length === 0 ? (
           <Grid size={12}>
@@ -524,18 +676,18 @@ export const ParserList: React.FC = () => {
         Available Parsers
       </Typography>
       <Grid container spacing={3}>
-        {availableParsers.length === 0 ? (
+        {displayedAvailableParsers.length === 0 ? (
           <Grid size={12}>
             <Card>
               <CardContent sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Collector did not return parser catalog
+                  No manageable parsers available from collector
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
         ) : (
-          availableParsers.map((parser) => (
+          displayedAvailableParsers.map((parser) => (
             <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={`available-${parser.slug}`}>
               <Card
                 sx={{
@@ -621,55 +773,41 @@ export const ParserList: React.FC = () => {
         </Alert>
       </Snackbar>
 
-      <Dialog open={runDialogOpen} onClose={handleRunDialogClose} fullWidth maxWidth="sm">
-        <DialogTitle>Run parser with parameters</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {parserDetails?.displayName || parserDetails?.slug}
-          </Typography>
+      <RunParserDialog
+        open={runDialogOpen}
+        parserDetails={parserDetails}
+        runParameterValues={runParameterValues}
+        onClose={handleRunDialogClose}
+        onParameterChange={handleParameterChange}
+        onRun={handleRunWithParameters}
+      />
 
-          {parserDetails?.parameters.map((parameter) => {
-            const hasOptions = parameter.options.length > 0;
-            return (
-              <Box key={parameter.name}>
-                <TextField
-                  fullWidth
-                  margin="normal"
-                  label={parameter.name}
-                  helperText={
-                    hasOptions
-                      ? `${parameter.description} Suggested: ${parameter.options
-                          .slice(0, 5)
-                          .map((option) => option.value)
-                          .join(', ')}${parameter.options.length > 5 ? '...' : ''}`
-                      : parameter.description
-                  }
-                  required={parameter.isRequired}
-                  value={runParameterValues[parameter.name] ?? ''}
-                  onChange={(event) => handleParameterChange(parameter.name, event.target.value)}
-                  placeholder={hasOptions ? 'Enter your value or use suggested one' : undefined}
-                  inputProps={hasOptions ? { list: `${parameter.name}-options` } : undefined}
-                />
-                {hasOptions && (
-                  <datalist id={`${parameter.name}-options`}>
-                    {parameter.options.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label || option.value}
-                      </option>
-                    ))}
-                  </datalist>
-                )}
-              </Box>
-            );
-          })}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleRunDialogClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleRunWithParameters}>
-            Run
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CreateConfigDialog
+        open={createDialogOpen}
+        configType={createConfigType}
+        internalParsers={internalParsers}
+        parserSlug={createParserSlug}
+        customName={createCustomName}
+        cronExpression={createCronExpression}
+        cronPreset={cronPreset}
+        cronPresets={CRON_PRESETS}
+        parameterValues={createParameterValues}
+        parserDetails={createParserDetails}
+        parserDetailsLoading={createParserDetailsLoading}
+        isEnabled={createIsEnabled}
+        createdExternalToken={createdExternalToken}
+        isCreating={isCreatingConfig}
+        onClose={handleCloseCreateDialog}
+        onConfigTypeChange={handleCreateConfigTypeChange}
+        onParserSlugChange={setCreateParserSlug}
+        onCustomNameChange={setCreateCustomName}
+        onCronExpressionChange={setCreateCronExpression}
+        onCronPresetChange={handleCronPresetChange}
+        onParameterChange={handleCreateParameterChange}
+        onEnabledChange={setCreateIsEnabled}
+        onCopyToken={handleCopyExternalToken}
+        onCreate={handleCreateConfig}
+      />
     </Box>
   );
 };

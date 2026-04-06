@@ -161,6 +161,7 @@ const normalizeParserDetailsResponse = (payload: unknown): ParserDetailsResponse
         name: String(row.name ?? row.Name ?? row.slug ?? row.Slug ?? ''),
         description: String(row.description ?? row.Description ?? ''),
         isRequired: Boolean(row.isRequired ?? row.IsRequired ?? false),
+        allowCustomValues: Boolean(row.allowCustomValues ?? row.AllowCustomValues ?? false),
         options: optionsRaw
           .map((option) => {
             if (!option || typeof option !== 'object') {
