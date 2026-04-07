@@ -27,6 +27,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { storageApi } from '../../api';
+import { PageSectionHeader } from '../../components/layout';
 import { useParserStore } from '../../store/parserStore';
 import type { ParserRunStatus, ParserTaskItem } from '../../types/storage';
 
@@ -135,24 +136,17 @@ export const HistoryDataGrid: React.FC = () => {
 
   return (
     <Box>
-      {/* Header */}
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-        }}
-      >
-        <Typography variant="h4" fontWeight={700}>
-          Task Logs
-        </Typography>
-        <Tooltip title="Refresh">
-          <IconButton onClick={() => void fetchTasks()} disabled={isLoading}>
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
+      <PageSectionHeader
+        title="Task history"
+        description="Browse and filter execution logs for parser tasks"
+        action={(
+          <Tooltip title="Refresh">
+            <IconButton onClick={() => void fetchTasks()} disabled={isLoading}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+      />
 
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
         <ToggleButtonGroup
@@ -283,13 +277,28 @@ export const HistoryDataGrid: React.FC = () => {
             <CircularProgress size={28} />
           </Box>
         )}
-        <TableContainer>
-          <Table stickyHeader>
+        <TableContainer
+          sx={{
+            maxHeight: { xs: '60vh', sm: 'none' },
+            overflowY: { xs: 'auto', sm: 'visible' },
+            overflowX: 'auto',
+          }}
+        >
+          <Table
+            stickyHeader
+            sx={{
+              minWidth: 980,
+              '& .MuiTableCell-stickyHeader': {
+                backgroundColor: 'background.paper',
+                zIndex: 2,
+              },
+            }}
+          >
             <TableHead>
               <TableRow>
                 <TableCell>Parser</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell sx={{ minWidth: 320 }}>Correlation ID</TableCell>
+                <TableCell>Correlation ID</TableCell>
                 <TableCell align="right">Records</TableCell>
                 <TableCell>Started</TableCell>
                 <TableCell>Finished</TableCell>
@@ -316,18 +325,16 @@ export const HistoryDataGrid: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Tooltip title={record.correlationId}>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontFamily: 'monospace',
-                            display: 'block',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {record.correlationId}
-                        </Typography>
-                      </Tooltip>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          display: 'block',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {record.correlationId}
+                      </Typography>
                     </TableCell>
                     <TableCell align="right">
                       <Typography variant="body2" fontWeight={600}>

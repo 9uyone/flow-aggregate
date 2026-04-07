@@ -26,6 +26,7 @@ import {
 import { LineChart } from '@mui/x-charts/LineChart';
 import { useParserStore } from '../../store/parserStore';
 import { storageApi } from '../../api';
+import { PageSectionHeader } from '../../components/layout';
 import type { AnalyticsResponse, ParserTaskItem } from '../../types/storage';
 
 // TypeScript Interfaces
@@ -133,28 +134,28 @@ export const AnalyticsDashboard: React.FC = () => {
   const quickStats: QuickStat[] = [
     {
       id: 'total-records',
-      title: 'Total Records',
+      title: 'Total records',
       value: analyticsData?.totalRecords.toLocaleString() || overallStats?.totalRecords.toLocaleString() || '0',
       icon: <AssessmentIcon sx={{ fontSize: 40 }} />,
       color: theme.palette.primary.main,
     },
     {
       id: 'active-parsers',
-      title: 'Active Parsers',
+      title: 'Active parsers',
       value: overallStats?.activeParsers || parsers.filter(p => p.isActive).length,
       icon: <DataUsageIcon sx={{ fontSize: 40 }} />,
       color: theme.palette.secondary.main,
     },
     {
       id: 'average-value',
-      title: 'Average Value',
+      title: 'Average value',
       value: analyticsData?.averageValue.toFixed(2) || 'N/A',
       icon: <ScheduleIcon sx={{ fontSize: 40 }} />,
       color: theme.palette.info.main,
     },
     {
       id: 'success-rate',
-      title: 'Success Rate',
+      title: 'Success rate',
       value: overallStats?.successRate ? `${overallStats.successRate.toFixed(1)}%` : 'N/A',
       icon: <CheckCircleIcon sx={{ fontSize: 40 }} />,
       color: theme.palette.success.main,
@@ -169,6 +170,11 @@ export const AnalyticsDashboard: React.FC = () => {
 
   return (
     <Box>
+      <PageSectionHeader
+        title="Analytics overview"
+        description="Monitor your data parsing platform performance and activity"
+      />
+
       {/* Quick Stats - Top Row */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         {quickStats.map((stat) => (
@@ -232,7 +238,7 @@ export const AnalyticsDashboard: React.FC = () => {
             }}
           >
             <Typography variant="h6" fontWeight="600" gutterBottom>
-              Data Trends
+              Data trends
               {selectedParserSlug && ` - ${selectedParserSlug}`}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -262,7 +268,7 @@ export const AnalyticsDashboard: React.FC = () => {
               >
                 <TrendingUpIcon sx={{ fontSize: 80, mb: 2, opacity: 0.3 }} />
                 <Typography variant="h6" gutterBottom>
-                  No Parser Selected
+                  No parser selected
                 </Typography>
                 <Typography variant="body2" textAlign="center">
                   Click on a parser card in the Management tab to view its analytics
@@ -281,7 +287,7 @@ export const AnalyticsDashboard: React.FC = () => {
               >
                 <AssessmentIcon sx={{ fontSize: 80, mb: 2, opacity: 0.3 }} />
                 <Typography variant="h6" gutterBottom>
-                  No Data Available
+                  No data available
                 </Typography>
                 <Typography variant="body2" textAlign="center">
                   This parser hasn't collected any data yet
@@ -345,7 +351,7 @@ export const AnalyticsDashboard: React.FC = () => {
             }}
           >
             <Typography variant="h6" fontWeight="600" gutterBottom>
-              Parser Information
+              Parser information
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Details about selected parser
@@ -364,7 +370,7 @@ export const AnalyticsDashboard: React.FC = () => {
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
-                      Total Records
+                      Total records
                     </Typography>
                     <Typography variant="body2" fontWeight="500">
                       {analyticsData?.totalRecords.toLocaleString() || 'Loading...'}
@@ -372,7 +378,7 @@ export const AnalyticsDashboard: React.FC = () => {
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
-                      Average Value
+                      Average value
                     </Typography>
                     <Typography variant="body2" fontWeight="500">
                       {analyticsData?.averageValue.toFixed(2) || 'Loading...'}
@@ -380,7 +386,7 @@ export const AnalyticsDashboard: React.FC = () => {
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
-                      Data Points
+                      Data points
                     </Typography>
                     <Typography variant="body2" fontWeight="500">
                       {analyticsData?.dataPoints.length || 0} entries
@@ -406,7 +412,7 @@ export const AnalyticsDashboard: React.FC = () => {
         }}
       >
         <Typography variant="h6" fontWeight="600" gutterBottom>
-          Quick Actions
+          Quick actions
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Manage your parsers and data collection
@@ -427,7 +433,7 @@ export const AnalyticsDashboard: React.FC = () => {
               },
             }}
           >
-            Add New Parser
+            Add new parser
           </Button>
           <Button
             variant="outlined"
@@ -444,7 +450,7 @@ export const AnalyticsDashboard: React.FC = () => {
               },
             }}
           >
-            Run All Now
+            Run all now
           </Button>
         </Stack>
       </Paper>
@@ -458,7 +464,7 @@ export const AnalyticsDashboard: React.FC = () => {
         }}
       >
         <Typography variant="h6" fontWeight="600" gutterBottom>
-          Recent Tasks (Last 5)
+          Recent tasks
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Latest parser execution logs

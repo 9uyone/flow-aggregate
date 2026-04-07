@@ -87,7 +87,7 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
           onChange={(_, value: 'internal' | 'external') => onConfigTypeChange(value)}
           sx={{ mb: 2 }}
         >
-          <Tab value="internal" label="Internal" />
+          <Tab value="internal" label="Internal / Plugin" />
           <Tab value="external" label="External" />
         </Tabs>
 
@@ -96,7 +96,7 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
             <TextField
               select
               fullWidth
-              margin="normal"
+              margin="dense"
               label="Parser"
               value={parserSlug}
               onChange={(event) => onParserSlugChange(event.target.value)}
@@ -109,14 +109,14 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
             </TextField>
             <TextField
               fullWidth
-              margin="normal"
+              margin="dense"
               label="Custom name"
               value={customName}
               onChange={(event) => onCustomNameChange(event.target.value)}
             />
             <TextField
               fullWidth
-              margin="normal"
+              margin="dense"
               label="Cron expression"
               value={cronExpression}
               onChange={(event) => onCronExpressionChange(event.target.value)}
@@ -126,7 +126,7 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
             <TextField
               select
               fullWidth
-              margin="normal"
+              margin="dense"
               label="Cron presets"
               value={cronPreset}
               onChange={(event) => onCronPresetChange(event.target.value)}
@@ -156,7 +156,7 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
                 <CircularProgress size={24} />
               </Box>
             ) : parserDetails && parserDetails.parameters.length > 0 ? (
-              <Stack spacing={1} sx={{ mt: 2 }}>
+              <Stack spacing={2} sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary">
                   Parser parameters
                 </Typography>
@@ -173,7 +173,7 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
                       key={parameter.name}
                       select={isSelectOnly}
                       fullWidth
-                      margin="dense"
+                      margin="none"
                       label={parameter.name}
                       value={parameterValues[parameter.name] ?? ''}
                       onChange={(event) => onParameterChange(parameter.name, event.target.value)}
@@ -184,7 +184,9 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
                       }
                       required={parameter.isRequired}
                       placeholder={parameter.allowCustomValues && hasOptions ? 'Enter value or pick suggestion' : undefined}
-                      inputProps={parameter.allowCustomValues && hasOptions ? { list: `${parameter.name}-create-options` } : undefined}
+                      slotProps={{
+                        htmlInput: parameter.allowCustomValues && hasOptions ? { list: `${parameter.name}-create-options` } : undefined
+                      }}
                     >
                       {isSelectOnly
                         ? parameter.options.map((option) => (
@@ -214,7 +216,7 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
           <>
             <TextField
               fullWidth
-              margin="normal"
+              margin="none"
               label="Parser slug"
               value={parserSlug}
               onChange={(event) => onParserSlugChange(event.target.value.trim().toLowerCase())}

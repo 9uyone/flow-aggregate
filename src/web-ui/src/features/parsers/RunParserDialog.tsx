@@ -58,14 +58,16 @@ export const RunParserDialog: React.FC<RunParserDialogProps> = ({
               <TextField
                 select={isSelectOnly}
                 fullWidth
-                margin="normal"
+                margin="dense"
                 label={parameter.name}
                 helperText={helperText}
                 required={parameter.isRequired}
                 value={runParameterValues[parameter.name] ?? ''}
                 onChange={(event) => onParameterChange(parameter.name, event.target.value)}
                 placeholder={isCustomWithSuggestions ? 'Enter your value or use suggested one' : undefined}
-                inputProps={isCustomWithSuggestions ? { list: `${parameter.name}-options` } : undefined}
+                slotProps={{
+                  htmlInput: isCustomWithSuggestions ? { list: `${parameter.name}-options` } : undefined
+                }}
               >
                 {isSelectOnly
                   ? parameter.options.map((option) => (

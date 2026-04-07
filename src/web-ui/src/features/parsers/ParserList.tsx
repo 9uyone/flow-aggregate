@@ -24,6 +24,7 @@ import {
 import { useParserStore, type ParserConfig } from '../../store/parserStore';
 import { storageApi } from '../../api';
 import type { ParserDetailsResponse } from '../../types/storage';
+import { PageSectionHeader } from '../../components/layout';
 import { RunParserDialog } from './RunParserDialog';
 import { CreateConfigDialog } from './CreateConfigDialog';
 import {
@@ -459,6 +460,11 @@ export const ParserList: React.FC = () => {
 
   return (
     <Box>
+      <PageSectionHeader
+        title="Parser management"
+        description="Configure and manage your data collection parsers"
+      />
+
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           Failed to load configs: {error}
@@ -477,7 +483,7 @@ export const ParserList: React.FC = () => {
       >
         <Typography variant="h6">Saved configs</Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreateDialog}>
-          Add Config
+          Add config
         </Button>
       </Box>
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -671,9 +677,9 @@ export const ParserList: React.FC = () => {
         )}
       </Grid>
 
-      {/* Available Parsers */}
+      {/* Available parsers */}
       <Typography variant="h6" sx={{ mb: 2 }}>
-        Available Parsers
+        Available parsers
       </Typography>
       <Grid container spacing={3}>
         {displayedAvailableParsers.length === 0 ? (

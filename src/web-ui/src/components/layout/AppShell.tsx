@@ -238,7 +238,7 @@ export const AppShell: React.FC = () => {
 
             {/* System Status Chip */}
             <Chip
-              label="System Online"
+              label="System online"
               color="success"
               size="small"
               sx={{
@@ -283,24 +283,6 @@ export const AppShell: React.FC = () => {
             px: { xs: 2, sm: 3 },
           }}
         >
-          {/* Page Header */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-              {currentView === 'overview'
-                ? 'Analytics Overview'
-                : currentView === 'history'
-                  ? 'Task History'
-                  : 'Parser Management'}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {currentView === 'overview'
-                ? 'Monitor your data parsing platform performance and activity'
-                : currentView === 'history'
-                  ? 'Browse and filter execution logs for parser tasks'
-                  : 'Configure and manage your data collection parsers'}
-            </Typography>
-          </Box>
-
           {/* View Panels */}
           {currentView === 'overview' && <AnalyticsDashboard />}
           {currentView === 'history' && <HistoryDataGrid />}
