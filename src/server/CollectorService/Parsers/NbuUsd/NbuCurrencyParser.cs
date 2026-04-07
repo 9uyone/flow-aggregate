@@ -6,9 +6,9 @@ using Common.Contracts.Parser;
 
 namespace CollectorService.Parsers.NbuUsd;
 
-[ParserInfo("nbu-exchange", "NBU Currency Exchange Rates", "Parses currency exchange rates to UAH from the National Bank of Ukraine")]
-[ParserParameter("valcode", "Requested currency\nBy default is USD", isRequired: false, allowCustomValues: false)]
-[ParserParameter("date", "Requested date in format YYYYMMDD.\nBy default is current", isRequired: false, allowCustomValues: true)]
+[ParserInfo("nbu-exchange", "NBU Currency Exchange Rates", "Parses currency exchange rates to UAH from the National Bank of Ukraine.")]
+[ParserParameter("valcode", "Requested currency. By default is USD.", isRequired: false, allowCustomValues: false)]
+[ParserParameter("date", "Requested date in format YYYYMMDD. By default is current.", isRequired: false, allowCustomValues: true)]
 public class NbuCurrencyParser(IHttpRestClient httpClient, ILogger<NbuCurrencyParser> logger) : IDataParser {
 	public async Task<IEnumerable<ParserDataPayload>> ParseAsync(IDictionary<string, string>? parameters) {
 		var valcode = parameters.GetValueOrDefault("valcode", "USD");

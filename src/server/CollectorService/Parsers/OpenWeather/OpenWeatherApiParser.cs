@@ -8,8 +8,8 @@ using Common.Contracts.Parser;
 namespace CollectorService.Parsers.OpenWeather;
 
 [ParserInfo("open-weather", "Current weather by city name")]
-[ParserParameter("city", "City name", isRequired: true, allowCustomValues: true)]
-[ParserParameter("units", "metric (default) or imperial", isRequired: false, allowCustomValues: false)]
+[ParserParameter("city", "City name.", isRequired: true, allowCustomValues: true)]
+[ParserParameter("units", "By default is Metric.", isRequired: false, allowCustomValues: false)]
 [ParserMetrics("humidityPercent", "windSpeed")]
 public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : IDataParser {
 	private string ApiKey => config["Parsers:OpenWeather:ApiKey"]
