@@ -1,9 +1,11 @@
 import axiosInstance from './axiosInstance';
 import type {
   PagedConfigsResponse,
+  PagedCollectedDataResponse,
   PagedTasksResponse,
   AnalyticsResponse,
   OverallStatsResponse,
+  CollectedDataItem,
   ParserCatalogItem,
   ParserDetailsResponse,
   ParserParameterDefinition,
@@ -263,6 +265,121 @@ const normalizePagedTasksResponse = (payload: unknown): PagedTasksResponse => {
   };
 };
 
+const toScalarMetric = (value: unknown): string | number | boolean | null => {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+
+  return JSON.stringify(value);
+};
+
+const normalizeCollectedDataItem = (item: unknown): CollectedDataItem | null => {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const raw = item as Record<string, unknown>;
+  const idRaw = raw.id ?? raw.Id;
+  const parserSlugRaw = raw.parserSlug ?? raw.ParserSlug ?? raw.slug ?? raw.Slug ?? raw.parserName ?? raw.ParserName;
+  const correlationIdRaw = raw.correlationId ?? raw.CorrelationId;
+  const configIdRaw = raw.configId ?? raw.ConfigId;
+  const timestampRaw = raw.timestamp ?? raw.Timestamp;
+  const capturedAtRaw =
+    raw.collectedAt ??
+    raw.CollectedAt ??
+    raw.createdAt ??
+    raw.CreatedAt ??
+    raw.capturedAt ??
+    raw.CapturedAt;
+  const metricsRaw = raw.metrics ?? raw.Metrics ?? raw.values ?? raw.Values ?? {};
+  const metricRaw = raw.metric ?? raw.Metric;
+  const valueRaw = raw.value ?? raw.Value;
+  const typeRaw = raw.type ?? raw.Type;
+  const sourceRaw = raw.source ?? raw.Source;
+  const metadataRaw = raw.metadata ?? raw.Metadata;
+
+  if (typeof idRaw !== 'string' || typeof parserSlugRaw !== 'string') {
+    return null;
+  }
+
+  let metricsRecord = metricsRaw && typeof metricsRaw === 'object'
+    ? Object.fromEntries(
+      Object.entries(metricsRaw as Record<string, unknown>).map(([key, value]) => [key, toScalarMetric(value)])
+    )
+    : {};
+
+  // Compatibility mapping for DataResultDto-like payload:
+  // { metric, value, type, source, metadata }.
+  if (Object.keys(metricsRecord).length === 0) {
+    if (typeof metricRaw === 'string') {
+      metricsRecord = {
+        [metricRaw]: toScalarMetric(valueRaw),
+      };
+    }
+
+    if (typeof typeRaw === 'string') {
+      metricsRecord.type = typeRaw;
+    }
+
+    if (typeof sourceRaw === 'string') {
+      metricsRecord.source = sourceRaw;
+    }
+
+    if (metadataRaw && typeof metadataRaw === 'object') {
+      const metadataEntries = Object.entries(metadataRaw as Record<string, unknown>);
+      metadataEntries.forEach(([key, value]) => {
+        metricsRecord[`metadata.${key}`] = toScalarMetric(value);
+      });
+    }
+
+    if (Object.keys(metricsRecord).length === 0 && valueRaw !== undefined) {
+      metricsRecord.value = toScalarMetric(valueRaw);
+    }
+  }
+
+  return {
+    id: idRaw,
+    parserSlug: parserSlugRaw,
+    correlationId: typeof correlationIdRaw === 'string' ? correlationIdRaw : null,
+    configId: typeof configIdRaw === 'string' ? configIdRaw : null,
+    timestamp: typeof timestampRaw === 'string' ? timestampRaw : null,
+    capturedAt: typeof capturedAtRaw === 'string' ? capturedAtRaw : null,
+    metrics: metricsRecord,
+  };
+};
+
+const normalizePagedCollectedDataResponse = (payload: unknown): PagedCollectedDataResponse => {
+  const raw = (payload ?? {}) as Record<string, unknown>;
+
+  const itemsRaw = Array.isArray(raw.items)
+    ? raw.items
+    : Array.isArray(raw.Items)
+      ? (raw.Items as unknown[])
+      : [];
+
+  const items = itemsRaw
+    .map(normalizeCollectedDataItem)
+    .filter((item): item is CollectedDataItem => item !== null);
+
+  const totalCountRaw = raw.totalCount ?? raw.TotalCount;
+  const pageRaw = raw.page ?? raw.Page;
+  const totalPagesRaw = raw.totalPages ?? raw.TotalPages;
+  const pageSizeRaw = raw.pageSize ?? raw.PageSize;
+
+  return {
+    items,
+    totalCount: typeof totalCountRaw === 'number' ? totalCountRaw : items.length,
+    page: typeof pageRaw === 'number' ? pageRaw : 1,
+    totalPages: typeof totalPagesRaw === 'number' ? totalPagesRaw : 1,
+    pageSize: typeof pageSizeRaw === 'number' ? pageSizeRaw : items.length,
+  };
+};
+
 const normalizeTaskStatusResponse = (payload: unknown): TaskStatusResponse | null => {
   if (!payload || typeof payload !== 'object') {
     return null;
@@ -443,6 +560,38 @@ export const storageApi = {
       },
     });
     return normalizePagedTasksResponse(data);
+  },
+
+  /**
+   * Get collected parser data records
+   */
+  getCollectedData: async (
+    page: number = 1,
+    pageSize: number = 50,
+    options?: {
+      oldFirst?: boolean;
+      search?: string;
+      parserSlug?: string;
+      correlationId?: string;
+      configId?: string;
+      from?: string;
+      to?: string;
+    }
+  ): Promise<PagedCollectedDataResponse> => {
+    const { data } = await axiosInstance.get('/storage/collected', {
+      params: {
+        page,
+        pageSize,
+        oldFirst: options?.oldFirst,
+        search: options?.search,
+        parserSlug: options?.parserSlug,
+        correlationId: options?.correlationId,
+        configId: options?.configId,
+        from: options?.from,
+        to: options?.to,
+      },
+    });
+    return normalizePagedCollectedDataResponse(data);
   },
 
   /**

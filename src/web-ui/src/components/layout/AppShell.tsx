@@ -25,8 +25,10 @@ import {
   Assessment as AssessmentIcon,
   Storage as StorageIcon,
   History as HistoryIcon,
+  Dataset as DatasetIcon,
 } from '@mui/icons-material';
 import { AnalyticsDashboard } from '../../features/analytics';
+import { CollectedDataGrid } from '../../features/data';
 import { HistoryDataGrid } from '../../features/history';
 import { ParserList } from '../../features/parsers';
 import { useAuthStore } from '../../store/authStore';
@@ -35,11 +37,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useGlobalTaskPolling } from '../../hooks';
 import { UserProfileMenu } from './UserProfileMenu';
 
-type ViewType = 'overview' | 'history' | 'management';
+type ViewType = 'overview' | 'history' | 'data' | 'management';
 
 const pathToView: Record<string, ViewType> = {
   '/overview': 'overview',
   '/history': 'history',
+  '/data': 'data',
   '/management': 'management',
 };
 
@@ -92,6 +95,7 @@ export const AppShell: React.FC = () => {
   const navigationItems = [
     { label: 'Overview', value: 'overview' as ViewType, icon: <AssessmentIcon /> },
     { label: 'History', value: 'history' as ViewType, icon: <HistoryIcon /> },
+    { label: 'Data', value: 'data' as ViewType, icon: <DatasetIcon /> },
     { label: 'Management', value: 'management' as ViewType, icon: <StorageIcon /> },
   ];
 
@@ -228,6 +232,12 @@ export const AppShell: React.FC = () => {
                   iconPosition="start"
                 />
                 <Tab
+                  label="Data"
+                  value="data"
+                  icon={<DatasetIcon />}
+                  iconPosition="start"
+                />
+                <Tab
                   label="Management"
                   value="management"
                   icon={<StorageIcon />}
@@ -286,6 +296,7 @@ export const AppShell: React.FC = () => {
           {/* View Panels */}
           {currentView === 'overview' && <AnalyticsDashboard />}
           {currentView === 'history' && <HistoryDataGrid />}
+          {currentView === 'data' && <CollectedDataGrid />}
           {currentView === 'management' && <ParserList />}
         </Container>
       </Box>

@@ -60,13 +60,14 @@ export const HistoryDataGrid: React.FC = () => {
   const [parserSlugFilter, setParserSlugFilter] = useState('');
   const [fromFilter, setFromFilter] = useState('');
   const [toFilter, setToFilter] = useState('');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await storageApi.getTasks(page + 1, rowsPerPage, {
-        oldFirst: false,
+        oldFirst: sortOrder === 'oldest',
         status: statusFilter === 'all' ? undefined : statusFilter,
         parserSlug: parserSlugFilter.trim() || undefined,
         from: fromFilter || undefined,
@@ -82,7 +83,7 @@ export const HistoryDataGrid: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, rowsPerPage, statusFilter, parserSlugFilter, fromFilter, toFilter]);
+  }, [page, rowsPerPage, statusFilter, parserSlugFilter, fromFilter, toFilter, sortOrder]);
 
   useEffect(() => {
     void fetchTasks();
@@ -106,6 +107,7 @@ export const HistoryDataGrid: React.FC = () => {
     setParserSlugFilter('');
     setFromFilter('');
     setToFilter('');
+    setSortOrder('newest');
   };
 
   const filteredTasks = useMemo(() => {
@@ -148,7 +150,11 @@ export const HistoryDataGrid: React.FC = () => {
         )}
       />
 
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+      <Stack 
+        direction={{ xs: 'column', md: 'row' }} 
+        spacing={1} 
+        sx={{ mb: 2, alignItems: { xs: 'stretch', md: 'center' } }}
+      >
         <ToggleButtonGroup
           value={statusFilter}
           exclusive
@@ -158,11 +164,14 @@ export const HistoryDataGrid: React.FC = () => {
             }
           }}
           size="small"
+          sx={{ width: { xs: '100%', md: 'auto' } }}
         >
           <ToggleButton
             value="all"
             sx={{
-              px: 2,
+              px: { xs: 1, md: 2 },
+              py: 0.7,
+              flex: { xs: 1, md: 'none' },
               color: 'text.primary',
               '&.Mui-selected, &.Mui-selected:hover': {
                 color: 'text.primary',
@@ -174,7 +183,9 @@ export const HistoryDataGrid: React.FC = () => {
           <ToggleButton
             value="Running"
             sx={{
-              px: 2,
+              px: { xs: 1, md: 2 },
+              py: 0.7,
+              flex: { xs: 1, md: 'none' },
               color: 'info.main',
               '&.Mui-selected, &.Mui-selected:hover': {
                 color: 'info.main',
@@ -186,7 +197,9 @@ export const HistoryDataGrid: React.FC = () => {
           <ToggleButton
             value="Success"
             sx={{
-              px: 2,
+              px: { xs: 1, md: 2 },
+              py: 0.7,
+              flex: { xs: 1, md: 'none' },
               color: 'success.main',
               '&.Mui-selected, &.Mui-selected:hover': {
                 color: 'success.main',
@@ -198,7 +211,9 @@ export const HistoryDataGrid: React.FC = () => {
           <ToggleButton
             value="Failed"
             sx={{
-              px: 2,
+              px: { xs: 1, md: 2 },
+              py: 0.7,
+              flex: { xs: 1, md: 'none' },
               color: 'error.main',
               '&.Mui-selected, &.Mui-selected:hover': {
                 color: 'error.main',
@@ -206,6 +221,62 @@ export const HistoryDataGrid: React.FC = () => {
             }}
           >
             Failed
+          </ToggleButton>
+        </ToggleButtonGroup>
+
+        {/* Separator */}
+        <Box sx={{ 
+          display: { xs: 'none', md: 'block' },
+          width: '100%', 
+          border: `1px solid`,
+          borderColor: 'divider',
+          my: 0.5
+        }} />
+
+        {/* Sort buttons */}
+        <ToggleButtonGroup
+          value={sortOrder}
+          exclusive
+          onChange={(_, value: 'newest' | 'oldest' | null) => {
+            if (value !== null) {
+              setPage(0);
+              setSortOrder(value);
+            }
+          }}
+          size="small"
+          sx={{ ml: { xs: 0, md: 'auto' }, width: { xs: '100%', md: 'auto' } }}
+        >
+          <ToggleButton
+            value="newest"
+            sx={{
+              px: 1.5,
+              py: 0.5,
+              fontSize: '0.8rem',
+              textTransform: 'none',
+              color: 'text.primary',
+              flex: { xs: 1, md: 'none' },
+              '&.Mui-selected, &.Mui-selected:hover': {
+                color: 'text.primary',
+              },
+            }}
+          >
+            Newest
+          </ToggleButton>
+          <ToggleButton
+            value="oldest"
+            sx={{
+              px: 1.5,
+              py: 0.5,
+              fontSize: '0.8rem',
+              textTransform: 'none',
+              color: 'text.primary',
+              flex: { xs: 1, md: 'none' },
+              '&.Mui-selected, &.Mui-selected:hover': {
+                color: 'text.primary',
+              },
+            }}
+          >
+            Oldest
           </ToggleButton>
         </ToggleButtonGroup>
       </Stack>

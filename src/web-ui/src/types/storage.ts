@@ -139,3 +139,15 @@ export interface TaskStatusResponse {
 }
 
 export type PagedTasksResponse = PagedResponse<ParserTaskItem>;
+
+export interface CollectedDataItem {
+  id: string;
+  parserSlug: string;
+  correlationId: string | null;
+  configId: string | null;
+  timestamp: string | null;
+  capturedAt: string | null;
+  metrics: Record<string, string | number | boolean | null>;
+}
+
+export type PagedCollectedDataResponse = PagedResponse<CollectedDataItem>;

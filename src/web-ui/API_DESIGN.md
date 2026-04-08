@@ -90,6 +90,7 @@ ParserParameterDefinition:
   name: string,
   description: string,
   isRequired: boolean,
+  allowCustomValues: boolean,
   options: Array<{ value: string, label: string }>
 }
 ```
@@ -139,6 +140,34 @@ Response: {
   recordsCount: number
 }
 ```
+
+---
+
+## Storage - Collected Data
+
+### Get collected data (paginated)
+```
+GET /api/storage/collected?page=1&pageSize=20&oldFirst=true|false&correlationId={guid?}&configId={guid?}&parserSlug=open-weather&from=2026-04-01T00:00:00Z&to=2026-04-02T00:00:00Z
+Response: PagedResponse<DataResultDto>
+```
+
+DataResultDto (shape expected by frontend):
+```
+{
+  id: string,
+  parserSlug: string,
+  correlationId: string | null,
+  configId: string | null,
+  timestamp: string | null,
+  capturedAt: string,
+  metrics: Record<string, string | number | boolean | null>
+}
+```
+
+Notes:
+1. `correlationId` and `configId` are optional filters and should work independently.
+2. `oldFirst=false` means newest data first (default UI mode).
+3. Frontend additionally supports local text search across parser slug, IDs, and metric preview values.
 
 ---
 
