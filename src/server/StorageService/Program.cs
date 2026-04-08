@@ -29,6 +29,7 @@ builder.Services.AddHealthChecks();
 
 builder.Services.AddScoped<ParserConfigService>();
 builder.Services.AddScoped<ParserConfigInternalService>();
+builder.Services.AddScoped<CollectedDataService>();
 builder.Services.AddScoped<TaskStatusService>();
 builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
 builder.Services.AddMyHttpClient();

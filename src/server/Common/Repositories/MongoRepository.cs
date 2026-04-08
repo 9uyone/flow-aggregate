@@ -30,6 +30,35 @@ public class MongoRepository<T>(IMongoDatabase database, string collectionName) 
 		return (items, totalCount);
 	}
 
+	public async Task<(List<T> items, int totalCount)> FindAsync(FilterDefinition<T> filter, SortDefinition<T>? sort = null, int? page = 1, int? pageSize = 10) {
+		var totalCount = (int)await _collection.CountDocumentsAsync(filter);
+		var actualPageSize = PagedExtensions.GetActualPageSize(pageSize);
+		var actualPage = Math.Max(page ?? 1, 1);
+		var skipCount = (actualPage - 1) * actualPageSize;
+
+		var query = _collection.Find(filter);
+		if (sort != null)
+			query = query.Sort(sort);
+
+		var items = await query
+			.Skip(skipCount)
+			.Limit(actualPageSize)
+			.ToListAsync();
+
+		return (items, totalCount);
+	}
+
+	public async Task<List<T>> FindAllAsync(FilterDefinition<T> filter, SortDefinition<T>? sort = null) {
+		var query = _collection.Find(filter);
+		if (sort != null)
+			query = query.Sort(sort);
+
+		return await query.ToListAsync();
+	}
+
+	public async Task<long> CountAsync(FilterDefinition<T> filter) =>
+		await _collection.CountDocumentsAsync(filter);
+
 	public async Task<bool> AnyAsync(Expression<Func<T, bool>> filter) =>
 		await _collection.Find(filter).AnyAsync();
 

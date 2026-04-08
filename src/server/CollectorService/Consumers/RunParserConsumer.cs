@@ -32,9 +32,6 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 
 			await runner.ExecuteAsync(msg);
 
-			await redisDb.SetRemoveAsync(runningSetKey, msg.CorrelationId.ToString());
-			await cache.RemoveAsync(statusKey);
-
 			await context.Publish(new ParserStatusUpdatedEvent {
 				ConfigId = msg.ConfigId,
 				CorrelationId = msg.CorrelationId,
@@ -45,6 +42,9 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 				FinishedAt = DateTime.UtcNow,
 				Options = msg.Options,
 			});
+
+			await redisDb.SetRemoveAsync(runningSetKey, msg.CorrelationId.ToString());
+			await cache.RemoveAsync(statusKey);
 
 			logger.LogInformation($"[Collector] Parser {msg.ParserSlug} has been finished; Config ID {msg.ConfigId}");
 		}

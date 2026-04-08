@@ -30,6 +30,15 @@ public class CachedMongoRepository<T>(
 	public Task<(List<T> items, int totalCount)> FindAsync(Expression<Func<T, bool>> filter, int? page, int? pageSize, bool? oldFirst) =>
 		inner.FindAsync(filter, page, pageSize, oldFirst);
 
+	public Task<(List<T> items, int totalCount)> FindAsync(FilterDefinition<T> filter, SortDefinition<T>? sort = null, int? page = 1, int? pageSize = 10) =>
+		inner.FindAsync(filter, sort, page, pageSize);
+
+	public Task<List<T>> FindAllAsync(FilterDefinition<T> filter, SortDefinition<T>? sort = null) =>
+		inner.FindAllAsync(filter, sort);
+
+	public Task<long> CountAsync(FilterDefinition<T> filter) =>
+		inner.CountAsync(filter);
+
 	public Task<bool> AnyAsync(Expression<Func<T, bool>> filter) =>
 		inner.AnyAsync(filter);
 

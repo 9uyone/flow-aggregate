@@ -4,17 +4,21 @@ using Common.Contracts.Events;
 using Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
+using Common.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using StackExchange.Redis;
 using StorageService.Contracts;
 using StorageService.Entities;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace StorageService.Services;
 
 internal class TaskStatusService(
-	IMongoDatabase mongoDatabase,
+	IMongoRepository<ExecutionLog> executionLogRepo,
+	IMongoRepository<DataCollectedEvent> collectedDataRepo,
 	IConnectionMultiplexer redis,
 	IDistributedCache cache)
 {
@@ -34,19 +38,23 @@ internal class TaskStatusService(
 
 		var allTasks = new List<TaskStatusDto>();
 
-		var runningTasks = await GetRunningTasksAsync(userId);
-		allTasks.AddRange(runningTasks);
+		if (statusFilter is null || statusFilter == ExecutionStatus.Running) {
+			var runningTasks = await GetRunningTasksAsync(userId);
+			allTasks.AddRange(runningTasks);
+		}
 
-		var logsCollection = mongoDatabase.GetCollection<ExecutionLog>(MongoCollections.ExecutionLogs);
-		var completedLogs = await logsCollection.Find(x => x.UserId == userId && x.CorrelationId != null).ToListAsync();
-		allTasks.AddRange(completedLogs.Select(log => new TaskStatusDto {
-			CorrelationId = log.CorrelationId!.Value,
-			ParserSlug = log.ParserSlug,
-			Status = log.Status.ToString(),
-			ErrorMessage = log.ErrorMessage,
-			StartedAt = log.StartedAt,
-			FinishedAt = log.FinishedAt,
-		}));
+		if (statusFilter is null || statusFilter != ExecutionStatus.Running) {
+			var completedFilter = BuildCompletedLogsFilter(userId, statusFilter, parserSlug, from, to);
+			var completedLogs = await executionLogRepo.FindAllAsync(completedFilter);
+			allTasks.AddRange(completedLogs.Select(log => new TaskStatusDto {
+				CorrelationId = log.CorrelationId!.Value,
+				ParserSlug = log.ParserSlug,
+				Status = log.Status.ToString(),
+				ErrorMessage = log.ErrorMessage,
+				StartedAt = log.StartedAt,
+				FinishedAt = log.FinishedAt,
+			}));
+		}
 
 		var filteredTasks = allTasks
 			.Where(task => MatchesStatus(task, statusFilter))
@@ -74,6 +82,34 @@ internal class TaskStatusService(
 		}
 
 		return pagedItems.ToPagedResponse(totalCount, actualPage, actualPageSize);
+	}
+
+	private static FilterDefinition<ExecutionLog> BuildCompletedLogsFilter(
+		Guid userId,
+		ExecutionStatus? statusFilter,
+		string? parserSlug,
+		DateTime? from,
+		DateTime? to) {
+		var filters = new List<FilterDefinition<ExecutionLog>> {
+			Builders<ExecutionLog>.Filter.Eq(x => x.UserId, userId),
+			Builders<ExecutionLog>.Filter.Ne(x => x.CorrelationId, null)
+		};
+
+		if (statusFilter is not null)
+			filters.Add(Builders<ExecutionLog>.Filter.Eq(x => x.Status, statusFilter.Value));
+
+		if (from is not null)
+			filters.Add(Builders<ExecutionLog>.Filter.Gte(x => x.StartedAt, from.Value));
+
+		if (to is not null)
+			filters.Add(Builders<ExecutionLog>.Filter.Lte(x => x.StartedAt, to.Value));
+
+		if (!string.IsNullOrWhiteSpace(parserSlug)) {
+			var parserRegex = new BsonRegularExpression(Regex.Escape(parserSlug.Trim()), "i");
+			filters.Add(Builders<ExecutionLog>.Filter.Regex(x => x.ParserSlug, parserRegex));
+		}
+
+		return Builders<ExecutionLog>.Filter.And(filters);
 	}
 
 	private static bool MatchesStatus(TaskStatusDto task, ExecutionStatus? statusFilter) {
@@ -138,22 +174,15 @@ internal class TaskStatusService(
 		if (correlationIds.Count == 0)
 			return new Dictionary<Guid, int>();
 
-		var dataCollection = mongoDatabase.GetCollection<DataCollectedEvent>(MongoCollections.CollectedData);
 		var filter = Builders<DataCollectedEvent>.Filter.And(
 			Builders<DataCollectedEvent>.Filter.Eq(x => x.UserId, userId),
 			Builders<DataCollectedEvent>.Filter.In(x => x.CorrelationId, correlationIds.Select(x => (Guid?)x)));
 
-		var counts = await dataCollection.Aggregate()
-			.Match(filter)
-			.Group(x => x.CorrelationId, g => new CorrelationRecordsCount {
-				CorrelationId = g.Key,
-				RecordsCount = g.Count()
-			})
-			.ToListAsync();
-
-		return counts
+		var data = await collectedDataRepo.FindAllAsync(filter);
+		return data
 			.Where(x => x.CorrelationId is not null)
-			.ToDictionary(x => x.CorrelationId!.Value, x => x.RecordsCount);
+			.GroupBy(x => x.CorrelationId!.Value)
+			.ToDictionary(g => g.Key, g => g.Count());
 	}
 
 	private static bool TryParseStatus(string? status, out ExecutionStatus? parsedStatus) {
@@ -196,10 +225,5 @@ internal class TaskStatusService(
 		public required string Status { get; init; }
 		public string? ParserSlug { get; init; }
 		public required DateTime StartedAt { get; init; }
-	}
-
-	private sealed class CorrelationRecordsCount {
-		public Guid? CorrelationId { get; init; }
-		public int RecordsCount { get; init; }
 	}
 }
