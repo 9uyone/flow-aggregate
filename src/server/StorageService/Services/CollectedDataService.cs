@@ -93,6 +93,8 @@ internal class CollectedDataService(IMongoRepository<DataCollectedEvent> repo) {
 		ParserName = x.ParserSlug,
 		Source = x.Source,
 		Metric = x.Metric,
+		Timestamp = x.Timestamp,
+		CapturedAt = x.CapturedAt,
 		Value = x.Value,
 		Type = x.Category,
 		Metadata = x.Metadata,

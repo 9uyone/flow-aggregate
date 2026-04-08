@@ -8,8 +8,9 @@ public class DataResultDto: ICorrelatedMessage {
 
 	public required string ParserName { get; init; }
 	public required string Source { get; init; }
-
 	public required string Metric { get; init; }
+	public required DateTime Timestamp { get; init; }
+	public required DateTime CapturedAt { get; init; }
 
 	public decimal? Value { get; init; }
 
