@@ -89,6 +89,21 @@ export const HistoryDataGrid: React.FC = () => {
     }
   }, []);
 
+  const formatParserOptions = useCallback((options?: ParserTaskItem['parserOptions']) => {
+    if (!options) {
+      return null;
+    }
+
+    const entries = Object.entries(options);
+    if (entries.length === 0) {
+      return null;
+    }
+
+    const preview = entries.slice(0, 3).map(([key, value]) => `${key}=${String(value ?? 'null')}`);
+    const extra = entries.length - preview.length;
+    return `${preview.join(', ')}${extra > 0 ? ` +${extra}` : ''}`;
+  }, []);
+
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -167,6 +182,7 @@ export const HistoryDataGrid: React.FC = () => {
         startedAt: liveStatus.startedAt,
         finishedAt: liveStatus.finishedAt,
         recordsCount: liveStatus.recordsCount,
+        parserOptions: liveStatus.parserOptions ?? task.parserOptions,
       };
     });
   }, [tasks, taskStatusesByCorrelationId]);
@@ -420,6 +436,7 @@ export const HistoryDataGrid: React.FC = () => {
             </TableHead>
             <TableBody>
               {displayedTasks.map((record) => (
+                  
                   <TableRow
                     key={record.correlationId}
                     hover
@@ -433,6 +450,11 @@ export const HistoryDataGrid: React.FC = () => {
                         {parserBySlug.get(record.parserSlug) && parserBySlug.get(record.parserSlug) !== record.parserSlug && (
                           <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                             ({record.parserSlug})
+                          </Typography>
+                        )}
+                        {formatParserOptions(record.parserOptions) && (
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'normal' }}>
+                            Options: {formatParserOptions(record.parserOptions)}
                           </Typography>
                         )}
                       </Stack>

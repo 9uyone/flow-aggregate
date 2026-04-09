@@ -156,6 +156,21 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   }, []);
 
+  const formatParserOptions = useCallback((options?: ParserTaskItem['parserOptions']) => {
+    if (!options) {
+      return null;
+    }
+
+    const entries = Object.entries(options);
+    if (entries.length === 0) {
+      return null;
+    }
+
+    const preview = entries.slice(0, 2).map(([key, value]) => `${key}=${String(value ?? 'null')}`);
+    const extra = entries.length - preview.length;
+    return `${preview.join(', ')}${extra > 0 ? ` +${extra}` : ''}`;
+  }, []);
+
   // Prepare quick stats cards
   const quickStats: QuickStat[] = [
     {
@@ -548,6 +563,11 @@ export const AnalyticsDashboard: React.FC = () => {
                   <Typography variant="caption" color="text.secondary" display="block">
                     Records: {task.recordsCount.toLocaleString()}
                   </Typography>
+                  {formatParserOptions(task.parserOptions) && (
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'normal' }}>
+                      Options: {formatParserOptions(task.parserOptions)}
+                    </Typography>
+                  )}
                 </Box>
                 <Stack spacing={1} alignItems="flex-end">
                   <Chip

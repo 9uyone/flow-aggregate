@@ -126,6 +126,7 @@ export interface ParserTaskItem {
   startedAt: string;
   finishedAt: string | null;
   recordsCount: number;
+  parserOptions?: Record<string, string | number | boolean | null>;
 }
 
 export interface TaskStatusResponse {
@@ -136,6 +137,7 @@ export interface TaskStatusResponse {
   startedAt: string;
   finishedAt: string | null;
   recordsCount: number;
+  parserOptions?: Record<string, string | number | boolean | null>;
 }
 
 export type PagedTasksResponse = PagedResponse<ParserTaskItem>;

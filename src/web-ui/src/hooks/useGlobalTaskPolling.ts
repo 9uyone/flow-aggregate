@@ -61,6 +61,7 @@ export const useGlobalTaskPolling = () => {
               startedAt: task.startedAt,
               finishedAt: task.finishedAt,
               recordsCount: task.recordsCount,
+              parserOptions: task.parserOptions,
             });
 
             if (task.status !== 'Running') {

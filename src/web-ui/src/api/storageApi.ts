@@ -227,7 +227,13 @@ const normalizePagedTasksResponse = (payload: unknown): PagedTasksResponse => {
       const startedAt = row.startedAt ?? row.StartedAt;
       const finishedAtRaw = row.finishedAt ?? row.FinishedAt;
       const recordsCountRaw = row.recordsCount ?? row.RecordsCount;
+      const parserOptionsRaw = row.parserOptions ?? row.ParserOptions ?? row.options ?? row.Options;
       const recordsCount = typeof recordsCountRaw === 'number' ? recordsCountRaw : 0;
+      const parserOptions = parserOptionsRaw && typeof parserOptionsRaw === 'object'
+        ? Object.fromEntries(
+          Object.entries(parserOptionsRaw as Record<string, unknown>).map(([key, value]) => [key, toScalarMetric(value)])
+        )
+        : undefined;
 
       if (
         !status ||
@@ -239,7 +245,7 @@ const normalizePagedTasksResponse = (payload: unknown): PagedTasksResponse => {
       }
 
       const errorMessageRaw = row.errorMessage ?? row.ErrorMessage;
-      return {
+      const normalizedTask = {
         correlationId,
         parserSlug,
         status,
@@ -248,6 +254,8 @@ const normalizePagedTasksResponse = (payload: unknown): PagedTasksResponse => {
         finishedAt: typeof finishedAtRaw === 'string' ? finishedAtRaw : null,
         recordsCount,
       };
+
+      return parserOptions ? { ...normalizedTask, parserOptions } : normalizedTask;
     })
     .filter((task): task is PagedTasksResponse['items'][number] => task !== null);
 
@@ -598,7 +606,7 @@ export const storageApi = {
    * Get status for a specific task by correlation ID
    */
   getTaskStatus: async (correlationId: string): Promise<TaskStatusResponse> => {
-    const { data } = await axiosInstance.get(`/storage/tasks/status/${correlationId}`);
+    const { data } = await axiosInstance.get(`/storage/tasks?correlationId=${correlationId}`);
     const normalized = normalizeTaskStatusResponse(data);
     if (!normalized) {
       throw new Error('Invalid task status response');

@@ -121,7 +121,8 @@ ParserTaskItem:
   errorMessage?: string,
   startedAt: string,
   finishedAt: string | null,
-  recordsCount: number
+  recordsCount: number,
+  parserOptions?: Record<string, string | number | boolean | null>
 }
 ```
 
@@ -137,7 +138,8 @@ Response: {
   errorMessage?: string | null,
   startedAt: string,
   finishedAt: string | null,
-  recordsCount: number
+  recordsCount: number,
+  parserOptions?: Record<string, string | number | boolean | null>
 }
 ```
 

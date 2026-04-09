@@ -49,6 +49,7 @@ internal class TaskStatusService(
 			allTasks.AddRange(completedLogs.Select(log => new TaskStatusDto {
 				CorrelationId = log.CorrelationId!.Value,
 				ParserSlug = log.ParserSlug,
+				ParserOptions = log.Options,
 				Status = log.Status.ToString(),
 				ErrorMessage = log.ErrorMessage,
 				StartedAt = log.StartedAt,
