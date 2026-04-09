@@ -1,46 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  Button,
-  CircularProgress,
-  Collapse,
   Box,
   IconButton,
-  InputAdornment,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
-  Typography,
 } from '@mui/material';
 import {
-  ContentCopy as ContentCopyIcon,
-  Tune as TuneIcon,
-  History as HistoryIcon,
   Refresh as RefreshIcon,
-  Search as SearchIcon,
 } from '@mui/icons-material';
 import { storageApi } from '../../api';
 import { PageSectionHeader } from '../../components/layout';
-import { PaginationJumpControls } from '../../components';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { CollectedDataItem, ParserCatalogItem } from '../../types/storage';
-import { MetricsSummary, ParserLabel } from './CollectedDataViewParts';
+import type { CollectedDataItem, ParserCatalogItem, UserConfig } from '../../types/storage';
+import { CollectedDataFilters } from './CollectedDataFilters';
+import { CollectedDataTable } from './CollectedDataTable';
 
 export const CollectedDataGrid: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState<CollectedDataItem[]>([]);
   const [parsers, setParsers] = useState<ParserCatalogItem[]>([]);
+  const [userConfigs, setUserConfigs] = useState<UserConfig[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +39,33 @@ export const CollectedDataGrid: React.FC = () => {
     return new Map(parsers.map((parser) => [parser.slug, parser]));
   }, [parsers]);
 
+  const parserSuggestions = useMemo(() => {
+    // Catalog parsers
+    const catalogSuggestions = parsers.map((parser) => ({
+      slug: parser.slug,
+      displayName: parser.displayName,
+    }));
+
+    // External parser configs
+    const externalSuggestions = userConfigs
+      .filter((config) => config.$type === 'external')
+      .map((config) => ({
+        slug: config.parserSlug,
+        displayName: config.parserSlug,
+      }));
+
+    // Merge and deduplicate
+    const merged = new Map<string, { slug: string; displayName: string }>();
+    catalogSuggestions.forEach((s) => merged.set(s.slug, s));
+    externalSuggestions.forEach((s) => {
+      if (!merged.has(s.slug)) {
+        merged.set(s.slug, s);
+      }
+    });
+
+    return Array.from(merged.values()).sort((a, b) => a.slug.localeCompare(b.slug));
+  }, [parsers, userConfigs]);
+
   const copyToClipboard = useCallback(async (value: string) => {
     if (!value) {
       return;
@@ -77,7 +83,7 @@ export const CollectedDataGrid: React.FC = () => {
     setError(null);
 
     try {
-      const [collectedResponse, parsersResponse] = await Promise.all([
+      const [collectedResponse, parsersResponse, configsResponse] = await Promise.all([
         storageApi.getCollectedData(page + 1, rowsPerPage, {
         oldFirst: sortOrder === 'oldest',
         search: searchQuery.trim() || undefined,
@@ -88,15 +94,18 @@ export const CollectedDataGrid: React.FC = () => {
         to: toFilter || undefined,
         }),
         storageApi.getAvailableParsers(),
+        storageApi.getConfigs(),
       ]);
       setItems(collectedResponse.items);
       setParsers(parsersResponse);
+      setUserConfigs(configsResponse.items);
       setTotalCount(collectedResponse.totalCount);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load collected data';
       setError(message);
       setItems([]);
       setParsers([]);
+      setUserConfigs([]);
       setTotalCount(0);
     } finally {
       setIsLoading(false);
@@ -154,6 +163,41 @@ export const CollectedDataGrid: React.FC = () => {
     setPage(0);
   };
 
+  const handleSearchQueryChange = (value: string) => {
+    setPage(0);
+    setSearchQuery(value);
+  };
+
+  const handleSortOrderChange = (value: 'newest' | 'oldest') => {
+    setPage(0);
+    setSortOrder(value);
+  };
+
+  const handleParserSlugFilterChange = (value: string) => {
+    setPage(0);
+    setParserSlugFilter(value);
+  };
+
+  const handleFromFilterChange = (value: string) => {
+    setPage(0);
+    setFromFilter(value);
+  };
+
+  const handleToFilterChange = (value: string) => {
+    setPage(0);
+    setToFilter(value);
+  };
+
+  const handleCorrelationIdFilterChange = (value: string) => {
+    setPage(0);
+    setCorrelationIdFilter(value);
+  };
+
+  const handleConfigIdFilterChange = (value: string) => {
+    setPage(0);
+    setConfigIdFilter(value);
+  };
+
   return (
     <Box>
       <PageSectionHeader
@@ -168,287 +212,42 @@ export const CollectedDataGrid: React.FC = () => {
         )}
       />
 
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={1}
-        sx={{ mb: 2, alignItems: { xs: 'stretch', md: 'center' } }}
-      >
-        <TextField
-          placeholder="Search parser / IDs / metric value"
-          size="small"
-          value={searchQuery}
-          onChange={(event) => {
-            setPage(0);
-            setSearchQuery(event.target.value);
-          }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            },
-          }}
-          sx={{ minWidth: { xs: '100%', md: 340 } }}
-        />
+      <CollectedDataFilters
+        searchQuery={searchQuery}
+        sortOrder={sortOrder}
+        parserSlugFilter={parserSlugFilter}
+        fromFilter={fromFilter}
+        toFilter={toFilter}
+        correlationIdFilter={correlationIdFilter}
+        configIdFilter={configIdFilter}
+        isAdvancedFiltersOpen={isAdvancedFiltersOpen}
+        parserSuggestions={parserSuggestions}
+        onSearchQueryChange={handleSearchQueryChange}
+        onSortOrderChange={handleSortOrderChange}
+        onParserSlugFilterChange={handleParserSlugFilterChange}
+        onFromFilterChange={handleFromFilterChange}
+        onToFilterChange={handleToFilterChange}
+        onCorrelationIdFilterChange={handleCorrelationIdFilterChange}
+        onConfigIdFilterChange={handleConfigIdFilterChange}
+        onToggleAdvancedFilters={() => setIsAdvancedFiltersOpen((prev) => !prev)}
+        onClearFilters={handleClearFilters}
+      />
 
-        {/* Separator */}
-        <Box sx={{ 
-          display: { xs: 'none', md: 'block' },
-          width: '100%', 
-          border: `1px solid`,
-          borderColor: 'divider',
-          my: 0.5
-        }} />
-
-        <ToggleButtonGroup
-          value={sortOrder}
-          exclusive
-          onChange={(_, value: 'newest' | 'oldest' | null) => {
-            if (value !== null) {
-              setPage(0);
-              setSortOrder(value);
-            }
-          }}
-          size="small"
-          sx={{ ml: { xs: 0, md: 'auto' }, width: { xs: '100%', md: 'auto' } }}
-        >
-          <ToggleButton
-            value="newest"
-            sx={{
-              px: 1.5,
-              py: 0.5,
-              fontSize: '0.8rem',
-              textTransform: 'none',
-              flex: { xs: 1, md: 'none' },
-            }}
-          >
-            Newest
-          </ToggleButton>
-          <ToggleButton
-            value="oldest"
-            sx={{
-              px: 1.5,
-              py: 0.5,
-              fontSize: '0.8rem',
-              textTransform: 'none',
-              flex: { xs: 1, md: 'none' },
-            }}
-          >
-            Oldest
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Stack>
-
-      <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-        <TextField
-          placeholder="Filter by parser slug"
-          size="small"
-          value={parserSlugFilter}
-          onChange={(event) => {
-            setPage(0);
-            setParserSlugFilter(event.target.value);
-          }}
-          sx={{ minWidth: 220 }}
-        />
-        <TextField
-          label="From"
-          type="datetime-local"
-          size="small"
-          value={fromFilter}
-          onChange={(event) => {
-            setPage(0);
-            setFromFilter(event.target.value);
-          }}
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-        <TextField
-          label="To"
-          type="datetime-local"
-          size="small"
-          value={toFilter}
-          onChange={(event) => {
-            setPage(0);
-            setToFilter(event.target.value);
-          }}
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-        <Button
-          variant="outlined"
-          startIcon={<TuneIcon />}
-          onClick={() => setIsAdvancedFiltersOpen((prev) => !prev)}
-          sx={{ alignSelf: 'center', height: 40, textTransform: 'none' }}
-        >
-          Advanced filters
-        </Button>
-        <Button
-          variant="text"
-          onClick={handleClearFilters}
-          sx={{ alignSelf: 'center', height: 40 }}
-        >
-          Clear filters
-        </Button>
-      </Box>
-
-      <Collapse in={isAdvancedFiltersOpen}>
-        <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          <TextField
-            placeholder="Filter by correlation ID"
-            size="small"
-            value={correlationIdFilter}
-            onChange={(event) => {
-              setPage(0);
-              setCorrelationIdFilter(event.target.value);
-            }}
-            sx={{ minWidth: 280 }}
-          />
-          <TextField
-            placeholder="Filter by config ID"
-            size="small"
-            value={configIdFilter}
-            onChange={(event) => {
-              setPage(0);
-              setConfigIdFilter(event.target.value);
-            }}
-            sx={{ minWidth: 260 }}
-          />
-        </Box>
-      </Collapse>
-
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-        {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
-        {isLoading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-            <CircularProgress size={28} />
-          </Box>
-        )}
-
-        <TableContainer
-          sx={{
-            maxHeight: { xs: '60vh', sm: 'none' },
-            overflowY: { xs: 'auto', sm: 'visible' },
-            overflowX: 'auto',
-          }}
-        >
-          <Table
-            stickyHeader
-            sx={{
-              minWidth: 920,
-              '& .MuiTableCell-stickyHeader': {
-                backgroundColor: 'background.paper',
-                zIndex: 2,
-              },
-            }}
-          >
-            <TableHead>
-              <TableRow>
-                <TableCell>Parser</TableCell>
-                <TableCell>Timestamp</TableCell>
-                <TableCell>Captured at</TableCell>
-                <TableCell>Metrics</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {displayedItems.map((item) => {
-                const parser = parserBySlug.get(item.parserSlug);
-                const metricFields = parser?.metricFields ?? [];
-
-                return (
-                  <TableRow key={item.id} hover sx={{ '&:last-child td': { border: 0 } }}>
-                    <TableCell>
-                      <ParserLabel
-                        slug={item.parserSlug}
-                        displayName={parser?.displayName}
-                        metricFields={metricFields}
-                        showMetricFields
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                        {item.timestamp ? new Date(item.timestamp).toLocaleString() : '—'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                        {item.capturedAt ? new Date(item.capturedAt).toLocaleString() : '—'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <MetricsSummary metrics={item.metrics} />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                        <Tooltip title="Copy correlation ID">
-                          <span>
-                            <IconButton
-                              size="small"
-                              onClick={() => void copyToClipboard(item.correlationId ?? '')}
-                              disabled={!item.correlationId}
-                              aria-label="Copy correlation ID"
-                            >
-                              <ContentCopyIcon fontSize="inherit" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Copy config ID">
-                          <span>
-                            <IconButton
-                              size="small"
-                              onClick={() => void copyToClipboard(item.configId ?? '')}
-                              disabled={!item.configId}
-                              aria-label="Copy config ID"
-                            >
-                              <ContentCopyIcon fontSize="inherit" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Open history">
-                          <IconButton
-                            size="small"
-                            onClick={() => navigate(`/history?correlationId=${encodeURIComponent(item.correlationId ?? '')}`)}
-                            disabled={!item.correlationId}
-                            aria-label="Open history"
-                          >
-                            <HistoryIcon fontSize="inherit" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-
-              {displayedItems.length === 0 && !isLoading && (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No collected data found
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          component="div"
-          count={totalCount}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-        <PaginationJumpControls
-          page={page}
-          totalCount={totalCount}
-          rowsPerPage={rowsPerPage}
-          onPageChange={setPage}
-        />
-      </Paper>
+      <CollectedDataTable
+        displayedItems={displayedItems}
+        parserBySlug={parserBySlug}
+        isLoading={isLoading}
+        error={error}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalCount={totalCount}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        onJumpPageChange={setPage}
+        onCopyCorrelationId={(correlationId) => void copyToClipboard(correlationId)}
+        onCopyConfigId={(configId) => void copyToClipboard(configId)}
+        onOpenHistory={(correlationId) => navigate(`/history?correlationId=${encodeURIComponent(correlationId)}`)}
+      />
     </Box>
   );
 };

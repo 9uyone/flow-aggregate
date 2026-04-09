@@ -15,6 +15,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  Collapse,
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
@@ -28,6 +29,8 @@ import {
   History as HistoryIcon,
   Dataset as DatasetIcon,
   Visibility as VisibilityIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { LineChart } from '@mui/x-charts/LineChart';
@@ -60,6 +63,7 @@ export const AnalyticsDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [recentTasks, setRecentTasks] = useState<ParserTaskItem[]>([]);
   const [recentTasksLoading, setRecentTasksLoading] = useState(false);
+  const [isRecentTasksExpanded, setIsRecentTasksExpanded] = useState(false);
   const [previewCorrelationId, setPreviewCorrelationId] = useState<string | null>(null);
 
   // Fetch overall stats on mount
@@ -107,7 +111,12 @@ export const AnalyticsDashboard: React.FC = () => {
     fetchAnalytics();
   }, [selectedParserSlug]);
 
+  // Fetch recent tasks only when expanded
   useEffect(() => {
+    if (!isRecentTasksExpanded) {
+      return;
+    }
+
     const fetchRecentTasks = async () => {
       setRecentTasksLoading(true);
       try {
@@ -122,7 +131,7 @@ export const AnalyticsDashboard: React.FC = () => {
     };
 
     void fetchRecentTasks();
-  }, [taskCompletionVersion]);
+  }, [isRecentTasksExpanded, taskCompletionVersion]);
 
   const displayedRecentTasks = recentTasks.map((task) => {
     const liveStatus = taskStatusesByCorrelationId[task.correlationId];
@@ -504,19 +513,43 @@ export const AnalyticsDashboard: React.FC = () => {
           mt: 3,
         }}
       >
-        <Typography variant="h6" fontWeight="600" gutterBottom>
-          Recent tasks
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Latest parser execution logs
-        </Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+          onClick={() => setIsRecentTasksExpanded(!isRecentTasksExpanded)}
+        >
+          <Box>
+            <Typography variant="h6" fontWeight="600">
+              Recent tasks
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Latest parser execution logs
+            </Typography>
+          </Box>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsRecentTasksExpanded(!isRecentTasksExpanded);
+            }}
+          >
+            {isRecentTasksExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+        </Box>
+
+        <Collapse in={isRecentTasksExpanded} sx={{ mt: 2 }}>
 
         {recentTasksLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
             <CircularProgress size={28} />
           </Box>
-        ) : recentTasks.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+        ) : isRecentTasksExpanded && recentTasks.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
             No recent tasks yet
           </Typography>
         ) : (
@@ -618,6 +651,7 @@ export const AnalyticsDashboard: React.FC = () => {
             ))}
           </Stack>
         )}
+        </Collapse>
       </Paper>
 
       <CollectedDataPreviewDialog

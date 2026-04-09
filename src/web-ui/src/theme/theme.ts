@@ -117,6 +117,13 @@ export const darkTheme = createTheme({
         },
       },
     },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.95rem',
+        },
+      },
+    },
   },
 });
 

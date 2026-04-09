@@ -1,24 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Card,
   CardContent,
   Typography,
   Button,
-  Chip,
-  IconButton,
   Grid,
   CircularProgress,
-  Tooltip,
-  CardActionArea,
   Alert,
   Snackbar,
 } from '@mui/material';
 import {
-  PlayArrow as PlayIcon,
-  Stop as StopIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
 import { useParserStore, type ParserConfig } from '../../store/parserStore';
@@ -27,12 +19,11 @@ import type { ParserDetailsResponse } from '../../types/storage';
 import { PageSectionHeader } from '../../components/layout';
 import { RunParserDialog } from './RunParserDialog';
 import { CreateConfigDialog } from './CreateConfigDialog';
+import { ParserConfigCard } from './ParserConfigCard';
+import { AvailableParserCard } from './AvailableParserCard';
+import { useLatestTaskOptions } from './useLatestTaskOptions';
 import {
   CRON_PRESETS,
-  getConfigStatusColor,
-  getConfigStatusLabel,
-  getParserTypeChipProps,
-  getParserTypeLabel,
 } from './parserUiHelpers';
 
 export const ParserList: React.FC = () => {
@@ -51,6 +42,7 @@ export const ParserList: React.FC = () => {
     runningTaskIds,
     taskSlugByCorrelationId,
     taskStatusesByCorrelationId,
+    taskCompletionVersion,
   } = useParserStore();
   const [notification, setNotification] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
   const [runDialogOpen, setRunDialogOpen] = useState(false);
@@ -72,8 +64,13 @@ export const ParserList: React.FC = () => {
 
   const configuredParsers = parserConfigs;
   const availableParsers = parsers;
+  const parsersWithRunnableOptions = useMemo(
+    () => availableParsers.filter((parser) => parser.sourceType !== 'external'),
+    [availableParsers]
+  );
   const displayedAvailableParsers = availableParsers.filter((parser) => parser.sourceType !== 'external');
   const parserBySlug = new Map(parsers.map((parser) => [parser.slug, parser]));
+  const { latestTaskOptionsBySlug } = useLatestTaskOptions(parsersWithRunnableOptions, taskCompletionVersion);
   const internalParsers = useMemo(
     () => availableParsers.filter((parser) => parser.sourceType === 'internal'),
     [availableParsers]
@@ -134,20 +131,10 @@ export const ParserList: React.FC = () => {
         const details = await storageApi.getParserDetails(createParserSlug);
         setCreateParserDetails(details);
 
-        const initialValues = details.parameters.reduce<Record<string, string>>((acc, parameter) => {
-          const isConfigurable = parameter.allowCustomValues || parameter.options.length > 0;
-          if (!isConfigurable) {
-            return acc;
-          }
-
-          if (parameter.options.length > 0) {
-            acc[parameter.name] = parameter.options[0].value;
-          } else {
-            acc[parameter.name] = '';
-          }
-
-          return acc;
-        }, {});
+        const initialValues = buildParametersFromDefaultsAndTaskOptions(
+          details,
+          latestTaskOptionsBySlug[createParserSlug]
+        );
         setCreateParameterValues(initialValues);
       } catch (detailsError) {
         const message = detailsError instanceof Error ? detailsError.message : 'Failed to load parser parameters';
@@ -160,7 +147,12 @@ export const ParserList: React.FC = () => {
     };
 
     void loadParserDetails();
-  }, [createDialogOpen, createConfigType, createParserSlug]);
+  }, [
+    createDialogOpen,
+    createConfigType,
+    createParserSlug,
+    latestTaskOptionsBySlug,
+  ]);
 
   const handleOpenCreateDialog = () => {
     setCreateDialogOpen(true);
@@ -208,10 +200,6 @@ export const ParserList: React.FC = () => {
     setNotification({ message: 'Token copied to clipboard', severity: 'success' });
   };
 
-  useEffect(() => {
-    void fetchConfigs();
-  }, [fetchConfigs]);
-
   const buildDefaultParameters = (details: ParserDetailsResponse): Record<string, string> => {
     return details.parameters.reduce<Record<string, string>>((acc, parameter) => {
       const isConfigurable = parameter.allowCustomValues || parameter.options.length > 0;
@@ -228,6 +216,55 @@ export const ParserList: React.FC = () => {
       return acc;
     }, {});
   };
+
+  const buildParametersFromDefaultsAndTaskOptions = useCallback(
+    (details: ParserDetailsResponse, options?: Record<string, string>): Record<string, string> => {
+      const defaults = buildDefaultParameters(details);
+
+      if (!options) {
+        return defaults;
+      }
+
+      const merged = { ...defaults };
+
+      details.parameters.forEach((parameter) => {
+        const candidate = options[parameter.name];
+        if (!candidate) {
+          return;
+        }
+
+        const isOptionAllowed =
+          parameter.allowCustomValues ||
+          parameter.options.some((option) => option.value === candidate);
+
+        if (isOptionAllowed) {
+          merged[parameter.name] = candidate;
+        }
+      });
+
+      return merged;
+    },
+    []
+  );
+
+  const formatOptionsPreview = useCallback((options?: Record<string, string>) => {
+    if (!options) {
+      return null;
+    }
+
+    const entries = Object.entries(options);
+    if (entries.length === 0) {
+      return null;
+    }
+
+    const preview = entries.slice(0, 3).map(([key, value]) => `${key}=${value}`);
+    const extra = entries.length - preview.length;
+    return `${preview.join(', ')}${extra > 0 ? ` +${extra}` : ''}`;
+  }, []);
+
+  useEffect(() => {
+    void fetchConfigs();
+  }, [fetchConfigs]);
 
   const runParserWithParams = async (slug: string, parameters: Record<string, string>) => {
     try {
@@ -293,7 +330,9 @@ export const ParserList: React.FC = () => {
       if (details.parameters.length === 0) {
         await runParserWithParams(slug, {});
       } else {
-        setRunParameterValues(buildDefaultParameters(details));
+        setRunParameterValues(
+          buildParametersFromDefaultsAndTaskOptions(details, latestTaskOptionsBySlug[slug])
+        );
         setRunDialogOpen(true);
       }
     } catch (runError) {
@@ -520,160 +559,24 @@ export const ParserList: React.FC = () => {
             const metricFields = parserDefinition?.metricFields ?? [];
 
             return (
-            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={config.configId}>
-              <Card
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'all 0.2s',
-                  border: selectedParserSlug === config.slug ? 2 : 0,
-                  borderColor: 'primary.main',
-                  '&:hover': {
-                    boxShadow: 6,
-                  },
-                }}
-              >
-                <CardActionArea
-                  onClick={() => handleCardClick(config.slug)}
-                  sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
-                >
-                  <CardContent sx={{ flex: 1, width: '100%' }}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        mb: 2,
-                        gap: 1.5,
-                      }}
-                    >
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="h6" fontWeight={600}>
-                          {parserName}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                          <Chip
-                            label={getParserTypeLabel(config.sourceType)}
-                            size="small"
-                            variant="outlined"
-                            {...getParserTypeChipProps(config.sourceType)}
-                          />
-                          <Chip
-                            label={getConfigStatusLabel(getDisplayedConfigStatus(config))}
-                            color={getConfigStatusColor(getDisplayedConfigStatus(config))}
-                            size="small"
-                          />
-                        </Box>
-                      </Box>
-                    </Box>
-
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mb: 2 }}
-                    >
-                      {parserDescription || 'No description'}
-                    </Typography>
-
-                    <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
-                      Type: {config.sourceType}
-                    </Typography>
-
-                    <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
-                      Config: Saved
-                    </Typography>
-
-                    {config.configOptions && Object.keys(config.configOptions).length > 0 && (
-                      <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
-                        Params: {Object.entries(config.configOptions)
-                          .map(([key, value]) => `${key}=${value}`)
-                          .join(', ')}
-                      </Typography>
-                    )}
-
-                    <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
-                      Metrics: {metricFields.length}
-                    </Typography>
-
-                    {config.cronExpression && (
-                      <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
-                        Schedule: {config.cronExpression}
-                      </Typography>
-                    )}
-
-                    {config.lastRunAt && (
-                      <Typography
-                        variant="caption"
-                        display="block"
-                        color="text.secondary"
-                        mt={1}
-                      >
-                        Last run: {new Date(config.lastRunAt).toLocaleString()}
-                      </Typography>
-                    )}
-                  </CardContent>
-                </CardActionArea>
-
-                {/* Actions */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: 1,
-                    p: 2,
-                    pt: 0,
-                  }}
-                >
-                  <Tooltip title="Edit">
-                    <IconButton size="small" onClick={(e) => e.stopPropagation()}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton size="small" color="error" onClick={(e) => e.stopPropagation()}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  {isSlugRunning(config.slug) || getDisplayedConfigStatus(config) === 'Running' ? (
-                    <Tooltip title="Stop">
-                      <IconButton
-                        size="small"
-                        color="warning"
-                        onClick={(e) => handleStopParser(config.slug, e)}
-                        disabled={isSlugRunning(config.slug)}
-                      >
-                        {isSlugRunning(config.slug) ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          <StopIcon fontSize="small" />
-                        )}
-                      </IconButton>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip title="Run">
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={(e) => handleRunSavedConfig(config, e)}
-                        disabled={
-                          isSlugRunning(config.slug) ||
-                          isPreparingRun ||
-                          config.sourceType === 'external'
-                        }
-                      >
-                        {isSlugRunning(config.slug) || isPreparingRun ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          <PlayIcon fontSize="small" />
-                        )}
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Box>
-              </Card>
-            </Grid>
-          )})
+              <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={config.configId}>
+                <ParserConfigCard
+                  config={config}
+                  parserName={parserName}
+                  parserDescription={parserDescription}
+                  metricFieldsCount={metricFields.length}
+                  selected={selectedParserSlug === config.slug}
+                  isRunning={isSlugRunning(config.slug)}
+                  isPreparingRun={isPreparingRun}
+                  displayedStatus={getDisplayedConfigStatus(config)}
+                  latestOptionsPreview={formatOptionsPreview(latestTaskOptionsBySlug[config.slug])}
+                  onCardClick={handleCardClick}
+                  onRun={handleRunSavedConfig}
+                  onStop={handleStopParser}
+                />
+              </Grid>
+            );
+          })
         )}
       </Grid>
 
@@ -695,69 +598,15 @@ export const ParserList: React.FC = () => {
         ) : (
           displayedAvailableParsers.map((parser) => (
             <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={`available-${parser.slug}`}>
-              <Card
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  border: selectedParserSlug === parser.slug ? 2 : 0,
-                  borderColor: 'primary.main',
-                }}
-              >
-                <CardActionArea
-                  onClick={() => handleCardClick(parser.slug)}
-                  sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
-                >
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="h6" fontWeight={600}>
-                          {parser.name}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                          <Chip
-                            label={getParserTypeLabel(parser.sourceType)}
-                            size="small"
-                            variant="outlined"
-                            {...getParserTypeChipProps(parser.sourceType)}
-                          />
-                          <Chip label={parser.hasConfig ? 'Has saved configs' : 'No saved config'} size="small" />
-                        </Box>
-                      </Box>
-                    </Box>
-
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                      {parser.description || 'No description'}
-                    </Typography>
-
-                    <Typography variant="caption" display="block" color="text.secondary">
-                      Type: {parser.sourceType}
-                    </Typography>
-                    <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
-                      Metrics: {parser.metricFields.length}
-                    </Typography>
-                  </CardContent>
-                </CardActionArea>
-
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 2, pt: 0 }}>
-                  <Tooltip title="Run">
-                    <span>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={(e) => handleRunAvailableParser(parser.slug, e)}
-                        disabled={isSlugRunning(parser.slug) || isPreparingRun || parser.sourceType === 'external'}
-                      >
-                        {isSlugRunning(parser.slug) || isPreparingRun ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          <PlayIcon fontSize="small" />
-                        )}
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </Box>
-              </Card>
+              <AvailableParserCard
+                parser={parser}
+                selected={selectedParserSlug === parser.slug}
+                isRunning={isSlugRunning(parser.slug)}
+                isPreparingRun={isPreparingRun}
+                latestOptionsPreview={formatOptionsPreview(latestTaskOptionsBySlug[parser.slug])}
+                onCardClick={handleCardClick}
+                onRun={handleRunAvailableParser}
+              />
             </Grid>
           ))
         )}
