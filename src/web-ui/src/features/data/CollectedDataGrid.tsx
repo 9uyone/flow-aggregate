@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import { storageApi } from '../../api';
 import { PageSectionHeader } from '../../components/layout';
+import { PaginationJumpControls } from '../../components';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { CollectedDataItem, ParserCatalogItem } from '../../types/storage';
 import { MetricsSummary, ParserLabel } from './CollectedDataViewParts';
@@ -440,6 +441,12 @@ export const CollectedDataGrid: React.FC = () => {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+        <PaginationJumpControls
+          page={page}
+          totalCount={totalCount}
+          rowsPerPage={rowsPerPage}
+          onPageChange={setPage}
         />
       </Paper>
     </Box>

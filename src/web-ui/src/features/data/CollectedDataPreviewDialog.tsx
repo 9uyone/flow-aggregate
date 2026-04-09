@@ -17,9 +17,15 @@ import {
   TableRow,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
-import { ContentCopy as ContentCopyIcon } from '@mui/icons-material';
+import {
+  ContentCopy as ContentCopyIcon,
+  Close as CloseIcon,
+} from '@mui/icons-material';
 import { storageApi } from '../../api';
+import { PaginationJumpControls } from '../../components';
 import type { CollectedDataItem } from '../../types/storage';
 import { MetricsSummary, ParserLabel } from './CollectedDataViewParts';
 
@@ -36,6 +42,8 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
   onClose,
   getParserDisplayName,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [items, setItems] = useState<CollectedDataItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -112,8 +120,30 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
       onClose={onClose}
       fullWidth
       maxWidth="lg"
+      slotProps={{
+        paper: {
+        sx: isMobile
+          ? {
+              width: '96vw',
+              //minHeight: '40vh',
+              maxHeight: '90vh',
+              height: 'auto',
+              m: 1,
+            }
+          : undefined,
+        }
+      }}
     >
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle sx={{ pr: 6 }}>
+        {title}
+        <IconButton
+          aria-label="Close preview"
+          onClick={onClose}
+          sx={{ position: 'absolute', right: 12, top: 10 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
       <DialogContent dividers>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {isLoading && (
@@ -209,6 +239,13 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+            <PaginationJumpControls
+              page={page}
+              totalCount={totalCount}
+              rowsPerPage={rowsPerPage}
+              onPageChange={setPage}
+              bottomPadding={1}
             />
           </>
         )}

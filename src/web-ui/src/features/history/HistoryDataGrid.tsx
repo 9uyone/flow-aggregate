@@ -30,6 +30,7 @@ import {
   Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { storageApi } from '../../api';
+import { PaginationJumpControls } from '../../components';
 import { PageSectionHeader } from '../../components/layout';
 import { useParserStore } from '../../store/parserStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -521,6 +522,12 @@ export const HistoryDataGrid: React.FC = () => {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+        <PaginationJumpControls
+          page={page}
+          totalCount={totalCount}
+          rowsPerPage={rowsPerPage}
+          onPageChange={setPage}
         />
       </Paper>
 
