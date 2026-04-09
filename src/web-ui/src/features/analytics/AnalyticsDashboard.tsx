@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -13,6 +13,8 @@ import {
   CircularProgress,
   Alert,
   Chip,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
@@ -22,11 +24,17 @@ import {
   Add as AddIcon,
   PlayArrow as PlayArrowIcon,
   TrendingUp as TrendingUpIcon,
+  ContentCopy as ContentCopyIcon,
+  History as HistoryIcon,
+  Dataset as DatasetIcon,
+  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { LineChart } from '@mui/x-charts/LineChart';
 import { useParserStore } from '../../store/parserStore';
 import { storageApi } from '../../api';
 import { PageSectionHeader } from '../../components/layout';
+import { CollectedDataPreviewDialog } from '../data';
 import type { AnalyticsResponse, ParserTaskItem } from '../../types/storage';
 
 // TypeScript Interfaces
@@ -40,6 +48,7 @@ interface QuickStat {
 
 export const AnalyticsDashboard: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { selectedParserSlug, parsers, taskStatusesByCorrelationId, taskCompletionVersion } = useParserStore();
   const [analyticsData, setAnalyticsData] = useState<AnalyticsResponse | null>(null);
   const [overallStats, setOverallStats] = useState<{
@@ -51,6 +60,7 @@ export const AnalyticsDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [recentTasks, setRecentTasks] = useState<ParserTaskItem[]>([]);
   const [recentTasksLoading, setRecentTasksLoading] = useState(false);
+  const [previewCorrelationId, setPreviewCorrelationId] = useState<string | null>(null);
 
   // Fetch overall stats on mount
   useEffect(() => {
@@ -129,6 +139,22 @@ export const AnalyticsDashboard: React.FC = () => {
       recordsCount: liveStatus.recordsCount,
     };
   });
+
+  const parserBySlug = useMemo(() => {
+    return new Map(parsers.map((parser) => [parser.slug, parser.name]));
+  }, [parsers]);
+
+  const copyToClipboard = useCallback(async (value: string) => {
+    if (!value) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      // Ignore clipboard failures; the value remains visible.
+    }
+  }, []);
 
   // Prepare quick stats cards
   const quickStats: QuickStat[] = [
@@ -495,8 +521,13 @@ export const AnalyticsDashboard: React.FC = () => {
               >
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={600}>
-                    {task.parserSlug}
+                    {parserBySlug.get(task.parserSlug) ?? task.parserSlug}
                   </Typography>
+                  {parserBySlug.get(task.parserSlug) && parserBySlug.get(task.parserSlug) !== task.parserSlug && (
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      ({task.parserSlug})
+                    </Typography>
+                  )}
                   <Typography
                     variant="caption"
                     sx={{
@@ -518,16 +549,63 @@ export const AnalyticsDashboard: React.FC = () => {
                     Records: {task.recordsCount.toLocaleString()}
                   </Typography>
                 </Box>
-                <Chip
-                  size="small"
-                  label={task.status}
-                  color={task.status === 'Success' ? 'success' : task.status === 'Failed' ? 'error' : 'info'}
-                />
+                <Stack spacing={1} alignItems="flex-end">
+                  <Chip
+                    size="small"
+                    label={task.status}
+                    color={task.status === 'Success' ? 'success' : task.status === 'Failed' ? 'error' : 'info'}
+                  />
+                  <Stack direction="row" spacing={0.25}>
+                    <Tooltip title="Preview collected data">
+                      <IconButton
+                        size="small"
+                        onClick={() => setPreviewCorrelationId(task.correlationId)}
+                        aria-label="Preview collected data"
+                      >
+                        <VisibilityIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Open history">
+                      <IconButton
+                        size="small"
+                        onClick={() => navigate(`/history?correlationId=${encodeURIComponent(task.correlationId)}`)}
+                        aria-label="Open history"
+                      >
+                        <HistoryIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Open data">
+                      <IconButton
+                        size="small"
+                        onClick={() => navigate(`/data?correlationId=${encodeURIComponent(task.correlationId)}`)}
+                        aria-label="Open data"
+                      >
+                        <DatasetIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                  <Tooltip title="Copy correlation ID">
+                    <IconButton
+                      size="small"
+                      onClick={() => void copyToClipboard(task.correlationId)}
+                      aria-label="Copy correlation ID"
+                    >
+                      <ContentCopyIcon fontSize="inherit" />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
               </Box>
             ))}
           </Stack>
         )}
       </Paper>
+
+      <CollectedDataPreviewDialog
+        open={previewCorrelationId !== null}
+        correlationId={previewCorrelationId}
+        onClose={() => setPreviewCorrelationId(null)}
+        getParserDisplayName={(slug) => parserBySlug.get(slug) ?? slug}
+      />
     </Box>
   );
 };

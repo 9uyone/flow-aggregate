@@ -4,6 +4,7 @@ import {
   Typography,
   Paper,
   Button,
+  Collapse,
   Table,
   TableBody,
   TableCell,
@@ -15,7 +16,6 @@ import {
   IconButton,
   Tooltip,
   TextField,
-  InputAdornment,
   Alert,
   CircularProgress,
   Stack,
@@ -23,12 +23,17 @@ import {
   ToggleButtonGroup,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   Refresh as RefreshIcon,
+  ContentCopy as ContentCopyIcon,
+  Dataset as DatasetIcon,
+  Tune as TuneIcon,
+  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { storageApi } from '../../api';
 import { PageSectionHeader } from '../../components/layout';
 import { useParserStore } from '../../store/parserStore';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CollectedDataPreviewDialog } from '../data/CollectedDataPreviewDialog';
 import type { ParserRunStatus, ParserTaskItem } from '../../types/storage';
 
 const getStatusColor = (status: ParserRunStatus) => {
@@ -48,10 +53,13 @@ type StatusFilter = 'all' | ParserRunStatus;
 
 export const HistoryDataGrid: React.FC = () => {
   const taskStatusesByCorrelationId = useParserStore((state) => state.taskStatusesByCorrelationId);
+  const parsers = useParserStore((state) => state.parsers);
   const taskCompletionVersion = useParserStore((state) => state.taskCompletionVersion);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [correlationIdFilter, setCorrelationIdFilter] = useState('');
   const [tasks, setTasks] = useState<ParserTaskItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,6 +69,24 @@ export const HistoryDataGrid: React.FC = () => {
   const [fromFilter, setFromFilter] = useState('');
   const [toFilter, setToFilter] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+  const [previewCorrelationId, setPreviewCorrelationId] = useState<string | null>(null);
+
+  const parserBySlug = useMemo(() => {
+    return new Map(parsers.map((parser) => [parser.slug, parser.name]));
+  }, [parsers]);
+
+  const copyToClipboard = useCallback(async (value: string) => {
+    if (!value) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      // Ignore clipboard failures; the value is still visible.
+    }
+  }, []);
 
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
@@ -70,6 +96,7 @@ export const HistoryDataGrid: React.FC = () => {
         oldFirst: sortOrder === 'oldest',
         status: statusFilter === 'all' ? undefined : statusFilter,
         parserSlug: parserSlugFilter.trim() || undefined,
+        correlationId: correlationIdFilter.trim() || undefined,
         from: fromFilter || undefined,
         to: toFilter || undefined,
       });
@@ -83,11 +110,25 @@ export const HistoryDataGrid: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, rowsPerPage, statusFilter, parserSlugFilter, fromFilter, toFilter, sortOrder]);
+  }, [page, rowsPerPage, statusFilter, parserSlugFilter, correlationIdFilter, fromFilter, toFilter, sortOrder]);
 
   useEffect(() => {
     void fetchTasks();
   }, [fetchTasks, taskCompletionVersion]);
+
+  useEffect(() => {
+    const correlationIdFromQuery = searchParams.get('correlationId') ?? '';
+    if (correlationIdFromQuery !== correlationIdFilter) {
+      setPage(0);
+      setCorrelationIdFilter(correlationIdFromQuery);
+    }
+  }, [searchParams, correlationIdFilter]);
+
+  useEffect(() => {
+    if (correlationIdFilter) {
+      setIsAdvancedFiltersOpen(true);
+    }
+  }, [correlationIdFilter]);
 
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
@@ -102,24 +143,17 @@ export const HistoryDataGrid: React.FC = () => {
 
   const handleClearFilters = () => {
     setPage(0);
-    setSearchQuery('');
+    setCorrelationIdFilter('');
     setStatusFilter('all');
     setParserSlugFilter('');
     setFromFilter('');
     setToFilter('');
     setSortOrder('newest');
+    navigate('/history', { replace: true });
   };
 
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      const bySearch =
-        task.correlationId.toLowerCase().includes(searchQuery.toLowerCase());
-      return bySearch;
-    });
-  }, [tasks, searchQuery]);
-
   const displayedTasks = useMemo(() => {
-    return filteredTasks.map((task) => {
+    return tasks.map((task) => {
       const liveStatus = taskStatusesByCorrelationId[task.correlationId];
       if (!liveStatus) {
         return task;
@@ -134,7 +168,7 @@ export const HistoryDataGrid: React.FC = () => {
         recordsCount: liveStatus.recordsCount,
       };
     });
-  }, [filteredTasks, taskStatusesByCorrelationId]);
+  }, [tasks, taskStatusesByCorrelationId]);
 
   return (
     <Box>
@@ -284,22 +318,6 @@ export const HistoryDataGrid: React.FC = () => {
       {/* Search */}
       <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
         <TextField
-          placeholder="Search by correlation ID..."
-          size="small"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            },
-          }}
-          sx={{ minWidth: 300 }}
-        />
-        <TextField
           placeholder="Filter by parser slug"
           size="small"
           value={parserSlugFilter}
@@ -332,6 +350,14 @@ export const HistoryDataGrid: React.FC = () => {
           slotProps={{ inputLabel: { shrink: true } }}
         />
         <Button
+          variant="outlined"
+          startIcon={<TuneIcon />}
+          onClick={() => setIsAdvancedFiltersOpen((prev) => !prev)}
+          sx={{ alignSelf: 'center', height: 40, textTransform: 'none' }}
+        >
+          Advanced filters
+        </Button>
+        <Button
           variant="text"
           onClick={handleClearFilters}
           sx={{ alignSelf: 'center', height: 40 }}
@@ -339,6 +365,21 @@ export const HistoryDataGrid: React.FC = () => {
           Clear filters
         </Button>
       </Box>
+
+      <Collapse in={isAdvancedFiltersOpen}>
+        <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+          <TextField
+            placeholder="Filter by correlation ID"
+            size="small"
+            value={correlationIdFilter}
+            onChange={(event) => {
+              setPage(0);
+              setCorrelationIdFilter(event.target.value);
+            }}
+            sx={{ minWidth: 300 }}
+          />
+        </Box>
+      </Collapse>
 
       {/* Data Table */}
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
@@ -369,11 +410,11 @@ export const HistoryDataGrid: React.FC = () => {
               <TableRow>
                 <TableCell>Parser</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Correlation ID</TableCell>
                 <TableCell align="right">Records</TableCell>
                 <TableCell>Started</TableCell>
                 <TableCell>Finished</TableCell>
                 <TableCell>Error</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -384,9 +425,16 @@ export const HistoryDataGrid: React.FC = () => {
                     sx={{ '&:last-child td': { border: 0 } }}
                   >
                     <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {record.parserSlug}
-                      </Typography>
+                      <Stack spacing={0.25}>
+                        <Typography variant="body2" fontWeight={500}>
+                          {parserBySlug.get(record.parserSlug) ?? record.parserSlug}
+                        </Typography>
+                        {parserBySlug.get(record.parserSlug) && parserBySlug.get(record.parserSlug) !== record.parserSlug && (
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                            ({record.parserSlug})
+                          </Typography>
+                        )}
+                      </Stack>
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -394,18 +442,6 @@ export const HistoryDataGrid: React.FC = () => {
                         color={getStatusColor(record.status)}
                         size="small"
                       />
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontFamily: 'monospace',
-                          display: 'block',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {record.correlationId}
-                      </Typography>
                     </TableCell>
                     <TableCell align="right">
                       <Typography variant="body2" fontWeight={600}>
@@ -429,6 +465,39 @@ export const HistoryDataGrid: React.FC = () => {
                       >
                         {record.errorMessage || '—'}
                       </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <Tooltip title="Preview collected data">
+                          <IconButton
+                            size="small"
+                            onClick={() => setPreviewCorrelationId(record.correlationId)}
+                            aria-label="Preview collected data"
+                          >
+                            <VisibilityIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Copy correlation ID">
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={() => void copyToClipboard(record.correlationId)}
+                              aria-label="Copy correlation ID"
+                            >
+                              <ContentCopyIcon fontSize="inherit" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Open collected data">
+                          <IconButton
+                            size="small"
+                            onClick={() => navigate(`/data?correlationId=${encodeURIComponent(record.correlationId)}`)}
+                            aria-label="Open collected data"
+                          >
+                            <DatasetIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -454,6 +523,13 @@ export const HistoryDataGrid: React.FC = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Paper>
+
+      <CollectedDataPreviewDialog
+        open={previewCorrelationId !== null}
+        correlationId={previewCorrelationId}
+        onClose={() => setPreviewCorrelationId(null)}
+        getParserDisplayName={(slug) => parserBySlug.get(slug) ?? slug}
+      />
     </Box>
   );
 };

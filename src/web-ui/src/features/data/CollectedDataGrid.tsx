@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Box,
   Button,
   CircularProgress,
+  Collapse,
+  Box,
   IconButton,
   InputAdornment,
   Paper,
@@ -22,15 +23,23 @@ import {
   Typography,
 } from '@mui/material';
 import {
+  ContentCopy as ContentCopyIcon,
+  Tune as TuneIcon,
+  History as HistoryIcon,
   Refresh as RefreshIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { storageApi } from '../../api';
 import { PageSectionHeader } from '../../components/layout';
-import type { CollectedDataItem } from '../../types/storage';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import type { CollectedDataItem, ParserCatalogItem } from '../../types/storage';
+import { MetricsSummary, ParserLabel } from './CollectedDataViewParts';
 
 export const CollectedDataGrid: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState<CollectedDataItem[]>([]);
+  const [parsers, setParsers] = useState<ParserCatalogItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +53,31 @@ export const CollectedDataGrid: React.FC = () => {
   const [fromFilter, setFromFilter] = useState('');
   const [toFilter, setToFilter] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+
+  const parserBySlug = useMemo(() => {
+    return new Map(parsers.map((parser) => [parser.slug, parser]));
+  }, [parsers]);
+
+  const copyToClipboard = useCallback(async (value: string) => {
+    if (!value) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      // Ignore clipboard failures; the row remains readable.
+    }
+  }, []);
 
   const fetchCollectedData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await storageApi.getCollectedData(page + 1, rowsPerPage, {
+      const [collectedResponse, parsersResponse] = await Promise.all([
+        storageApi.getCollectedData(page + 1, rowsPerPage, {
         oldFirst: sortOrder === 'oldest',
         search: searchQuery.trim() || undefined,
         parserSlug: parserSlugFilter.trim() || undefined,
@@ -58,13 +85,17 @@ export const CollectedDataGrid: React.FC = () => {
         configId: configIdFilter.trim() || undefined,
         from: fromFilter || undefined,
         to: toFilter || undefined,
-      });
-      setItems(response.items);
-      setTotalCount(response.totalCount);
+        }),
+        storageApi.getAvailableParsers(),
+      ]);
+      setItems(collectedResponse.items);
+      setParsers(parsersResponse);
+      setTotalCount(collectedResponse.totalCount);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load collected data';
       setError(message);
       setItems([]);
+      setParsers([]);
       setTotalCount(0);
     } finally {
       setIsLoading(false);
@@ -85,6 +116,20 @@ export const CollectedDataGrid: React.FC = () => {
     void fetchCollectedData();
   }, [fetchCollectedData]);
 
+  useEffect(() => {
+    const correlationIdFromQuery = searchParams.get('correlationId') ?? '';
+    if (correlationIdFromQuery !== correlationIdFilter) {
+      setPage(0);
+      setCorrelationIdFilter(correlationIdFromQuery);
+    }
+  }, [searchParams, correlationIdFilter]);
+
+  useEffect(() => {
+    if (correlationIdFilter || configIdFilter) {
+      setIsAdvancedFiltersOpen(true);
+    }
+  }, [correlationIdFilter, configIdFilter]);
+
   const displayedItems = useMemo(() => items, [items]);
 
   const handleClearFilters = () => {
@@ -96,6 +141,7 @@ export const CollectedDataGrid: React.FC = () => {
     setFromFilter('');
     setToFilter('');
     setSortOrder('newest');
+    navigate('/data', { replace: true });
   };
 
   const handleChangePage = (_: unknown, newPage: number) => {
@@ -206,26 +252,6 @@ export const CollectedDataGrid: React.FC = () => {
           sx={{ minWidth: 220 }}
         />
         <TextField
-          placeholder="Filter by correlation ID"
-          size="small"
-          value={correlationIdFilter}
-          onChange={(event) => {
-            setPage(0);
-            setCorrelationIdFilter(event.target.value);
-          }}
-          sx={{ minWidth: 280 }}
-        />
-        <TextField
-          placeholder="Filter by config ID"
-          size="small"
-          value={configIdFilter}
-          onChange={(event) => {
-            setPage(0);
-            setConfigIdFilter(event.target.value);
-          }}
-          sx={{ minWidth: 260 }}
-        />
-        <TextField
           label="From"
           type="datetime-local"
           size="small"
@@ -248,6 +274,14 @@ export const CollectedDataGrid: React.FC = () => {
           slotProps={{ inputLabel: { shrink: true } }}
         />
         <Button
+          variant="outlined"
+          startIcon={<TuneIcon />}
+          onClick={() => setIsAdvancedFiltersOpen((prev) => !prev)}
+          sx={{ alignSelf: 'center', height: 40, textTransform: 'none' }}
+        >
+          Advanced filters
+        </Button>
+        <Button
           variant="text"
           onClick={handleClearFilters}
           sx={{ alignSelf: 'center', height: 40 }}
@@ -255,6 +289,31 @@ export const CollectedDataGrid: React.FC = () => {
           Clear filters
         </Button>
       </Box>
+
+      <Collapse in={isAdvancedFiltersOpen}>
+        <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+          <TextField
+            placeholder="Filter by correlation ID"
+            size="small"
+            value={correlationIdFilter}
+            onChange={(event) => {
+              setPage(0);
+              setCorrelationIdFilter(event.target.value);
+            }}
+            sx={{ minWidth: 280 }}
+          />
+          <TextField
+            placeholder="Filter by config ID"
+            size="small"
+            value={configIdFilter}
+            onChange={(event) => {
+              setPage(0);
+              setConfigIdFilter(event.target.value);
+            }}
+            sx={{ minWidth: 260 }}
+          />
+        </Box>
+      </Collapse>
 
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
@@ -274,7 +333,7 @@ export const CollectedDataGrid: React.FC = () => {
           <Table
             stickyHeader
             sx={{
-              minWidth: 1100,
+              minWidth: 920,
               '& .MuiTableCell-stickyHeader': {
                 backgroundColor: 'background.paper',
                 zIndex: 2,
@@ -284,35 +343,26 @@ export const CollectedDataGrid: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Parser</TableCell>
-                <TableCell>Correlation ID</TableCell>
-                <TableCell>Config ID</TableCell>
                 <TableCell>Timestamp</TableCell>
                 <TableCell>Captured at</TableCell>
                 <TableCell>Metrics</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {displayedItems.map((item) => {
-                const metricsEntries = Object.entries(item.metrics);
-                const preview = metricsEntries.slice(0, 3);
-                const extraCount = Math.max(metricsEntries.length - preview.length, 0);
+                const parser = parserBySlug.get(item.parserSlug);
+                const metricFields = parser?.metricFields ?? [];
 
                 return (
                   <TableRow key={item.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {item.parserSlug}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                        {item.correlationId ?? '—'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                        {item.configId ?? '—'}
-                      </Typography>
+                      <ParserLabel
+                        slug={item.parserSlug}
+                        displayName={parser?.displayName}
+                        metricFields={metricFields}
+                        showMetricFields
+                      />
                     </TableCell>
                     <TableCell>
                       <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
@@ -325,19 +375,45 @@ export const CollectedDataGrid: React.FC = () => {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="caption" color="text.secondary">
-                        {preview.length === 0 && 'No metrics'}
-                        {preview.map(([key, value], index) => (
-                          <Box component="span" key={key} sx={{ mr: index < preview.length - 1 ? 1.5 : 0 }}>
-                            <strong>{key}</strong>: {String(value ?? 'null')}
-                          </Box>
-                        ))}
-                        {extraCount > 0 && (
-                          <Box component="span" sx={{ ml: 1 }}>
-                            +{extraCount} more
-                          </Box>
-                        )}
-                      </Typography>
+                      <MetricsSummary metrics={item.metrics} />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <Tooltip title="Copy correlation ID">
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={() => void copyToClipboard(item.correlationId ?? '')}
+                              disabled={!item.correlationId}
+                              aria-label="Copy correlation ID"
+                            >
+                              <ContentCopyIcon fontSize="inherit" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Copy config ID">
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={() => void copyToClipboard(item.configId ?? '')}
+                              disabled={!item.configId}
+                              aria-label="Copy config ID"
+                            >
+                              <ContentCopyIcon fontSize="inherit" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Open history">
+                          <IconButton
+                            size="small"
+                            onClick={() => navigate(`/history?correlationId=${encodeURIComponent(item.correlationId ?? '')}`)}
+                            disabled={!item.correlationId}
+                            aria-label="Open history"
+                          >
+                            <HistoryIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 );
@@ -345,7 +421,7 @@ export const CollectedDataGrid: React.FC = () => {
 
               {displayedItems.length === 0 && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                     <Typography variant="body2" color="text.secondary">
                       No collected data found
                     </Typography>

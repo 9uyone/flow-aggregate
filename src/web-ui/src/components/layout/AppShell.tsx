@@ -214,7 +214,7 @@ export const AppShell: React.FC = () => {
                   '& .MuiTab-root': {
                     textTransform: 'none',
                     fontWeight: 600,
-                    fontSize: '0.95rem',
+                    fontSize: '1rem',
                     minHeight: 64,
                   },
                 }}
