@@ -17,7 +17,7 @@ export const HistoryDataGrid: React.FC = () => {
   const parsers = useParserStore((state) => state.parsers);
   const taskCompletionVersion = useParserStore((state) => state.taskCompletionVersion);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [correlationIdFilter, setCorrelationIdFilter] = useState('');
@@ -108,7 +108,7 @@ export const HistoryDataGrid: React.FC = () => {
       setPage(0);
       setCorrelationIdFilter(correlationIdFromQuery);
     }
-  }, [searchParams, correlationIdFilter]);
+  }, [searchParams]);
 
   useEffect(() => {
     if (correlationIdFilter) {
@@ -185,6 +185,15 @@ export const HistoryDataGrid: React.FC = () => {
   const handleCorrelationIdFilterChange = (value: string) => {
     setPage(0);
     setCorrelationIdFilter(value);
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (value.trim()) {
+      nextParams.set('correlationId', value.trim());
+    } else {
+      nextParams.delete('correlationId');
+    }
+
+    setSearchParams(nextParams, { replace: true });
   };
 
   return (

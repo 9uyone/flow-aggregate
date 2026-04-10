@@ -16,7 +16,7 @@ import { CollectedDataTable } from './CollectedDataTable';
 
 export const CollectedDataGrid: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<CollectedDataItem[]>([]);
   const [parsers, setParsers] = useState<ParserCatalogItem[]>([]);
   const [userConfigs, setUserConfigs] = useState<UserConfig[]>([]);
@@ -128,11 +128,18 @@ export const CollectedDataGrid: React.FC = () => {
 
   useEffect(() => {
     const correlationIdFromQuery = searchParams.get('correlationId') ?? '';
+    const configIdFromQuery = searchParams.get('configId') ?? '';
+
     if (correlationIdFromQuery !== correlationIdFilter) {
       setPage(0);
       setCorrelationIdFilter(correlationIdFromQuery);
     }
-  }, [searchParams, correlationIdFilter]);
+
+    if (configIdFromQuery !== configIdFilter) {
+      setPage(0);
+      setConfigIdFilter(configIdFromQuery);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (correlationIdFilter || configIdFilter) {
@@ -191,11 +198,29 @@ export const CollectedDataGrid: React.FC = () => {
   const handleCorrelationIdFilterChange = (value: string) => {
     setPage(0);
     setCorrelationIdFilter(value);
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (value.trim()) {
+      nextParams.set('correlationId', value.trim());
+    } else {
+      nextParams.delete('correlationId');
+    }
+
+    setSearchParams(nextParams, { replace: true });
   };
 
   const handleConfigIdFilterChange = (value: string) => {
     setPage(0);
     setConfigIdFilter(value);
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (value.trim()) {
+      nextParams.set('configId', value.trim());
+    } else {
+      nextParams.delete('configId');
+    }
+
+    setSearchParams(nextParams, { replace: true });
   };
 
   return (

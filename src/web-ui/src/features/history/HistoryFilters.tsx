@@ -1,28 +1,19 @@
 import {
-  Autocomplete,
   Box,
   Button,
   Collapse,
-  IconButton,
-  InputAdornment,
   Stack,
-  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 import {
-  Clear as ClearIcon,
   Tune as TuneIcon,
 } from '@mui/icons-material';
+import { FilterTextField, ParserFilterAutocomplete, type ParserSuggestion } from '../../components';
 import type { ParserRunStatus } from '../../types/storage';
 
 export type HistoryStatusFilter = 'all' | ParserRunStatus;
-
-type ParserSuggestion = {
-  slug: string;
-  displayName: string;
-};
 
 interface HistoryFiltersProps {
   statusFilter: HistoryStatusFilter;
@@ -194,138 +185,31 @@ export const HistoryFilters: React.FC<HistoryFiltersProps> = ({
       </Stack>
 
       <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-        <Autocomplete<ParserSuggestion, false, false, true>
-          freeSolo
+        <ParserFilterAutocomplete
+          value={parserSlugFilter}
           options={parserSuggestions}
-          value={parserSuggestions.find((option) => option.slug === parserSlugFilter) ?? null}
-          inputValue={parserSlugFilter}
-          onChange={(_, value) => {
-            if (typeof value === 'string') {
-              onParserSlugFilterChange(value);
-              return;
-            }
-
-            onParserSlugFilterChange(value?.slug ?? '');
-          }}
-          onInputChange={(_, value, reason) => {
-            if (reason === 'input' || reason === 'clear') {
-              onParserSlugFilterChange(value);
-            }
-          }}
-          filterOptions={(options, state) => {
-            const query = state.inputValue.trim().toLowerCase();
-            if (!query) {
-              return options;
-            }
-
-            return options.filter((option) =>
-              option.slug.toLowerCase().includes(query) ||
-              option.displayName.toLowerCase().includes(query)
-            );
-          }}
-          getOptionLabel={(option) => {
-            if (typeof option === 'string') {
-              return option;
-            }
-
-            return option.displayName !== option.slug
-              ? `${option.displayName} (${option.slug})`
-              : option.slug;
-          }}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder="Filter by parser slug"
-              size="small"
-              sx={{
-                '& .MuiInputBase-input': {
-                  fontSize: '0.85rem',
-                },
-              }}
-            />
-          )}
-          slotProps={{
-            paper: {
-              sx: {
-                border: '1px solid',
-                borderColor: 'divider',
-                boxShadow: 8,
-                '& .MuiAutocomplete-option': {
-                  fontSize: '0.85rem',
-                  padding: '8px 12px !important',
-                  '&[data-highlighted="true"]': {
-                    backgroundColor: 'action.hover',
-                    color: 'text.primary',
-                    fontWeight: 500,
-                  },
-                  '&[aria-selected="true"]': {
-                    backgroundColor: 'action.selected',
-                    color: 'text.primary',
-                    fontWeight: 600,
-                  },
-                },
-              },
-            },
-            popper: {
-              sx: {
-                '& .MuiAutocomplete-listbox': {
-                  py: 0.5,
-                },
-              },
-            },
-          }}
-          sx={{ minWidth: 280 }}
+          onChange={onParserSlugFilterChange}
         />
 
-        <TextField
+        <FilterTextField
           label="From"
           type="datetime-local"
           size="small"
           value={fromFilter}
-          onChange={(event) => onFromFilterChange(event.target.value)}
+          onChange={onFromFilterChange}
           slotProps={{
             inputLabel: { shrink: true },
-            input: {
-              endAdornment: fromFilter ? (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    edge="end"
-                    aria-label="Clear from filter"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => onFromFilterChange('')}
-                  >
-                    <ClearIcon fontSize="inherit" />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
-            },
           }}
         />
 
-        <TextField
+        <FilterTextField
           label="To"
           type="datetime-local"
           size="small"
           value={toFilter}
-          onChange={(event) => onToFilterChange(event.target.value)}
+          onChange={onToFilterChange}
           slotProps={{
             inputLabel: { shrink: true },
-            input: {
-              endAdornment: toFilter ? (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    edge="end"
-                    aria-label="Clear to filter"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => onToFilterChange('')}
-                  >
-                    <ClearIcon fontSize="inherit" />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
-            },
           }}
         />
 
@@ -353,11 +237,11 @@ export const HistoryFilters: React.FC<HistoryFiltersProps> = ({
 
       <Collapse in={isAdvancedFiltersOpen}>
         <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          <TextField
+          <FilterTextField
             placeholder="Filter by correlation ID"
             size="small"
             value={correlationIdFilter}
-            onChange={(event) => onCorrelationIdFilterChange(event.target.value)}
+            onChange={onCorrelationIdFilterChange}
             sx={{ minWidth: 300 }}
           />
         </Box>
