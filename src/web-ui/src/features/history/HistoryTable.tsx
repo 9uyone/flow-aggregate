@@ -163,15 +163,17 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                 </TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                    <Tooltip title="Preview collected data">
-                      <IconButton
-                        size="small"
-                        onClick={() => onPreviewCollectedData(record.correlationId)}
-                        aria-label="Preview collected data"
-                      >
+                    {record.status === 'Success' && (
+                      <Tooltip title="Preview collected data">
+                        <IconButton
+                          size="small"
+                          onClick={() => onPreviewCollectedData(record.correlationId)}
+                          aria-label="Preview collected data"
+                        >
                         <VisibilityIcon fontSize="inherit" />
-                      </IconButton>
-                    </Tooltip>
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     <Tooltip title="Copy correlation ID">
                       <span>
                         <IconButton
