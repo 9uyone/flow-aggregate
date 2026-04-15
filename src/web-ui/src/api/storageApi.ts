@@ -66,7 +66,9 @@ const normalizeConfigItem = (item: unknown): UserConfig | null => {
 
   if (type === 'internal') {
     const cronRaw = raw.cronExpression ?? raw.CronExpression;
-    const cronExpression = typeof cronRaw === 'string' ? cronRaw : '';
+    const cronExpression = typeof cronRaw === 'string' && cronRaw.trim().length > 0
+      ? cronRaw
+      : undefined;
     const customNameRaw = raw.customName ?? raw.CustomName;
     const customName = typeof customNameRaw === 'string' ? customNameRaw : undefined;
     const optionsRaw = raw.options ?? raw.Options;
@@ -87,6 +89,34 @@ const normalizeConfigItem = (item: unknown): UserConfig | null => {
       options,
     };
   }
+
+  if (type === 'plugin') {
+    const customNameRaw = raw.customName ?? raw.CustomName;
+    const customName = typeof customNameRaw === 'string' ? customNameRaw : undefined;
+    const cronRaw = raw.cronExpression ?? raw.CronExpression;
+    const cronExpression = typeof cronRaw === 'string' && cronRaw.trim().length > 0
+      ? cronRaw
+      : undefined;
+    const optionsRaw = raw.options ?? raw.Options;
+    const options = optionsRaw && typeof optionsRaw === 'object'
+      ? (optionsRaw as Record<string, string>)
+      : undefined;
+
+    return {
+      $type: 'plugin',
+      configId,
+      parserSlug,
+      isEnabled,
+      lastRunAt,
+      lastStatus,
+      lastErrorMessage,
+      customName,
+      cronExpression,
+      options,
+      pluginId: String(raw.pluginId ?? raw.PluginId ?? ''),
+    };
+  }
+
 
   const tokenHashRaw = raw.tokenHash ?? raw.TokenHash;
   const tokenHash = typeof tokenHashRaw === 'string' ? tokenHashRaw : undefined;

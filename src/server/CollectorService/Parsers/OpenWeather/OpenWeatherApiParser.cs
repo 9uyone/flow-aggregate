@@ -7,7 +7,7 @@ using Common.Contracts.Parser;
 
 namespace CollectorService.Parsers.OpenWeather;
 
-[ParserInfo("open-weather", "Current weather by city name")]
+[ParserInfo("open-weather", "OpenWeather", "Get current weather by city name")]
 [ParserParameter("city", "City name.", isRequired: true, allowCustomValues: true)]
 [ParserParameter("units", "By default is Metric.", isRequired: false, allowCustomValues: false)]
 [ParserMetrics("humidityPercent", "windSpeed")]

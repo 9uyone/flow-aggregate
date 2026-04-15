@@ -89,7 +89,9 @@ const mapUserConfigToParser = (config: UserConfig): Parser => ({
   name: config.parserSlug,
   description:
     config.$type === 'internal'
-      ? `Internal parser · cron: ${config.cronExpression}`
+      ? config.cronExpression
+        ? `Internal parser · cron: ${config.cronExpression}`
+        : 'Internal parser · manual run'
       : config.$type === 'plugin'
         ? 'Plugin parser'
         : 'External parser · trigger via token',
@@ -98,7 +100,7 @@ const mapUserConfigToParser = (config: UserConfig): Parser => ({
   hasConfig: true,
   url:
     config.$type === 'internal'
-      ? config.cronExpression
+      ? config.cronExpression ?? 'Manual run'
       : 'External trigger',
   cronExpression: config.$type === 'internal' ? config.cronExpression : undefined,
   configOptions: config.$type === 'internal' ? config.options : undefined,
@@ -117,9 +119,9 @@ const mapUserConfigToParserConfig = (config: UserConfig): ParserConfig => ({
   status: config.lastStatus,
   lastRunAt: config.lastRunAt ?? undefined,
   lastErrorMessage: config.lastErrorMessage ?? undefined,
-  cronExpression: config.$type === 'internal' ? config.cronExpression : undefined,
-  configOptions: config.$type === 'internal' ? config.options : undefined,
-  customName: config.$type === 'internal' ? config.customName : undefined,
+  cronExpression: config.$type === 'internal' || config.$type === 'plugin' ? config.cronExpression : undefined,
+  configOptions: config.$type === 'internal' || config.$type === 'plugin' ? config.options : undefined,
+  customName: config.$type === 'internal' || config.$type === 'plugin' ? config.customName : undefined,
 });
 
 const mapCatalogParser = (parser: ParserCatalogItem): Parser => {

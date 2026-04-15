@@ -9,6 +9,6 @@ internal class UserConfigCreateInternalDto {
 	public bool IsEnabled { get; init; } = true;
 
 	public string? CustomName { get; init; }
-	public required string CronExpression { get; init; }
+	public string? CronExpression { get; init; }
 	public  IDictionary<string, string>? Options { get; init; }
 }

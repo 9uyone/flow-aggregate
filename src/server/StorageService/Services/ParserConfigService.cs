@@ -26,20 +26,22 @@ internal class ParserConfigService(
 		if (!response)
 			throw new BadRequestException($"Parser '{dto.ParserSlug}' not found");
 
-		var interval = config.GetValue<int>("ParserConfigs:minIntervalSeconds");
-		if (!CronValidator.TryValidate(dto.CronExpression, minIntervalSeconds: interval, out var error))
-			throw new BadRequestException(error);
+		if (!string.IsNullOrEmpty(dto.CronExpression)) {
+			var interval = config.GetValue<int>("ParserConfigs:minIntervalSeconds");
+			if (!CronValidator.TryValidate(dto.CronExpression, minIntervalSeconds: interval, out var error))
+				throw new BadRequestException(error);
+		}
 
 		var isNameBusy = await repo.AnyAsync(x =>
-			x.SourceType == ParserSourceType.Internal &&
+			(x.SourceType == ParserSourceType.Internal || x.SourceType == ParserSourceType.Plugin) &&
 			x.UserId == userId &&
 			x.Internal!.CustomName == dto.CustomName);
 		if (isNameBusy && !string.IsNullOrEmpty(dto.CustomName))
-			throw new BadRequestException("Parser with the same options already exists");
+			throw new BadRequestException("Parser with the same custom name already exists");
 
 		var (existingConfigs, _) = await repo.FindAsync(x =>
 			x.UserId == userId &&
-			x.SourceType == ParserSourceType.Internal &&
+			(x.SourceType == ParserSourceType.Internal || x.SourceType == ParserSourceType.Plugin) &&
 			x.ParserSlug == dto.ParserSlug);
 		var isDuplicate = existingConfigs.Any(x =>
 			(x.Internal!.Options?.Count == dto.Options?.Count) &&
@@ -94,12 +96,12 @@ internal class ParserConfigService(
 		return (resp, totalCount);
 	}
 
-	public async Task<ParserUserConfig> GetByIdAsync(Guid id, Guid userId) {
+	public async Task<UserConfigBaseDto> GetByIdAsync(Guid id, Guid userId) {
 		var config = await repo.GetByIdAsync(id);
 		if (config == null || config.UserId != userId)
 			throw new NotFoundException("Parser configuration not found");
 
-		return config;
+		return MapToDto(config);
 	}
 
 	public async Task UpdateInternalAsync(
@@ -107,8 +109,7 @@ internal class ParserConfigService(
 		UserConfigPatchDto dto,
 		Guid userId)
 	{
-		if (dto.CronExpression != null)
-		{
+		if (dto.CronExpression != null) {
 			var interval = config.GetValue<int>("ParserConfigs:minIntervalSeconds");
 			if (!CronValidator.TryValidate(dto.CronExpression, minIntervalSeconds: interval, out var error))
 				throw new BadRequestException(error);
@@ -122,8 +123,10 @@ internal class ParserConfigService(
 			throw new BadRequestException("This configuration is not an internal parser");
 
 		var updates = new List<UpdateDefinition<ParserUserConfig>>();
-		if (dto.CronExpression != null)
-			updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.Internal.CronExpression, dto.CronExpression));
+		//if (dto.CronExpression != null)
+		updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.Internal.CronExpression, dto.CronExpression));
+		if (dto.CustomName != null)
+			updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.Internal.CustomName, dto.CustomName));
 		if (dto.IsEnabled.HasValue)
 			updates.Add(Builders<ParserUserConfig>.Update.Set(c => c.IsEnabled, dto.IsEnabled.Value));
 		if (dto.Options is not null)
@@ -207,6 +210,8 @@ internal class ParserConfigService(
 				new UserInternalConfigDto
 				{
 					Id = config.Id,
+					CustomName = config.Internal?.CustomName,
+					SourceType = config.SourceType,
 					ParserSlug = config.ParserSlug,
 					IsEnabled = config.IsEnabled,
 					LastRunAt = config.LastRunAt,
@@ -219,6 +224,7 @@ internal class ParserConfigService(
 				new UserExternalConfigDto
 				{
 					Id = config.Id,
+					SourceType = config.SourceType,
 					ParserSlug = config.ParserSlug,
 					IsEnabled = config.IsEnabled,
 					LastRunAt = config.LastRunAt,

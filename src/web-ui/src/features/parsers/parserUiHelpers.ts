@@ -66,3 +66,15 @@ export const getParserTypeChipProps = (sourceType: ParserSourceType): Pick<ChipP
       return { color: 'default' };
   }
 };
+
+export const getScheduleModeLabel = (cronExpression?: string) => {
+  return cronExpression ? 'Scheduled' : 'Manual';
+};
+
+export const getScheduleModeChipProps = (cronExpression?: string): Pick<ChipProps, 'color' | 'variant'> => {
+  if (cronExpression) {
+    return { color: 'info', variant: 'filled' };
+  }
+
+  return { color: 'default', variant: 'outlined' };
+};

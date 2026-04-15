@@ -6,7 +6,14 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import type { ParserConfig } from '../../store/parserStore';
-import { getConfigStatusColor, getConfigStatusLabel, getParserTypeChipProps, getParserTypeLabel } from './parserUiHelpers';
+import {
+  getConfigStatusColor,
+  getConfigStatusLabel,
+  getParserTypeChipProps,
+  getParserTypeLabel,
+  getScheduleModeChipProps,
+  getScheduleModeLabel,
+} from './parserUiHelpers';
 
 interface ParserConfigCardProps {
   config: ParserConfig;
@@ -19,6 +26,8 @@ interface ParserConfigCardProps {
   displayedStatus: ParserConfig['status'];
   latestOptionsPreview?: string | null;
   onCardClick: (slug: string) => void;
+  onEdit: (config: ParserConfig, event: React.MouseEvent) => void;
+  onDelete: (config: ParserConfig, event: React.MouseEvent) => void;
   onRun: (config: ParserConfig, event: React.MouseEvent) => void;
   onStop: (slug: string, event: React.MouseEvent) => void;
 }
@@ -34,6 +43,8 @@ export const ParserConfigCard: React.FC<ParserConfigCardProps> = ({
   displayedStatus,
   latestOptionsPreview,
   onCardClick,
+  onEdit,
+  onDelete,
   onRun,
   onStop,
 }) => {
@@ -81,6 +92,11 @@ export const ParserConfigCard: React.FC<ParserConfigCardProps> = ({
                   color={getConfigStatusColor(displayedStatus)}
                   size="small"
                 />
+                <Chip
+                  label={getScheduleModeLabel(config.cronExpression)}
+                  size="small"
+                  {...getScheduleModeChipProps(config.cronExpression)}
+                />
               </Box>
             </Box>
           </Box>
@@ -109,7 +125,7 @@ export const ParserConfigCard: React.FC<ParserConfigCardProps> = ({
 
           {config.cronExpression && (
             <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
-              Schedule: {config.cronExpression}
+              Cron: {config.cronExpression}
             </Typography>
           )}
 
@@ -131,12 +147,12 @@ export const ParserConfigCard: React.FC<ParserConfigCardProps> = ({
         }}
       >
         <Tooltip title="Edit">
-          <IconButton size="small" onClick={(e) => e.stopPropagation()}>
+          <IconButton size="small" onClick={(e) => onEdit(config, e)}>
             <EditIcon fontSize="small" />
           </IconButton>
         </Tooltip>
         <Tooltip title="Delete">
-          <IconButton size="small" color="error" onClick={(e) => e.stopPropagation()}>
+          <IconButton size="small" color="error" onClick={(e) => onDelete(config, e)}>
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Tooltip>

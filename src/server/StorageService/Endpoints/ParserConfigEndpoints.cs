@@ -2,7 +2,9 @@
 using Common.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using StorageService.Contracts.ParserUserConfig;
+using StorageService.Contracts.ParserUserConfig.Get;
 using StorageService.Services;
+using System.Text.Json.Serialization.Metadata;
 
 namespace StorageService.Endpoints;
 
@@ -59,8 +61,9 @@ public static partial class StorageEndpoints {
 			HttpContext httpContext) => {
 				var userId = httpContext.User.GetUserId()!;
 				var config = await service.GetByIdAsync(id, userId);
-				
-				if (config.SourceType == ParserSourceType.Internal)
+
+				//if (config.SourceType == ParserSourceType.Internal || config.SourceType == ParserSourceType.Plugin)
+				if (config.GetType() == typeof(UserInternalConfigDto))
 					await service.UpdateInternalAsync(id, dto, userId);
 				else
 					await service.UpdateExternalAsync(id, dto, userId);

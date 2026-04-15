@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using Common.Enums;
+using System.Text.Json.Serialization;
 
 namespace StorageService.Contracts.ParserUserConfig.Get;
 
@@ -7,7 +8,7 @@ namespace StorageService.Contracts.ParserUserConfig.Get;
 internal abstract class UserConfigBaseDto {
 	public required Guid Id { get; init; }
 	public required string ParserSlug { get; init; }
-
+	public required ParserSourceType SourceType { get; init; }
 	public required bool IsEnabled { get; init; }
 	public required DateTime? LastRunAt { get; init; }
 	public required string? LastStatus { get; init; }

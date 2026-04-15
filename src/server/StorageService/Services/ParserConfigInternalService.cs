@@ -36,7 +36,9 @@ internal class ParserConfigInternalService(IMongoRepository<ParserUserConfig> re
 		int page, int pageSize)
 	{
 		var (configs, totalCount) = await repo.FindAsync(
-			c => c.IsEnabled == true && c.SourceType == ParserSourceType.Internal,
+			c => c.IsEnabled == true
+			&& (c.SourceType == ParserSourceType.Internal || c.SourceType == ParserSourceType.Plugin)
+			&& c.Internal.CronExpression != null,
 			page, pageSize);
 		return (configs.Select(MapToDto), totalCount);
 	}

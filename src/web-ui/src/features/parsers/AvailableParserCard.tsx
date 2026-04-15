@@ -1,5 +1,5 @@
 import { Box, Card, CardActionArea, CardContent, Chip, CircularProgress, IconButton, Tooltip, Typography } from '@mui/material';
-import { PlayArrow as PlayIcon } from '@mui/icons-material';
+import { PlayArrow as PlayIcon, Add as AddIcon } from '@mui/icons-material';
 import type { Parser } from '../../store/parserStore';
 import { getParserTypeChipProps, getParserTypeLabel } from './parserUiHelpers';
 
@@ -11,6 +11,7 @@ interface AvailableParserCardProps {
   latestOptionsPreview?: string | null;
   onCardClick: (slug: string) => void;
   onRun: (slug: string, event: React.MouseEvent) => void;
+  onCreateConfig: (event: React.MouseEvent) => void;
 }
 
 export const AvailableParserCard: React.FC<AvailableParserCardProps> = ({
@@ -21,6 +22,7 @@ export const AvailableParserCard: React.FC<AvailableParserCardProps> = ({
   latestOptionsPreview,
   onCardClick,
   onRun,
+  onCreateConfig,
 }) => {
   return (
     <Card
@@ -69,7 +71,18 @@ export const AvailableParserCard: React.FC<AvailableParserCardProps> = ({
         </CardContent>
       </CardActionArea>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 2, pt: 0 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, p: 2, pt: 0 }}>
+        <Tooltip title="Create config">
+          <span>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={onCreateConfig}
+            >
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
         <Tooltip title="Run">
           <span>
             <IconButton

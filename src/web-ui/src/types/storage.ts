@@ -18,7 +18,7 @@ export interface BaseParserConfig {
 export interface InternalParserConfig extends BaseParserConfig {
   $type: 'internal';
   customName?: string;
-  cronExpression: string;
+  cronExpression?: string;
   options?: Record<string, string>;
 }
 
@@ -30,6 +30,9 @@ export interface ExternalParserConfig extends BaseParserConfig {
 export interface PluginParserConfig extends BaseParserConfig {
   $type: 'plugin';
   pluginId: string;
+  customName?: string;
+  cronExpression?: string;
+  options?: Record<string, string>;
 }
 
 export type UserConfig = InternalParserConfig | ExternalParserConfig | PluginParserConfig;
@@ -98,7 +101,7 @@ export interface CreateInternalConfigDto {
   parserSlug: string;
   isEnabled?: boolean;
   customName?: string;
-  cronExpression: string;
+  cronExpression?: string;
   options?: Record<string, string>;
 }
 
@@ -114,8 +117,9 @@ export interface CreateExternalConfigResponse {
 // Update config DTO (partial)
 export interface UpdateConfigDto {
   isEnabled?: boolean;
-  cronExpression?: string; // internal only
-  options?: Record<string, string>; // internal only
+  customName?: string; // internal / plugin only
+  cronExpression?: string; // internal / plugin only
+  options?: Record<string, string>; // internal / plugin only
 }
 
 export interface ParserTaskItem {
