@@ -1,4 +1,3 @@
-using Common.Constants;
 using Common.Contracts;
 using Common.Contracts.Events;
 using Common.Enums;
@@ -33,64 +32,106 @@ internal class TaskStatusService(
 		DateTime? from,
 		DateTime? to)
 	{
-		if (!TryParseStatus(status, out var statusFilter))
-			throw new BadRequestException("Invalid status. Allowed values: Running, Success, Failed");
+		ExecutionStatus? statusFilter = null;
+		if (!string.IsNullOrWhiteSpace(status)) {
+			if (!Enum.TryParse<ExecutionStatus>(status, true, out var parsedStatus))
+				throw new BadRequestException("Invalid status. Allowed values: Running, Success, Failed");
 
+			statusFilter = parsedStatus;
+		}
+
+		Guid? correlationGuid = null;
+		if (!string.IsNullOrWhiteSpace(correlationId) && Guid.TryParse(correlationId, out var parsedGuid))
+			correlationGuid = parsedGuid;
+
+		var actualPage = Math.Max(page ?? 1, 1);
+		var actualPageSize = PagedExtensions.GetActualPageSize(pageSize);
+
+		if (statusFilter is not null && statusFilter != ExecutionStatus.Running) {
+			var completedFilter = BuildCompletedLogsFilter(userId, statusFilter, parserSlug, from, to, correlationGuid);
+			var sort = oldFirst == true
+				? Builders<ExecutionLog>.Sort.Ascending(x => x.StartedAt)
+				: Builders<ExecutionLog>.Sort.Descending(x => x.StartedAt);
+
+			var (completedLogs, totalCount) = await executionLogRepo.FindAsync(completedFilter, sort, actualPage, actualPageSize);
+			var pagedItems = completedLogs.Select(MapCompletedLogToDto).ToList();
+			await SetRecordsCountAsync(userId, pagedItems);
+
+			return pagedItems.ToPagedResponse(totalCount, actualPage, actualPageSize);
+		}
+
+		var allTasks = await GetTasksByStatusAsync(userId, statusFilter, parserSlug, from, to, correlationGuid);
+		var filteredTasks = allTasks.Where(task => {
+			if (statusFilter is not null
+				&& !string.Equals(task.Status, statusFilter.Value.ToString(), StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			if (from is not null && (task.StartedAt is null || task.StartedAt < from))
+				return false;
+
+			if (to is not null && (task.StartedAt is null || task.StartedAt > to))
+				return false;
+
+			if (string.IsNullOrWhiteSpace(parserSlug))
+				return true;
+
+			return !string.IsNullOrWhiteSpace(task.ParserSlug)
+				&& task.ParserSlug.Contains(parserSlug, StringComparison.OrdinalIgnoreCase);
+		});
+
+		var filteredList = (oldFirst == true
+			? filteredTasks.OrderBy(x => x.StartedAt)
+			: filteredTasks.OrderByDescending(x => x.StartedAt)).ToList();
+
+		var skip = (actualPage - 1) * actualPageSize;
+		var pagedItemsInMemory = filteredList.Skip(skip).Take(actualPageSize).ToList();
+		await SetRecordsCountAsync(userId, pagedItemsInMemory);
+
+		return pagedItemsInMemory.ToPagedResponse(filteredList.Count, actualPage, actualPageSize);
+	}
+
+	private async Task<List<TaskStatusDto>> GetTasksByStatusAsync(
+		Guid userId,
+		ExecutionStatus? statusFilter,
+		string? parserSlug,
+		DateTime? from,
+		DateTime? to,
+		Guid? correlationGuid) {
 		var allTasks = new List<TaskStatusDto>();
 
 		if (statusFilter is null || statusFilter == ExecutionStatus.Running) {
 			var runningTasks = await GetRunningTasksAsync(userId);
+			if (correlationGuid.HasValue)
+				runningTasks = runningTasks.Where(t => t.CorrelationId == correlationGuid.Value).ToList();
 			allTasks.AddRange(runningTasks);
 		}
 
 		if (statusFilter is null || statusFilter != ExecutionStatus.Running) {
-			var completedFilter = BuildCompletedLogsFilter(userId, statusFilter, parserSlug, from, to);
+			var completedFilter = BuildCompletedLogsFilter(userId, statusFilter, parserSlug, from, to, correlationGuid);
 			var completedLogs = await executionLogRepo.FindAllAsync(completedFilter);
-			allTasks.AddRange(completedLogs.Select(log => new TaskStatusDto {
-				CorrelationId = log.CorrelationId!.Value,
-				ParserSlug = log.ParserSlug,
-				ParserOptions = log.Options,
-				Status = log.Status.ToString(),
-				ErrorMessage = log.ErrorMessage,
-				StartedAt = log.StartedAt,
-				FinishedAt = log.FinishedAt,
-			}));
+			allTasks.AddRange(completedLogs.Select(MapCompletedLogToDto));
 		}
 
-		var filteredTasks = allTasks
-			.Where(task => MatchesStatus(task, statusFilter))
-			.Where(task => MatchesFrom(task, from))
-			.Where(task => MatchesTo(task, to))
-			.Where(task => MatchesParserSlug(task, parserSlug))
-			.Where(task => MatchesCorrelationId(task, correlationId));
-
-		var sortedTasks = oldFirst == true
-			? filteredTasks.OrderBy(x => x.StartedAt)
-			: filteredTasks.OrderByDescending(x => x.StartedAt);
-
-		var filteredList = sortedTasks.ToList();
-		var totalCount = filteredList.Count;
-
-		var actualPage = Math.Max(page ?? 1, 1);
-		var actualPageSize = PagedExtensions.GetActualPageSize(pageSize);
-		var skip = (actualPage - 1) * actualPageSize;
-		var pagedItems = filteredList.Skip(skip).Take(actualPageSize).ToList();
-
-		var correlationIds = pagedItems.Select(x => x.CorrelationId).Distinct().ToList();
-		var recordsCountByCorrelationId = await GetRecordsCountByCorrelationIdAsync(userId, correlationIds);
-		foreach (var task in pagedItems) {
-			task.RecordsCount = recordsCountByCorrelationId.GetValueOrDefault(task.CorrelationId, 0);
-		}
-
-		return pagedItems.ToPagedResponse(totalCount, actualPage, actualPageSize);
+		return allTasks;
 	}
+
+	private static TaskStatusDto MapCompletedLogToDto(ExecutionLog log) => new() {
+		CorrelationId = log.CorrelationId!.Value,
+		ParserSlug = log.ParserSlug,
+		ParserOptions = log.Options,
+		Status = log.Status.ToString(),
+		ErrorMessage = log.ErrorMessage,
+		StartedAt = log.StartedAt,
+		FinishedAt = log.FinishedAt,
+	};
 
 	private static FilterDefinition<ExecutionLog> BuildCompletedLogsFilter(
 		Guid userId,
 		ExecutionStatus? statusFilter,
 		string? parserSlug,
 		DateTime? from,
-		DateTime? to) {
+		DateTime? to,
+		Guid? correlationGuid = null) {
 		var filters = new List<FilterDefinition<ExecutionLog>> {
 			Builders<ExecutionLog>.Filter.Eq(x => x.UserId, userId),
 			Builders<ExecutionLog>.Filter.Ne(x => x.CorrelationId, null)
@@ -110,43 +151,10 @@ internal class TaskStatusService(
 			filters.Add(Builders<ExecutionLog>.Filter.Regex(x => x.ParserSlug, parserRegex));
 		}
 
+		if (correlationGuid.HasValue)
+			filters.Add(Builders<ExecutionLog>.Filter.Eq(x => x.CorrelationId, correlationGuid.Value));
+
 		return Builders<ExecutionLog>.Filter.And(filters);
-	}
-
-	private static bool MatchesStatus(TaskStatusDto task, ExecutionStatus? statusFilter) {
-		if (statusFilter is null)
-			return true;
-
-		return string.Equals(task.Status, statusFilter.Value.ToString(), StringComparison.OrdinalIgnoreCase);
-	}
-
-	private static bool MatchesFrom(TaskStatusDto task, DateTime? from) {
-		if (from is null)
-			return true;
-
-		return task.StartedAt is not null && task.StartedAt >= from;
-	}
-
-	private static bool MatchesTo(TaskStatusDto task, DateTime? to) {
-		if (to is null)
-			return true;
-
-		return task.StartedAt is not null && task.StartedAt <= to;
-	}
-
-	private static bool MatchesParserSlug(TaskStatusDto task, string? parserSlug) {
-		if (string.IsNullOrWhiteSpace(parserSlug))
-			return true;
-
-		return !string.IsNullOrWhiteSpace(task.ParserSlug)
-			&& task.ParserSlug.Contains(parserSlug, StringComparison.OrdinalIgnoreCase);
-	}
-
-	private static bool MatchesCorrelationId(TaskStatusDto task, string? correlationId) {
-		if (string.IsNullOrWhiteSpace(correlationId))
-			return true;
-
-		return task.CorrelationId.ToString().Contains(correlationId, StringComparison.OrdinalIgnoreCase);
 	}
 
 	private async Task<List<TaskStatusDto>> GetRunningTasksAsync(Guid userId) {
@@ -169,6 +177,16 @@ internal class TaskStatusService(
 		return runningTasks;
 	}
 
+	private async Task SetRecordsCountAsync(Guid userId, List<TaskStatusDto> tasks) {
+		if (tasks.Count == 0)
+			return;
+
+		var correlationIds = tasks.Select(x => x.CorrelationId).Distinct().ToList();
+		var recordsCountByCorrelationId = await GetRecordsCountByCorrelationIdAsync(userId, correlationIds);
+		foreach (var task in tasks)
+			task.RecordsCount = recordsCountByCorrelationId.GetValueOrDefault(task.CorrelationId, 0);
+	}
+
 	private async Task<Dictionary<Guid, int>> GetRecordsCountByCorrelationIdAsync(
 		Guid userId,
 		IReadOnlyCollection<Guid> correlationIds) {
@@ -184,18 +202,6 @@ internal class TaskStatusService(
 			.Where(x => x.CorrelationId is not null)
 			.GroupBy(x => x.CorrelationId!.Value)
 			.ToDictionary(g => g.Key, g => g.Count());
-	}
-
-	private static bool TryParseStatus(string? status, out ExecutionStatus? parsedStatus) {
-		parsedStatus = null;
-		if (string.IsNullOrWhiteSpace(status))
-			return true;
-
-		if (!Enum.TryParse<ExecutionStatus>(status, true, out var value))
-			return false;
-
-		parsedStatus = value;
-		return true;
 	}
 
 	private static TaskStatusDto ToTaskStatusDtoFromCache(Guid correlationId, string statusRaw) {
