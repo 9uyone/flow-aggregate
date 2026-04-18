@@ -203,18 +203,148 @@ Response: ParserStatsResponse
 
 ---
 
-## Storage - Metrics (для графиків)
+## Analytics - Parser Metrics History
 
-### Get metric history (time series)
+### Get available metrics for a parser
 ```
-GET /api/storage/metrics/{slug}/history?metric=recordsCount&from=2024-01-01&to=2024-12-31&interval=hour|day
+GET /analyze/parsers/{slug}/available-metrics
+
+Response:
+[ 
+  { "metric": "temperature", "dimensions": ["city"] },
+  { "metric": "humidity", "dimensions": ["city", "sensor_type"] }
+]
+```
+
+Interpretation:
+1. Each item describes one metric and supported dimension keys for filtering
+2. `dimensions` can be empty; in that case no dimension filter controls are needed
+3. Metric is required for history/stats, dimensions are optional
+4. If dimensions are omitted, backend aggregates across all dimension values
+
+### Get available values for a metric dimension
+```
+GET /analyze/parsers/{slug}/dimension-options?metric=temperature&dimension=city
+GET /analyze/parsers/{slug}/dimension-options?metric=temperature&dimension=sensor_type&city=lviv
+```
+
+Query Parameters:
+  metric (required): Metric name
+  dimension (required): Dimension key to inspect, e.g. city
+  {dimensionKey} (optional): Additional dimension filters; all filters are ANDed
+
+Response: string[]
+[
+  "kyiv",
+  "lviv",
+  "odesa"
+]
+
+Rules:
+  1. If no additional dimension filters are passed, return all available values for the metric dimension
+  2. If multiple dimension filters are passed, apply AND filtering
+  3. Only dimension keys supported by the parser should be forwarded by the frontend
+
+### Get parser metric history (time series for charts)
+```
+GET /analyze/parsers/{slug}/history?metric=temperature&range=week
+GET /analyze/parsers/{slug}/history?metric=temperature&from=2026-04-01T00:00:00Z&to=2026-04-08T00:00:00Z&interval=day
+
+Query Parameters:
+  metric (required): Name of the metric to retrieve
+  range (optional): Preset time range -
+    'day' | 'week' | 'month' |
+    'quarter' | '3m' | '3-month' | '3 months' |
+    'year' | '1y' |
+    'all' | 'all-time' | 'all time'
+  interval (optional): Aggregation interval - 'hour' | 'day' | 'week' | 'month'
+  from (optional): Start date-time (ISO 8601) - used if range is not specified
+  to (optional): End date-time (ISO 8601) - used if range is not specified
+  {dimensionKey} (optional): Dynamic dimension filters, e.g. city=lviv&sensor_type=outdoor
+
 Response: Array<{ timestamp: string, value: number }>
-```
+[
+  { timestamp: "2026-04-08T00:00:00Z", value: 25.5 },
+  { timestamp: "2026-04-08T01:00:00Z", value: 26.1 }
+]
 
-### Get latest metric value
+Range Presets:
+  - 'day': Last 24 hours
+  - 'week': Last 7 days
+  - 'month': Last 30 days
+  - 'quarter' / '3m' / '3-month' / '3 months': Last 3 months
+  - 'year' / '1y': Last 12 months
+  - 'all' / 'all-time' / 'all time': Full available period
+
+History interval mapping (recommended defaults):
+  - range=quarter => interval=week
+  - range=year => interval=month
+
+Rules:
+  1. If 'range' is provided, 'from' and 'to' are ignored
+  2. If 'range' is not provided, both 'from' and 'to' are required
+  3. 'interval' is optional; backend defaults to appropriate interval based on range
+  4. Do not mix data from different parser slugs in single request
+  5. Timestamps are always returned in ISO 8601 format
+  6. Pass selected dimensions as dynamic query keys, not as fixed dimensionKey/dimensionValue fields
+
+### Get parser metric statistics (summary stats)
 ```
-GET /api/storage/metrics/{slug}/latest?metric=recordsCount
-Response: { timestamp: string, value: number }
+GET /analyze/parsers/{slug}/stats?metric=temperature&range=week
+GET /analyze/parsers/{slug}/stats?metric=temperature&from=2026-04-01T00:00:00Z&to=2026-04-08T00:00:00Z
+
+Query Parameters:
+  metric (required): Name of the metric to retrieve stats for
+  range (optional): Preset time range -
+    'day' | 'week' | 'month' |
+    'quarter' | '3m' | '3-month' | '3 months' |
+    'year' | '1y' |
+    'all' | 'all-time' | 'all time'
+  interval (optional): Aggregation interval - 'hour' | 'day' | 'week' | 'month'
+  from (optional): Start date-time (ISO 8601) - used if range is not specified
+  to (optional): End date-time (ISO 8601) - used if range is not specified
+  {dimensionKey} (optional): Dynamic dimension filters, e.g. city=lviv&sensor_type=outdoor
+
+Response: ParserMetricStats
+{
+  count: number,
+  min: number,
+  max: number,
+  average: number,
+  firstValue: number,
+  lastValue: number,
+  delta: number,
+  percentChange: number | null,
+  firstTimestamp: string | null,
+  lastTimestamp: string | null
+}
+
+Example Response:
+{
+  "count": 168,
+  "min": 15.2,
+  "max": 28.9,
+  "average": 22.1,
+  "firstValue": 20.5,
+  "lastValue": 23.8,
+  "delta": 3.3,
+  "percentChange": 16.1,
+  "firstTimestamp": "2026-04-11T00:00:00Z",
+  "lastTimestamp": "2026-04-18T00:00:00Z"
+}
+
+Rules:
+  1. Same parameters and rules as /history endpoint
+  2. For quarter/year ranges, stats only extend period and do not require interval
+  3. Returns aggregated statistics, not time-series data
+  4. Used for quick summary cards without building charts
+  5. Delta = lastValue - firstValue
+  6. percentChange = (delta / firstValue) * 100 (null if firstValue is 0)
+  7. count = total number of data points in range
+
+Examples:
+  - /analyze/parsers/open-weather/history?metric=temperature&range=quarter
+  - /analyze/parsers/open-weather/stats?metric=temperature&range=year
 ```
 
 ---

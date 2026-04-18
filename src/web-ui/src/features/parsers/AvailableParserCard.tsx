@@ -24,6 +24,8 @@ export const AvailableParserCard: React.FC<AvailableParserCardProps> = ({
   onRun,
   onCreateConfig,
 }) => {
+  const dimensionCount = Array.from(new Set(parser.metricOptions.flatMap((option) => option.dimensions))).length;
+
   return (
     <Card
       sx={{
@@ -60,9 +62,10 @@ export const AvailableParserCard: React.FC<AvailableParserCardProps> = ({
             {parser.description || 'No description'}
           </Typography>
 
-          <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
-            Metrics: {parser.metricFields.length}
-          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
+            <Chip size="small" label={`Metrics: ${parser.metricOptions.length}`} variant="outlined" />
+            <Chip size="small" label={`Dimensions: ${dimensionCount}`} variant="outlined" />
+          </Box>
           {latestOptionsPreview && (
             <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
               Last task options: {latestOptionsPreview}

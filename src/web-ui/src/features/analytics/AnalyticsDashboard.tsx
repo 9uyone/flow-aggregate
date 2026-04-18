@@ -11,7 +11,6 @@ import {
   useTheme,
   Skeleton,
   CircularProgress,
-  Alert,
   Chip,
   IconButton,
   Tooltip,
@@ -24,7 +23,6 @@ import {
   CheckCircle as CheckCircleIcon,
   Add as AddIcon,
   PlayArrow as PlayArrowIcon,
-  TrendingUp as TrendingUpIcon,
   ContentCopy as ContentCopyIcon,
   History as HistoryIcon,
   Dataset as DatasetIcon,
@@ -33,12 +31,13 @@ import {
   ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { LineChart } from '@mui/x-charts/LineChart';
 import { useParserStore } from '../../store/parserStore';
 import { storageApi } from '../../api';
+import { ParserSelector } from '../../components';
 import { PageSectionHeader } from '../../components/layout';
 import { CollectedDataPreviewDialog } from '../data';
-import type { AnalyticsResponse, ParserTaskItem } from '../../types/storage';
+import { ParserHistoryChart } from './ParserHistoryChart';
+import type { ParserTaskItem } from '../../types/storage';
 
 // TypeScript Interfaces
 interface QuickStat {
@@ -52,64 +51,23 @@ interface QuickStat {
 export const AnalyticsDashboard: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { selectedParserSlug, parsers, taskStatusesByCorrelationId, taskCompletionVersion } = useParserStore();
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsResponse | null>(null);
-  const [overallStats, setOverallStats] = useState<{
-    totalRecords: number;
-    activeParsers: number;
-    successRate: number;
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    selectedParserSlug,
+    setSelectedParserSlug,
+    parsers,
+    taskStatusesByCorrelationId,
+    taskCompletionVersion,
+  } = useParserStore();
   const [recentTasks, setRecentTasks] = useState<ParserTaskItem[]>([]);
   const [recentTasksLoading, setRecentTasksLoading] = useState(false);
   const [isRecentTasksExpanded, setIsRecentTasksExpanded] = useState(false);
   const [previewCorrelationId, setPreviewCorrelationId] = useState<string | null>(null);
 
-  // Fetch overall stats on mount
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const stats = await storageApi.getOverallStats();
-        setOverallStats(stats);
-      } catch (err) {
-        console.error('Error fetching overall stats:', err);
-        // Use parsers count as fallback
-        setOverallStats({
-          totalRecords: 0,
-          activeParsers: parsers.filter(p => p.isActive).length,
-          successRate: 0,
-        });
-      }
-    };
-    fetchStats();
-  }, [parsers]);
-
-  // Fetch analytics data when selectedParserSlug changes
-  useEffect(() => {
-    if (!selectedParserSlug) {
-      setAnalyticsData(null);
-      return;
-    }
-
-    const fetchAnalytics = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const data = await storageApi.getAnalytics(selectedParserSlug, 7);
-        setAnalyticsData(data);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to fetch analytics data';
-        setError(message);
-        console.error('Error fetching analytics:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAnalytics();
-  }, [selectedParserSlug]);
+  const overallStats = useMemo(() => ({
+    totalRecords: 0,
+    activeParsers: parsers.filter((parser) => parser.isActive).length,
+    successRate: 0,
+  }), [parsers]);
 
   // Fetch recent tasks only when expanded
   useEffect(() => {
@@ -185,7 +143,7 @@ export const AnalyticsDashboard: React.FC = () => {
     {
       id: 'total-records',
       title: 'Total records',
-      value: analyticsData?.totalRecords.toLocaleString() || overallStats?.totalRecords.toLocaleString() || '0',
+      value: overallStats?.totalRecords.toLocaleString() || '0',
       icon: <AssessmentIcon sx={{ fontSize: 40 }} />,
       color: theme.palette.primary.main,
     },
@@ -197,9 +155,9 @@ export const AnalyticsDashboard: React.FC = () => {
       color: theme.palette.secondary.main,
     },
     {
-      id: 'average-value',
-      title: 'Average value',
-      value: analyticsData?.averageValue.toFixed(2) || 'N/A',
+      id: 'selected-parser',
+      title: 'Selected parser',
+      value: selectedParserSlug || 'None',
       icon: <ScheduleIcon sx={{ fontSize: 40 }} />,
       color: theme.palette.info.main,
     },
@@ -211,12 +169,6 @@ export const AnalyticsDashboard: React.FC = () => {
       color: theme.palette.success.main,
     },
   ];
-
-  // Prepare chart data from backend response
-  const chartDates = analyticsData?.dataPoints.map((point) =>
-    new Date(point.capturedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  ) || [];
-  const chartValues = analyticsData?.dataPoints.map((point) => point.value) || [];
 
   return (
     <Box>
@@ -274,185 +226,6 @@ export const AnalyticsDashboard: React.FC = () => {
         ))}
       </Grid>
 
-      {/* Middle Row - Data Trends and Instructions */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Data Trends - Left Side (8 units) */}
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Paper
-            sx={{
-              p: 3,
-              borderRadius: 2,
-              boxShadow: 3,
-              height: '100%',
-              minHeight: 400,
-            }}
-          >
-            <Typography variant="h6" fontWeight="600" gutterBottom>
-              Data trends
-              {selectedParserSlug && ` - ${selectedParserSlug}`}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {selectedParserSlug 
-                ? 'Historical data collection over the past 7 days' 
-                : 'Select a parser to view its analytics'}
-            </Typography>
-            
-            {isLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
-                <CircularProgress size={60} />
-              </Box>
-            ) : error ? (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            ) : !selectedParserSlug ? (
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
-                  height: 300,
-                  color: 'text.secondary'
-                }}
-              >
-                <TrendingUpIcon sx={{ fontSize: 80, mb: 2, opacity: 0.3 }} />
-                <Typography variant="h6" gutterBottom>
-                  No parser selected
-                </Typography>
-                <Typography variant="body2" textAlign="center">
-                  Click on a parser card in the Management tab to view its analytics
-                </Typography>
-              </Box>
-            ) : analyticsData && analyticsData.dataPoints.length === 0 ? (
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
-                  height: 300,
-                  color: 'text.secondary'
-                }}
-              >
-                <AssessmentIcon sx={{ fontSize: 80, mb: 2, opacity: 0.3 }} />
-                <Typography variant="h6" gutterBottom>
-                  No data available
-                </Typography>
-                <Typography variant="body2" textAlign="center">
-                  This parser hasn't collected any data yet
-                </Typography>
-              </Box>
-            ) : (
-              <Box sx={{ width: '100%', height: 300 }}>
-                <LineChart
-                  xAxis={[
-                    {
-                      scaleType: 'point',
-                      data: chartDates,
-                      label: 'Date',
-                    },
-                  ]}
-                  yAxis={[
-                    {
-                      label: 'Value',
-                    },
-                  ]}
-                  series={[
-                    {
-                      data: chartValues,
-                      label: 'Collected Values',
-                      color: theme.palette.primary.main,
-                      curve: 'linear',
-                      showMark: true,
-                    },
-                  ]}
-                  height={300}
-                  margin={{ left: 70, right: 20, top: 20, bottom: 50 }}
-                  grid={{ vertical: true, horizontal: true }}
-                  sx={{
-                    '& .MuiChartsAxis-line': {
-                      stroke: theme.palette.divider,
-                    },
-                    '& .MuiChartsAxis-tick': {
-                      stroke: theme.palette.divider,
-                    },
-                    '& .MuiChartsAxis-tickLabel': {
-                      fill: theme.palette.text.secondary,
-                    },
-                    '& .MuiChartsLegend-series text': {
-                      fill: theme.palette.text.primary,
-                    },
-                  }}
-                />
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-
-        {/* Parser Info - Right Side (4 units) */}
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Paper
-            sx={{
-              p: 3,
-              borderRadius: 2,
-              boxShadow: 3,
-              height: '100%',
-            }}
-          >
-            <Typography variant="h6" fontWeight="600" gutterBottom>
-              Parser information
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Details about selected parser
-            </Typography>
-            
-            {selectedParserSlug ? (
-              <Box>
-                <Stack spacing={2}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Slug
-                    </Typography>
-                    <Typography variant="body2" fontWeight="500">
-                      {analyticsData?.slug || selectedParserSlug}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Total records
-                    </Typography>
-                    <Typography variant="body2" fontWeight="500">
-                      {analyticsData?.totalRecords.toLocaleString() || 'Loading...'}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Average value
-                    </Typography>
-                    <Typography variant="body2" fontWeight="500">
-                      {analyticsData?.averageValue.toFixed(2) || 'Loading...'}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Data points
-                    </Typography>
-                    <Typography variant="body2" fontWeight="500">
-                      {analyticsData?.dataPoints.length || 0} entries
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Box>
-            ) : (
-              <Alert severity="info">
-                Select a parser from the Management tab to see detailed information
-              </Alert>
-            )}
-          </Paper>
-        </Grid>
-      </Grid>
-
       {/* Quick Actions Section */}
       <Paper
         sx={{
@@ -504,6 +277,28 @@ export const AnalyticsDashboard: React.FC = () => {
           </Button>
         </Stack>
       </Paper>
+
+      {/* Parser metrics panel */}
+      <Box sx={{ mt: 3 }}>
+        <Paper
+          sx={{
+            p: 2,
+            borderRadius: 2,
+            boxShadow: 2,
+            mb: 2,
+          }}
+        >
+          <ParserSelector
+            parsers={parsers}
+            selectedParserSlug={selectedParserSlug}
+            onChange={setSelectedParserSlug}
+            label="Parser for analytics"
+            helperText="You can choose parser here or in Management. Selection is shared."
+          />
+        </Paper>
+
+        <ParserHistoryChart selectedParserSlug={selectedParserSlug} />
+      </Box>
 
       <Paper
         sx={{

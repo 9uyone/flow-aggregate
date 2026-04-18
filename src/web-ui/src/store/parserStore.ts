@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { storageApi } from '../api';
+import { analyzeApi, storageApi } from '../api';
+import type { MetricOption } from '../api';
 import type { ParserCatalogItem, ParserRunStatus, ParserSourceType, TaskStatusResponse, UserConfig } from '../types/storage';
 
 export interface Parser {
@@ -7,7 +8,7 @@ export interface Parser {
   name: string;
   description?: string;
   sourceType: ParserSourceType;
-  metricFields: string[];
+  metricOptions: MetricOption[];
   hasConfig: boolean;
   url?: string;
   cronExpression?: string;
@@ -96,7 +97,7 @@ const mapUserConfigToParser = (config: UserConfig): Parser => ({
         ? 'Plugin parser'
         : 'External parser · trigger via token',
   sourceType: config.$type,
-  metricFields: [],
+  metricOptions: [],
   hasConfig: true,
   url:
     config.$type === 'internal'
@@ -131,7 +132,7 @@ const mapCatalogParser = (parser: ParserCatalogItem): Parser => {
     name: parser.displayName || parser.slug,
     description: parser.description || undefined,
     sourceType: parser.sourceType,
-    metricFields: parser.metricFields,
+    metricOptions: [],
     hasConfig: false,
     url: undefined,
     cronExpression: undefined,
@@ -162,7 +163,7 @@ const mergeParsers = (catalogParsers: ParserCatalogItem[], configuredParsers: Us
         ...configuredParser,
         name: existing.name || configuredParser.name,
         description: existing.description || configuredParser.description,
-        metricFields: existing.metricFields,
+        metricOptions: existing.metricOptions,
         sourceType: existing.sourceType,
         hasConfig: true,
         cronExpression: configuredParser.cronExpression,
@@ -174,12 +175,30 @@ const mergeParsers = (catalogParsers: ParserCatalogItem[], configuredParsers: Us
     mergedMap.set(configuredParser.slug, {
       ...configuredParser,
       sourceType: configuredItem.$type,
-      metricFields: [],
+      metricOptions: [],
       hasConfig: true,
     });
   });
 
   return Array.from(mergedMap.values());
+};
+
+const applyAvailableMetrics = (
+  parsers: Parser[],
+  availableMetricsBySlug: Record<string, MetricOption[]>
+): Parser[] => {
+  return parsers.map((parser) => {
+    const metricOptions = availableMetricsBySlug[parser.slug];
+
+    if (!metricOptions) {
+      return parser;
+    }
+
+    return {
+      ...parser,
+      metricOptions,
+    };
+  });
 };
 
 export const useParserStore = create<ParserState>()((set) => ({
@@ -205,7 +224,24 @@ export const useParserStore = create<ParserState>()((set) => ({
         storageApi.getAvailableParsers(),
       ]);
 
-      const parsers = mergeParsers(availableParsers, configsResponse.items);
+      const mergedParsers = mergeParsers(availableParsers, configsResponse.items);
+      const metricsResponses = await Promise.allSettled(
+        mergedParsers.map(async (parser) => {
+          const metrics = await analyzeApi.getAvailableMetrics(parser.slug);
+          return [parser.slug, metrics] as const;
+        })
+      );
+
+      const availableMetricsBySlug: Record<string, MetricOption[]> = {};
+
+      metricsResponses.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          const [slug, metrics] = result.value;
+          availableMetricsBySlug[slug] = metrics;
+        }
+      });
+
+      const parsers = applyAvailableMetrics(mergedParsers, availableMetricsBySlug);
       const parserConfigs = configsResponse.items.map(mapUserConfigToParserConfig);
       set({ parsers, parserConfigs, isLoading: false });
     } catch (error) {

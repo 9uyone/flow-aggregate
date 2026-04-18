@@ -85,7 +85,8 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
               (config.sourceType === 'internal'
                 ? 'Internal parser configuration'
                 : 'External parser configuration');
-            const metricFields = parserDefinition?.metricFields ?? [];
+            const metricOptionsCount = parserDefinition?.metricOptions.length ?? 0;
+            const dimensionCount = Array.from(new Set(parserDefinition?.metricOptions.flatMap((option) => option.dimensions) ?? [])).length;
 
             return (
               <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={config.configId}>
@@ -93,7 +94,8 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
                   config={config}
                   parserName={parserName}
                   parserDescription={parserDescription}
-                  metricFieldsCount={metricFields.length}
+                  metricOptionsCount={metricOptionsCount}
+                  dimensionCount={dimensionCount}
                   selected={selectedParserSlug === config.slug}
                   isRunning={isSlugRunning(config.slug)}
                   isPreparingRun={isPreparingRun}
