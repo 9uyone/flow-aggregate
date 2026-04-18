@@ -8,5 +8,6 @@ public record ParserDetailsDto(
 	string Description,
 	ParserSourceType SourceType,
 	IEnumerable<string>? MetricFields,
+	IEnumerable<string>? Dimensions,
 	IEnumerable<ParameterDetailsDto> Parameters
 );

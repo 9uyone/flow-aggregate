@@ -31,6 +31,8 @@ builder.Services.AddScoped<ParserConfigService>();
 builder.Services.AddScoped<ParserConfigInternalService>();
 builder.Services.AddScoped<CollectedDataService>();
 builder.Services.AddScoped<TaskStatusService>();
+builder.Services.AddScoped<IHistoryAggregationService, HistoryAggregationService>();
+builder.Services.AddScoped<IHistoryStatsService, HistoryStatsService>();
 builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
 builder.Services.AddMyHttpClient();
 

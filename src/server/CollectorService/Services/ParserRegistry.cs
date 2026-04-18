@@ -10,7 +10,7 @@ using CollectorService.Extensions;
 namespace CollectorService.Services;
 
 public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
-	private sealed record ParserRegistration(Type ParserType, ParserInfoAttribute Info, ParserSourceType SourceType, IEnumerable<string>? MetricFields);
+	private sealed record ParserRegistration(Type ParserType, ParserInfoAttribute Info, ParserSourceType SourceType, IEnumerable<string>? MetricFields, IEnumerable<string>? Dimensions);
 
 	private readonly Dictionary<string, ParserRegistration> _parsers = new(StringComparer.OrdinalIgnoreCase);
 
@@ -29,7 +29,12 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 				.Distinct()
 				.ToList();
 
-			_parsers[info.Slug] = new ParserRegistration(type, info, source, metricFields);
+			var dimensions = type.GetCustomAttributes<ParserDimensionsAttribute>()
+				.SelectMany(a => a.Dimensions)
+				.Distinct()
+				.ToList();
+
+			_parsers[info.Slug] = new ParserRegistration(type, info, source, metricFields, dimensions);
 		}
 	}
 
@@ -55,6 +60,6 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 		}
 
 		var info = reg.Info;
-		return new ParserDetailsDto(info.Slug, info.DisplayName, info.Description, reg.SourceType, reg.MetricFields, parameters);
+		return new ParserDetailsDto(info.Slug, info.DisplayName, info.Description, reg.SourceType, reg.MetricFields, reg.Dimensions, parameters);
 	}
 }

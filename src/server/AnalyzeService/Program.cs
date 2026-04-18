@@ -1,4 +1,5 @@
 using AnalyzeService;
+using AnalyzeService.Services;
 using Common.Config;
 using Common.Extensions;
 
@@ -11,6 +12,8 @@ builder.Services.AddGlobalExceptionHandler();
 builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddAuthorization();
 builder.Services.AddMyHttpClient();
+builder.Services.AddScoped<IHistoryQueryService, HistoryQueryService>();
+builder.Services.AddScoped<IAnalyticsStatsService, AnalyticsStatsService>();
 
 var app = builder.Build();
 
