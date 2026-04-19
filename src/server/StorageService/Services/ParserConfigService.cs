@@ -184,6 +184,25 @@ internal class ParserConfigService(
 			throw new NotFoundException("Parser configuration not found");
 
 		await repo.DeleteAsync(c => c.Id == id);
+
+		if (existing.SourceType != ParserSourceType.External)
+			return;
+
+		var hasOtherConfigsWithSlug = await repo.AnyAsync(c => c.ParserSlug == existing.ParserSlug && c.Id != id);
+		if (hasOtherConfigsWithSlug)
+			return;
+
+		var parserDefinition = await FindParserDefinitionAsync(existing.ParserSlug);
+		if (parserDefinition is null)
+			return;
+
+		if (parserDefinition.SourceType != ParserSourceType.External)
+			return;
+
+		if (parserDefinition.OwnerUserId != userId)
+			return;
+
+		await definitionsRepo.DeleteAsync(x => x.Slug == existing.ParserSlug);
 	}
 
 	public async Task<RunParserResult> RunConfigAsync(Guid id, Guid userId) {
