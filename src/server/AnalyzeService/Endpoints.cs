@@ -37,6 +37,43 @@ public static class Endpoints {
 			return result.Success ? Results.Ok(result.Data) : Results.BadRequest(result.ErrorMessage);
 		});
 
+		group.MapGet("/parsers/{slug}/trend", async (IAdvancedAnalyticsService analyticsService, IHttpRestClient httpClient, HttpContext context, string slug,
+			[FromQuery] string metric,
+			[FromQuery] string? range,
+			[FromQuery] string? interval,
+			[FromQuery] DateTime? from,
+			[FromQuery] DateTime? to) =>
+		{
+			var dimensions = await BuildDimensionsAsync(httpClient, context.Request.Query, slug);
+			var result = await analyticsService.GetTrendAsync(new HistoryQueryRequest(slug, metric, range, interval, from, to, dimensions));
+			return result.Success ? Results.Ok(result.Data) : Results.BadRequest(result.ErrorMessage);
+		});
+
+		group.MapGet("/parsers/{slug}/volatility", async (IAdvancedAnalyticsService analyticsService, IHttpRestClient httpClient, HttpContext context, string slug,
+			[FromQuery] string metric,
+			[FromQuery] string? range,
+			[FromQuery] string? interval,
+			[FromQuery] DateTime? from,
+			[FromQuery] DateTime? to) =>
+		{
+			var dimensions = await BuildDimensionsAsync(httpClient, context.Request.Query, slug);
+			var result = await analyticsService.GetVolatilityAsync(new HistoryQueryRequest(slug, metric, range, interval, from, to, dimensions));
+			return result.Success ? Results.Ok(result.Data) : Results.BadRequest(result.ErrorMessage);
+		});
+
+		group.MapGet("/parsers/{slug}/forecast", async (IAdvancedAnalyticsService analyticsService, IHttpRestClient httpClient, HttpContext context, string slug,
+			[FromQuery] string metric,
+			[FromQuery] int horizon = 12,
+			[FromQuery] string? range = null,
+			[FromQuery] string? interval = null,
+			[FromQuery] DateTime? from = null,
+			[FromQuery] DateTime? to = null) =>
+		{
+			var dimensions = await BuildDimensionsAsync(httpClient, context.Request.Query, slug);
+			var result = await analyticsService.GetForecastAsync(new HistoryQueryRequest(slug, metric, range, interval, from, to, dimensions), horizon);
+			return result.Success ? Results.Ok(result.Data) : Results.BadRequest(result.ErrorMessage);
+		});
+
 		group.MapGet("/parsers/{slug}/available-metrics", async (IHttpRestClient httpClient, string slug) => {
 			var recordMetrics = await httpClient.GetAsync<string[]>($"/internal/storage/aggregation/metrics/{slug}") ?? [];
 			var parserDetails = await httpClient.GetAsync<ParserDetailsResponse>($"/api/collector/parsers/{slug}");

@@ -30,8 +30,7 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient) : IHistoryQu
 		string effectiveInterval;
 
 		if (!string.IsNullOrWhiteSpace(request.Range)) {
-			(effectiveFrom, effectiveTo, effectiveInterval) = ResolveRange(request.Range);
-			if (effectiveInterval.Length == 0)
+			if (!AnalyticsTimeRangeResolver.TryResolvePreset(request.Range, out effectiveFrom, out effectiveTo, out effectiveInterval))
 				return new HistoryQueryResult(false, "Range must be one of: day, week, month, quarter, year, all, all-time.", null);
 
 			if (!string.IsNullOrWhiteSpace(request.Interval))
@@ -44,11 +43,11 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient) : IHistoryQu
 			effectiveFrom = request.From.Value;
 			effectiveTo = request.To.Value;
 			effectiveInterval = string.IsNullOrWhiteSpace(request.Interval)
-				? InferInterval(effectiveFrom, effectiveTo)
+				? AnalyticsTimeRangeResolver.InferInterval(effectiveFrom, effectiveTo)
 				: request.Interval.Trim().ToLowerInvariant();
 		}
 
-		if (effectiveInterval is not ("hour" or "day" or "week" or "month"))
+		if (!AnalyticsTimeRangeResolver.IsSupportedInterval(effectiveInterval))
 			return new HistoryQueryResult(false, "Interval must be one of: hour, day, week, month.", null);
 
 		if (effectiveFrom > effectiveTo)
@@ -71,29 +70,4 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient) : IHistoryQu
 		return new HistoryQueryResult(true, null, data ?? Array.Empty<HistoryPointDto>());
 	}
 
-	private static (DateTime From, DateTime To, string Interval) ResolveRange(string range) {
-		var now = DateTime.UtcNow;
-
-		return range.Trim().ToLowerInvariant() switch {
-			"day" => (now.AddDays(-1), now, "hour"),
-			"week" => (now.AddDays(-7), now, "day"),
-			"month" => (now.AddMonths(-1), now, "week"),
-			"quarter" or "3m" or "3-month" or "3 months" => (now.AddMonths(-3), now, "week"),
-			"year" or "1y" => (now.AddYears(-1), now, "month"),
-			"all" or "all-time" or "all time" => (DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc), now, "month"),
-			_ => (default, default, string.Empty)
-		};
 	}
-
-	private static string InferInterval(DateTime from, DateTime to) {
-		var span = to - from;
-
-		return span <= TimeSpan.FromDays(2)
-			? "hour"
-			: span <= TimeSpan.FromDays(90)
-				? "day"
-				: span <= TimeSpan.FromDays(365)
-					? "week"
-					: "month";
-	}
-}

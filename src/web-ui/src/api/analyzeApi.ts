@@ -23,6 +23,31 @@ export interface MetricOption {
   dimensions: string[];
 }
 
+export interface ParserTrendResponse {
+  slope: number;
+  r2: number;
+  direction: 'up' | 'down' | 'flat';
+  pointsCount: number;
+}
+
+export interface ParserVolatilityResponse {
+  stdDev: number;
+  coefficientOfVariation: number;
+  mean: number;
+  min: number;
+  max: number;
+}
+
+export interface ForecastPoint {
+  timestamp: string;
+  value: number;
+}
+
+export interface ParserForecastResponse {
+  points: ForecastPoint[];
+  note: string | null;
+}
+
 export type AvailableMetricsResponse = MetricOption[];
 
 export type TimeRange =
@@ -40,23 +65,21 @@ export type TimeRange =
   | 'all time';
 export type TimeInterval = 'hour' | 'day' | 'week' | 'month';
 
-export interface GetParserHistoryParams {
+export interface AnalyticsQueryInput {
   metric: string;
   range?: TimeRange;
   interval?: TimeInterval;
   from?: string;
   to?: string;
-  [dimensionKey: string]: string | undefined;
+  dimensions?: Record<string, string>;
+  horizon?: number;
 }
 
-export interface GetParserStatsParams {
-  metric: string;
-  range?: TimeRange;
-  interval?: TimeInterval;
-  from?: string;
-  to?: string;
-  [dimensionKey: string]: string | undefined;
-}
+export type GetParserHistoryParams = AnalyticsQueryInput;
+export type GetParserStatsParams = AnalyticsQueryInput;
+export type GetParserTrendParams = AnalyticsQueryInput;
+export type GetParserVolatilityParams = AnalyticsQueryInput;
+export type GetParserForecastParams = AnalyticsQueryInput;
 
 export interface GetDimensionOptionsParams {
   metric: string;
@@ -64,9 +87,9 @@ export interface GetDimensionOptionsParams {
   [dimensionKey: string]: string | undefined;
 }
 
-export type MetricQueryParams = Omit<GetParserHistoryParams, 'metric'>;
+export type MetricQueryParams = Omit<AnalyticsQueryInput, 'metric' | 'horizon'>;
 
-const validateMetricQueryParams = (params: GetParserHistoryParams | GetParserStatsParams) => {
+const validateMetricQueryParams = (params: AnalyticsQueryInput) => {
   if (!params.metric) {
     throw new Error('Metric parameter is required');
   }
@@ -74,6 +97,38 @@ const validateMetricQueryParams = (params: GetParserHistoryParams | GetParserSta
   if (!params.range && (!params.from || !params.to)) {
     throw new Error('Either "range" or both "from" and "to" parameters are required');
   }
+};
+
+const buildAnalyticsQueryParams = (
+  params: AnalyticsQueryInput,
+  options?: {
+    includeHorizon?: boolean;
+    defaultHorizon?: number;
+  }
+) => {
+  validateMetricQueryParams(params);
+
+  const dimensions = params.dimensions ?? {};
+  const normalizedDimensions = Object.fromEntries(
+    Object.entries(dimensions)
+      .filter(([key, value]) => key.trim().length > 0 && value.trim().length > 0)
+      .map(([key, value]) => [key.trim(), value.trim()])
+  );
+
+  const query: Record<string, string | number | undefined> = {
+    metric: params.metric,
+    range: params.range,
+    from: params.from,
+    to: params.to,
+    interval: params.interval,
+    ...normalizedDimensions,
+  };
+
+  if (options?.includeHorizon) {
+    query.horizon = params.horizon ?? options.defaultHorizon ?? 12;
+  }
+
+  return query;
 };
 
 /**
@@ -110,11 +165,11 @@ export const analyzeApi = {
     slug: string,
     params: GetParserHistoryParams
   ): Promise<ChartDataPoint[]> => {
-    validateMetricQueryParams(params);
+    const queryParams = buildAnalyticsQueryParams(params);
 
     const { data } = await axiosInstance.get<ChartDataPoint[]>(
       `/analyze/parsers/${slug}/history`,
-      { params }
+      { params: queryParams }
     );
     return data;
   },
@@ -129,13 +184,74 @@ export const analyzeApi = {
     slug: string,
     params: GetParserStatsParams
   ): Promise<ParserMetricStats> => {
-    validateMetricQueryParams(params);
+    const queryParams = buildAnalyticsQueryParams(params);
 
     const { data } = await axiosInstance.get<ParserMetricStats>(
       `/analyze/parsers/${slug}/stats`,
-      { params }
+      { params: queryParams }
     );
     return data;
+  },
+
+  /**
+   * Get trend diagnostics for selected metric and filters.
+   */
+  getParserTrend: async (
+    slug: string,
+    params: GetParserTrendParams
+  ): Promise<ParserTrendResponse> => {
+    const queryParams = buildAnalyticsQueryParams(params);
+
+    const { data } = await axiosInstance.get<ParserTrendResponse>(
+      `/analyze/parsers/${slug}/trend`,
+      { params: queryParams }
+    );
+    return data;
+  },
+
+  /**
+   * Get volatility diagnostics for selected metric and filters.
+   */
+  getParserVolatility: async (
+    slug: string,
+    params: GetParserVolatilityParams
+  ): Promise<ParserVolatilityResponse> => {
+    const queryParams = buildAnalyticsQueryParams(params);
+
+    const { data } = await axiosInstance.get<ParserVolatilityResponse>(
+      `/analyze/parsers/${slug}/volatility`,
+      { params: queryParams }
+    );
+    return data;
+  },
+
+  /**
+   * Get short-term forecast points for selected metric and filters.
+   */
+  getParserForecast: async (
+    slug: string,
+    params: GetParserForecastParams
+  ): Promise<ParserForecastResponse> => {
+    const queryParams = buildAnalyticsQueryParams(params, {
+      includeHorizon: true,
+      defaultHorizon: 12,
+    });
+
+    const { data } = await axiosInstance.get<ParserForecastResponse>(
+      `/analyze/parsers/${slug}/forecast`,
+      { params: queryParams }
+    );
+
+    const points = Array.isArray(data?.points)
+      ? data.points
+        .filter((point) => point && typeof point.timestamp === 'string' && typeof point.value === 'number')
+        .map((point) => ({ timestamp: point.timestamp, value: point.value }))
+      : [];
+
+    return {
+      points,
+      note: typeof data?.note === 'string' ? data.note : null,
+    };
   },
 
   /**

@@ -8,12 +8,6 @@ GET /api/storage/configs?page=1&pageSize=20&type=internal|external&enabled=true|
 Response: PagedResponse<InternalParserConfig | ExternalParserConfig>
 ```
 
-### Get config by ID
-```
-GET /api/storage/configs/{configId}
-Response: InternalParserConfig | ExternalParserConfig
-```
-
 ### Create internal parser config
 ```
 POST /api/storage/configs/internal
@@ -21,7 +15,7 @@ Body: {
   parserSlug: string,
   isEnabled?: boolean,
   customName?: string,
-  cronExpression: string,
+  cronExpression?: string,
   options?: Record<string, string>
 }
 Response: 200 OK
@@ -42,8 +36,9 @@ Response: 200 OK { token: string }
 PATCH /api/storage/configs/{configId}
 Body: {
   isEnabled?: boolean,
-  cronExpression?: string,  // internal only
-  options?: Record<string, string>  // internal only
+  customName?: string, // internal/plugin only
+  cronExpression?: string,  // internal/plugin only
+  options?: Record<string, string>  // internal/plugin only
 }
 Response: 204 No Content
 ```
@@ -62,13 +57,62 @@ Response: 202 Accepted { correlationId: string }
 
 ---
 
-## Collector - Parser Catalog & Execution
+## Storage - Parser Catalog & External Definitions
 
-### Get all available parsers
+### Get unified parser catalog
 ```
-GET /api/collector/parsers
+GET /api/storage/parsers
 Response: ParserCatalogItem[]
+
+ParserCatalogItem:
+{
+  slug: string,
+  displayName: string,
+  description: string,
+  sourceType: "Internal" | "Plugin" | "External",
+  metricFields: string[],
+  dimensions: string[],
+  supportsScheduledRun: boolean,
+  supportsManualRun: boolean,
+  supportsPushIngest: boolean,
+  supportsParameters: boolean,
+  isExternalOwnedByCurrentUser: boolean
+}
 ```
+
+### Create external parser definition
+```
+POST /api/storage/parsers/external
+Body: {
+  slug: string,
+  displayName: string,
+  description?: string,
+  metricFields: string[],
+  dimensions: string[]
+}
+Response: 200 OK
+```
+
+### Update external parser definition
+```
+PUT /api/storage/parsers/external/{slug}
+Body: {
+  displayName: string,
+  description?: string,
+  metricFields: string[],
+  dimensions: string[]
+}
+Response: 200 OK
+```
+
+Notes:
+1. External config creation requires existing external definition.
+2. If definition is missing, backend returns a validation error.
+3. `isExternalOwnedByCurrentUser=true` marks external definitions editable by current user.
+
+---
+
+## Collector - Execution & Parser Details
 
 ### Get parser details with parameters
 ```
@@ -130,7 +174,7 @@ Note: list is composed from MongoDB (finished tasks) + Redis/cache (running task
 
 ### Get task status by correlationId
 ```
-GET /api/storage/tasks/status/{correlationId}
+GET /api/storage/tasks?correlationId={correlationId}
 Response: {
   correlationId: string,
   parserSlug: string,
@@ -188,26 +232,11 @@ Response: OverallStatsResponse
 }
 ```
 
-### Get stats for specific parser
-```
-GET /api/storage/stats/{slug}?from=2024-01-01&to=2024-12-31
-Response: ParserStatsResponse
-{
-  slug: string,
-  totalRuns: number,
-  successRate: number,
-  averageRecords: number,
-  lastRunAt: string
-}
-```
-
----
-
 ## Analytics - Parser Metrics History
 
 ### Get available metrics for a parser
 ```
-GET /analyze/parsers/{slug}/available-metrics
+GET /api/analyze/parsers/{slug}/available-metrics
 
 Response:
 [ 
@@ -224,8 +253,8 @@ Interpretation:
 
 ### Get available values for a metric dimension
 ```
-GET /analyze/parsers/{slug}/dimension-options?metric=temperature&dimension=city
-GET /analyze/parsers/{slug}/dimension-options?metric=temperature&dimension=sensor_type&city=lviv
+GET /api/analyze/parsers/{slug}/dimension-options?metric=temperature&dimension=city
+GET /api/analyze/parsers/{slug}/dimension-options?metric=temperature&dimension=sensor_type&city=lviv
 ```
 
 Query Parameters:
@@ -247,8 +276,8 @@ Rules:
 
 ### Get parser metric history (time series for charts)
 ```
-GET /analyze/parsers/{slug}/history?metric=temperature&range=week
-GET /analyze/parsers/{slug}/history?metric=temperature&from=2026-04-01T00:00:00Z&to=2026-04-08T00:00:00Z&interval=day
+GET /api/analyze/parsers/{slug}/history?metric=temperature&range=week
+GET /api/analyze/parsers/{slug}/history?metric=temperature&from=2026-04-01T00:00:00Z&to=2026-04-08T00:00:00Z&interval=day
 
 Query Parameters:
   metric (required): Name of the metric to retrieve
@@ -290,8 +319,8 @@ Rules:
 
 ### Get parser metric statistics (summary stats)
 ```
-GET /analyze/parsers/{slug}/stats?metric=temperature&range=week
-GET /analyze/parsers/{slug}/stats?metric=temperature&from=2026-04-01T00:00:00Z&to=2026-04-08T00:00:00Z
+GET /api/analyze/parsers/{slug}/stats?metric=temperature&range=week
+GET /api/analyze/parsers/{slug}/stats?metric=temperature&from=2026-04-01T00:00:00Z&to=2026-04-08T00:00:00Z
 
 Query Parameters:
   metric (required): Name of the metric to retrieve stats for
@@ -343,22 +372,72 @@ Rules:
   7. count = total number of data points in range
 
 Examples:
-  - /analyze/parsers/open-weather/history?metric=temperature&range=quarter
-  - /analyze/parsers/open-weather/stats?metric=temperature&range=year
+  - /api/analyze/parsers/open-weather/history?metric=temperature&range=quarter
+  - /api/analyze/parsers/open-weather/stats?metric=temperature&range=year
 ```
+
+### Get parser metric trend diagnostics
+```
+GET /api/analyze/parsers/{slug}/trend?metric=temperature&range=week
+
+Response:
+{
+  slope: number,
+  r2: number,
+  direction: "up" | "down" | "flat",
+  pointsCount: number
+}
+```
+
+### Get parser metric volatility diagnostics
+```
+GET /api/analyze/parsers/{slug}/volatility?metric=temperature&range=week
+
+Response:
+{
+  stdDev: number,
+  coefficientOfVariation: number,
+  mean: number,
+  min: number,
+  max: number
+}
+```
+
+### Get parser metric forecast
+```
+GET /api/analyze/parsers/{slug}/forecast?metric=temperature&range=week&horizon=12
+
+Response:
+{
+  points: Array<{ timestamp: string, value: number }>,
+  note: string | null
+}
+```
+
+Forecast rules:
+1. `horizon` is optional; default is 12.
+2. Uses same base query filters as history/stats (metric + range/from/to + interval + dynamic dimensions).
+3. Forecast may be unavailable for very short history windows (e.g. 1 point).
 
 ---
 
 ## Ключові особливості API:
 
 1. ✅ **POST /api/collector/run/{slug}** - slug в URL (відповідає бекенду)
-2. ✅ **GET /api/storage/configs/{configId}** - по ID, не по slug (slug не унікальний)
-3. ✅ **Два створюючі ендпоінти:**
+2. ✅ **Parser catalog з єдиного джерела:**
+   - `GET /api/storage/parsers` (capability-driven + ownership)
+3. ✅ **External definition flow:**
+   - `POST /api/storage/parsers/external`
+   - `PUT /api/storage/parsers/external/{slug}`
+   - після definition доступний `POST /api/storage/configs/external`
+4. ✅ **Два створюючі config ендпоінти:**
    - `POST /api/storage/configs/internal` - для запланованих парсерів (cron)
    - `POST /api/storage/configs/external` - для API ingestion (повертає token)
-4. ✅ **PATCH** замість PUT - часткове оновлення конфігів
-5. ✅ **POST /api/storage/configs/{configId}/run** - окремий endpoint для запуску збереженого конфігу
-6. ✅ **CustomName** - можливість давати власні назви конфігам
-7. ✅ **Tasks list = Mongo + Redis** - в одному paged response
-8. ✅ **GET /api/storage/tasks/status/{correlationId}** - точковий статус задачі для polling
-9. ⏳ **Stop task** - поки немає на бекенді (correlationId може використовуватись як taskId в майбутньому)
+5. ✅ **PATCH** замість PUT - часткове оновлення конфігів
+6. ✅ **POST /api/storage/configs/{configId}/run** - окремий endpoint для запуску збереженого конфігу
+7. ✅ **CustomName** - можливість давати власні назви конфігам
+8. ✅ **Tasks list = Mongo + Redis** - в одному paged response
+9. ✅ **GET /api/storage/tasks?correlationId=...** - точковий статус задачі для polling
+10. ✅ **Dimension-aware analytics + advanced endpoints:**
+   - `/history`, `/stats`, `/trend`, `/volatility`, `/forecast`
+11. ⏳ **Stop task** - поки немає на бекенді (correlationId може використовуватись як taskId в майбутньому)

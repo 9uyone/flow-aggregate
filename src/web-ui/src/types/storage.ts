@@ -92,21 +92,6 @@ export interface ParserDetailsResponse {
   parameters: ParserParameterDefinition[];
 }
 
-// Analytics data point
-export interface AnalyticsDataPoint {
-  slug: string;
-  value: number;
-  capturedAt: string;
-}
-
-// Analytics response
-export interface AnalyticsResponse {
-  slug: string;
-  dataPoints: AnalyticsDataPoint[];
-  totalRecords: number;
-  averageValue: number;
-}
-
 export interface OverallStatsResponse {
   totalRecords: number;
   activeParsers: number;

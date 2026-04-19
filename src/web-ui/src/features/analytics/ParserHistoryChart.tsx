@@ -1,146 +1,55 @@
-import { useState, useEffect, useMemo } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Chip,
-  CircularProgress,
-  Divider,
-  FormControl,
-  FormControlLabel,
-  FormLabel,
-  InputLabel,
-  MenuItem,
-  Radio,
-  RadioGroup,
-  Select,
-  Stack,
-  TextField,
-  Typography,
-  useTheme,
-} from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
 import { RefreshOutlined as RefreshIcon } from '@mui/icons-material';
-import { LineChart } from '@mui/x-charts/LineChart';
-import { analyzeApi, type ChartDataPoint, type MetricOption, type MetricQueryParams, type TimeInterval, type TimeRange } from '../../api';
+import {
+  analyzeApi,
+  type AnalyticsQueryInput,
+  type MetricOption,
+  type MetricQueryParams,
+  type TimeInterval,
+} from '../../api';
 import { ParserStatsDisplay } from './ParserStatsDisplay';
+import {
+  type PresetRange,
+  areDimensionOptionsEqual,
+  getAutoIntervalForPreset,
+  getTrendMeta,
+  getVolatilityMeta,
+  normalizeMetricOptions,
+  normalizePercent,
+  shouldOmitStatsIntervalForPreset,
+  toIsoStringOrNull,
+  toRangeParam,
+} from './analyticsUiHelpers';
+import { AnalyticsInsightsCards } from './AnalyticsInsightsCards';
+import { AnalyticsFiltersPanel } from './AnalyticsFiltersPanel';
+import { AnalyticsChartSection } from './AnalyticsChartSection';
+import { useParserAnalyticsData } from './useParserAnalyticsData';
 
 interface ParserHistoryChartProps {
   selectedParserSlug: string | null;
 }
 
-const normalizeMetricOptions = (options: MetricOption[]): MetricOption[] => {
-  const byMetric = new Map<string, Set<string>>();
-
-  options.forEach((option) => {
-    const metric = option.metric?.trim();
-    if (!metric) {
-      return;
-    }
-
-    const current = byMetric.get(metric) ?? new Set<string>();
-    option.dimensions
-      .map((dimension) => dimension.trim())
-      .filter(Boolean)
-      .forEach((dimension) => current.add(dimension));
-
-    byMetric.set(metric, current);
-  });
-
-  return Array.from(byMetric.entries()).map(([metric, dimensions]) => ({
-    metric,
-    dimensions: Array.from(dimensions),
-  }));
-};
-
-const areStringArraysEqual = (first: string[], second: string[]) => {
-  if (first.length !== second.length) {
-    return false;
-  }
-
-  return first.every((value, index) => value === second[index]);
-};
-
-const areDimensionOptionsEqual = (
-  first: Record<string, string[]>,
-  second: Record<string, string[]>
-) => {
-  const firstKeys = Object.keys(first).sort();
-  const secondKeys = Object.keys(second).sort();
-
-  if (!areStringArraysEqual(firstKeys, secondKeys)) {
-    return false;
-  }
-
-  return firstKeys.every((key) => areStringArraysEqual(first[key] ?? [], second[key] ?? []));
-};
-
-const toIsoStringOrNull = (value: string) => {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-};
-
 type IntervalSelection = TimeInterval | 'auto';
-type PresetRange = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'all';
-
-const getHistoryAutoInterval = (range: PresetRange): TimeInterval | undefined => {
-  switch (range) {
-    case 'quarter':
-      return 'week';
-    case 'year':
-      return 'month';
-    default:
-      return undefined;
-  }
-};
-
-const toRangeParam = (range: PresetRange): TimeRange => {
-  switch (range) {
-    case 'quarter':
-      return 'quarter';
-    case 'year':
-      return 'year';
-    case 'all':
-      return 'all';
-    case 'day':
-      return 'day';
-    case 'week':
-      return 'week';
-    case 'month':
-      return 'month';
-    default:
-      return 'week';
-  }
-};
-
-const shouldOmitStatsIntervalForPreset = (range: PresetRange): boolean => (
-  range === 'quarter' || range === 'year'
-);
 
 export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selectedParserSlug }) => {
-  const theme = useTheme();
   const [metricOptions, setMetricOptions] = useState<MetricOption[]>([]);
   const [selectedMetric, setSelectedMetric] = useState('');
+
   const [selectedDimensions, setSelectedDimensions] = useState<Record<string, string>>({});
   const [dimensionOptionsByKey, setDimensionOptionsByKey] = useState<Record<string, string[]>>({});
   const [isDimensionOptionsLoading, setIsDimensionOptionsLoading] = useState(false);
   const [dimensionOptionsError, setDimensionOptionsError] = useState<string | null>(null);
+
   const [rangeMode, setRangeMode] = useState<'preset' | 'custom'>('preset');
   const [timeRange, setTimeRange] = useState<PresetRange>('week');
   const [interval, setInterval] = useState<IntervalSelection>('auto');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [forecastHorizon, setForecastHorizon] = useState(12);
+
   const [isMetricsLoading, setIsMetricsLoading] = useState(false);
-  const [isChartLoading, setIsChartLoading] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
-  const [chartError, setChartError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedParserSlug) {
@@ -150,14 +59,15 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
       setDimensionOptionsByKey({});
       setDimensionOptionsError(null);
       setIsDimensionOptionsLoading(false);
+
       setRangeMode('preset');
       setTimeRange('week');
       setInterval('auto');
       setCustomFrom('');
       setCustomTo('');
-      setChartData([]);
+      setForecastHorizon(12);
+
       setMetricsError(null);
-      setChartError(null);
       return;
     }
 
@@ -166,7 +76,6 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
       setSelectedDimensions({});
       setDimensionOptionsByKey({});
       setDimensionOptionsError(null);
-      setChartData([]);
       setIsMetricsLoading(true);
       setMetricsError(null);
 
@@ -241,7 +150,6 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
       }
 
       const nextOptions: Record<string, string[]> = {};
-
       results.forEach((result) => {
         if (result.status === 'fulfilled') {
           const [dimensionKey, values] = result.value;
@@ -306,6 +214,7 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
     if (rangeMode === 'preset') {
       return {
         range: toRangeParam(timeRange),
+        dimensions: dimensionQueryParams,
       };
     }
 
@@ -319,109 +228,124 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
     return {
       from,
       to,
+      dimensions: dimensionQueryParams,
     };
-  }, [rangeMode, timeRange, customFrom, customTo]);
+  }, [rangeMode, timeRange, customFrom, customTo, dimensionQueryParams]);
 
-  const historyQueryParams: MetricQueryParams | null = useMemo(() => {
-    if (!baseQueryParams) {
-      return null;
-    }
-
-    const queryWithDimensions: MetricQueryParams = {
-      ...baseQueryParams,
-      ...dimensionQueryParams,
-    };
-
+  const resolvedHistoryInterval = useMemo<TimeInterval | undefined>(() => {
     if (interval !== 'auto') {
-      return { ...queryWithDimensions, interval };
+      return interval;
     }
 
     if (rangeMode === 'preset') {
-      const mappedInterval = getHistoryAutoInterval(timeRange);
-
-      if (mappedInterval) {
-        return { ...queryWithDimensions, interval: mappedInterval };
-      }
+      return getAutoIntervalForPreset(timeRange);
     }
 
-    return queryWithDimensions;
-  }, [baseQueryParams, dimensionQueryParams, interval, rangeMode, timeRange]);
+    return undefined;
+  }, [interval, rangeMode, timeRange]);
 
-  const statsQueryParams: MetricQueryParams | null = useMemo(() => {
-    if (!baseQueryParams) {
-      return null;
-    }
-
-    const queryWithDimensions: MetricQueryParams = {
-      ...baseQueryParams,
-      ...dimensionQueryParams,
-    };
-
+  const resolvedStatsInterval = useMemo<TimeInterval | undefined>(() => {
     if (interval === 'auto') {
-      return queryWithDimensions;
+      return undefined;
     }
 
     if (rangeMode === 'preset' && shouldOmitStatsIntervalForPreset(timeRange)) {
-      return queryWithDimensions;
+      return undefined;
     }
 
-    return { ...queryWithDimensions, interval };
-  }, [baseQueryParams, dimensionQueryParams, interval, rangeMode, timeRange]);
+    return interval;
+  }, [interval, rangeMode, timeRange]);
 
-  useEffect(() => {
-    if (!selectedParserSlug || !selectedMetric || !historyQueryParams) {
-      setChartData([]);
-      return;
-    }
-
-    const fetchHistoryData = async () => {
-      setIsChartLoading(true);
-      setChartError(null);
-
-      try {
-        const data = await analyzeApi.getParserHistory(selectedParserSlug, {
-          metric: selectedMetric,
-          ...historyQueryParams,
-        });
-        setChartData(data);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to fetch history data';
-        setChartError(message);
-        setChartData([]);
-      } finally {
-        setIsChartLoading(false);
-      }
-    };
-
-    void fetchHistoryData();
-  }, [selectedParserSlug, selectedMetric, historyQueryParams]);
-
-  const preparedData = useMemo(() => {
-    if (chartData.length === 0) {
-      return { timestamps: [], values: [] };
+  const buildMetricRequest = (
+    query: MetricQueryParams | null,
+    extra?: Pick<AnalyticsQueryInput, 'interval' | 'horizon'>
+  ): AnalyticsQueryInput | null => {
+    if (!selectedMetric || !query) {
+      return null;
     }
 
     return {
-      timestamps: chartData.map((dataPoint) => {
-        const date = new Date(dataPoint.timestamp);
-        return date.toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        });
-      }),
-      values: chartData.map((dataPoint) => dataPoint.value),
+      metric: selectedMetric,
+      ...query,
+      ...extra,
     };
-  }, [chartData]);
-
-  const handleRangeModeChange = (mode: 'preset' | 'custom') => {
-    setRangeMode(mode);
   };
 
-  const handlePresetRangeChange = (newRange: PresetRange) => {
-    setTimeRange(newRange);
-  };
+  const historyRequest = useMemo(
+    () => buildMetricRequest(baseQueryParams, { interval: resolvedHistoryInterval }),
+    [selectedMetric, baseQueryParams, resolvedHistoryInterval]
+  );
+
+  const statsRequest = useMemo(
+    () => buildMetricRequest(baseQueryParams, { interval: resolvedStatsInterval }),
+    [selectedMetric, baseQueryParams, resolvedStatsInterval]
+  );
+
+  const insightRequest = useMemo(
+    () => buildMetricRequest(baseQueryParams, { interval: resolvedHistoryInterval }),
+    [selectedMetric, baseQueryParams, resolvedHistoryInterval]
+  );
+
+  const forecastRequest = useMemo(
+    () => buildMetricRequest(baseQueryParams, { interval: resolvedHistoryInterval, horizon: forecastHorizon }),
+    [selectedMetric, baseQueryParams, resolvedHistoryInterval, forecastHorizon]
+  );
+
+  const {
+    chartData,
+    isChartLoading,
+    chartError,
+    clearChartError,
+    trend,
+    isTrendLoading,
+    trendError,
+    volatility,
+    isVolatilityLoading,
+    volatilityError,
+    forecast,
+    isForecastLoading,
+    forecastError,
+    refresh,
+  } = useParserAnalyticsData({
+    selectedParserSlug,
+    historyRequest,
+    insightRequest,
+    forecastRequest,
+  });
+
+  const mergedChartData = useMemo(() => {
+    const actualByTimestamp = new Map<string, number>();
+    chartData.forEach((point) => {
+      actualByTimestamp.set(point.timestamp, point.value);
+    });
+
+    const forecastPoints = forecast?.points ?? [];
+    const forecastByTimestamp = new Map<string, number>();
+    forecastPoints.forEach((point) => {
+      forecastByTimestamp.set(point.timestamp, point.value);
+    });
+
+    const allTimestamps = Array.from(new Set([
+      ...actualByTimestamp.keys(),
+      ...forecastByTimestamp.keys(),
+    ])).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+    const labels = allTimestamps.map((timestamp) => {
+      const date = new Date(timestamp);
+      return date.toLocaleString('uk-UA', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    });
+
+    return {
+      labels,
+      actualSeries: allTimestamps.map((timestamp) => actualByTimestamp.get(timestamp) ?? null),
+      forecastSeries: allTimestamps.map((timestamp) => forecastByTimestamp.get(timestamp) ?? null),
+    };
+  }, [chartData, forecast]);
 
   const historyIntervalLabel = useMemo(() => {
     if (interval !== 'auto') {
@@ -429,7 +353,7 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
     }
 
     if (rangeMode === 'preset') {
-      const mapped = getHistoryAutoInterval(timeRange);
+      const mapped = getAutoIntervalForPreset(timeRange);
       if (mapped) {
         return `auto -> ${mapped}`;
       }
@@ -450,17 +374,25 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
     return interval;
   }, [interval, rangeMode, timeRange]);
 
+  const trendMeta = trend ? getTrendMeta(trend.direction) : null;
+  const trendQuality = trend ? Math.max(0, Math.min(100, normalizePercent(trend.r2))) : 0;
+
+  const cvPercent = volatility ? Math.abs(normalizePercent(volatility.coefficientOfVariation)) : 0;
+  const volatilityMeta = volatility ? getVolatilityMeta(cvPercent) : null;
+
+  const forecastUnavailableReason = selectedMetric
+    && !isChartLoading
+    && !chartError
+    && chartData.length === 1
+    ? 'Forecast unavailable: at least 2 actual points are required.'
+    : null;
+
   const handleRefresh = () => {
-    if (!selectedParserSlug || !selectedMetric || !historyQueryParams) {
+    if (!selectedParserSlug || !selectedMetric || !historyRequest) {
       return;
     }
 
-    void analyzeApi.getParserHistory(selectedParserSlug, {
-      metric: selectedMetric,
-      ...historyQueryParams,
-    }).then(setChartData).catch((error) => {
-      setChartError(error instanceof Error ? error.message : 'Refresh failed');
-    });
+    refresh();
   };
 
   const handleDimensionChange = (dimensionKey: string, value: string) => {
@@ -478,26 +410,27 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
     });
   };
 
-  const getDimensionLabel = (dimensionKey: string) => dimensionKey.replace(/_/g, ' ');
-
   return (
     <Card sx={{ height: '100%' }}>
-      <CardHeader
-        title="Parser Metrics"
-        subheader={selectedParserSlug ? `Parser: ${selectedParserSlug}` : 'Choose a parser from Management'}
-        action={
-          <Button
-            size="small"
-            startIcon={<RefreshIcon />}
-            onClick={handleRefresh}
-            disabled={isChartLoading || !selectedParserSlug || !selectedMetric || !historyQueryParams}
-          >
-            Refresh
-          </Button>
-        }
-      />
       <CardContent>
         <Stack spacing={3}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <Box>
+              <Typography variant="h6">Parser Metrics</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedParserSlug ? `Parser: ${selectedParserSlug}` : 'Choose a parser from Management'}
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              startIcon={<RefreshIcon />}
+              onClick={handleRefresh}
+              disabled={isChartLoading || !selectedParserSlug || !selectedMetric || !historyRequest}
+            >
+              Refresh
+            </Button>
+          </Box>
+
           {!selectedParserSlug && (
             <Alert severity="info">
               Select a parser in Management to load its available metrics.
@@ -506,217 +439,80 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
 
           {selectedParserSlug && (
             <>
-              {metricsError && <Alert severity="error">{metricsError}</Alert>}
-
-              {isMetricsLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                  <CircularProgress size={32} />
-                </Box>
-              ) : (
-                <Stack spacing={2}>
-                  {metricOptions.length > 0 ? (
-                    <>
-                      <FormControl fullWidth size="small">
-                        <InputLabel id="metric-select-label">Metric</InputLabel>
-                        <Select
-                          labelId="metric-select-label"
-                          label="Metric"
-                          value={selectedMetric}
-                          onChange={(event) => {
-                            const nextMetric = String(event.target.value);
-                            setSelectedMetric(nextMetric);
-                            setSelectedDimensions({});
-                          }}
-                        >
-                          {metricOptions.map((option) => (
-                            <MenuItem key={option.metric} value={option.metric}>
-                              {option.metric}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-
-                      {selectedMetricOption && selectedDimensionKeys.length > 0 && (
-                        <>
-                          <Divider />
-                          <Box>
-                            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                              Dimensions
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                              Optional dimension filters. Leave empty to aggregate across all dimension values.
-                            </Typography>
-                            {dimensionOptionsError && (
-                              <Alert severity="warning" sx={{ mb: 1.5 }}>
-                                {dimensionOptionsError}
-                              </Alert>
-                            )}
-                            <Box
-                              sx={{
-                                display: 'grid',
-                                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                                gap: 1.5,
-                              }}
-                            >
-                              {selectedDimensionKeys.map((dimensionKey) => (
-                                <FormControl key={dimensionKey} fullWidth size="small">
-                                  <InputLabel id={`${dimensionKey}-label`}>{getDimensionLabel(dimensionKey)}</InputLabel>
-                                  <Select
-                                    labelId={`${dimensionKey}-label`}
-                                    label={getDimensionLabel(dimensionKey)}
-                                    value={selectedDimensions[dimensionKey] ?? ''}
-                                    onChange={(event) => handleDimensionChange(dimensionKey, String(event.target.value))}
-                                    disabled={isDimensionOptionsLoading && !(dimensionOptionsByKey[dimensionKey]?.length)}
-                                  >
-                                    <MenuItem value="">
-                                      <em>All values</em>
-                                    </MenuItem>
-                                    {(dimensionOptionsByKey[dimensionKey] ?? []).map((option) => (
-                                      <MenuItem key={option} value={option}>
-                                        {option}
-                                      </MenuItem>
-                                    ))}
-                                  </Select>
-                                </FormControl>
-                              ))}
-                            </Box>
-                          </Box>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <Alert severity="warning">No metrics are available for this parser.</Alert>
-                  )}
-                </Stack>
-              )}
-
-              <FormControl component="fieldset" fullWidth>
-                <FormLabel component="legend" sx={{ mb: 1 }}>Range mode</FormLabel>
-                <RadioGroup
-                  row
-                  value={rangeMode}
-                  onChange={(event) => handleRangeModeChange(event.target.value as 'preset' | 'custom')}
-                  sx={{ mb: 1 }}
-                >
-                  <FormControlLabel value="preset" control={<Radio size="small" />} label="Preset" />
-                  <FormControlLabel value="custom" control={<Radio size="small" />} label="Custom" />
-                </RadioGroup>
-
-                {rangeMode === 'preset' ? (
-                  <RadioGroup
-                    row
-                    value={timeRange}
-                    onChange={(event) => handlePresetRangeChange(event.target.value as PresetRange)}
-                  >
-                    <FormControlLabel value="day" control={<Radio size="small" />} label="Last 24h" />
-                    <FormControlLabel value="week" control={<Radio size="small" />} label="Last 7 days" />
-                    <FormControlLabel value="month" control={<Radio size="small" />} label="Last month" />
-                    <FormControlLabel value="quarter" control={<Radio size="small" />} label="Last 3 months" />
-                    <FormControlLabel value="year" control={<Radio size="small" />} label="Last year" />
-                    <FormControlLabel value="all" control={<Radio size="small" />} label="All time" />
-                  </RadioGroup>
-                ) : (
-                  <Stack spacing={2}>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                      <TextField
-                        label="From"
-                        type="datetime-local"
-                        value={customFrom}
-                        onChange={(event) => setCustomFrom(event.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        size="small"
-                      />
-                      <TextField
-                        label="To"
-                        type="datetime-local"
-                        value={customTo}
-                        onChange={(event) => setCustomTo(event.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        size="small"
-                      />
-                    </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      These values are converted to ISO 8601 and sent as `from` / `to` without `range`.
-                    </Typography>
-                  </Stack>
-                )}
-              </FormControl>
-
-              <FormControl fullWidth size="small">
-                <FormLabel sx={{ mb: 1 }}>Aggregation interval</FormLabel>
-                <Select
-                  value={interval}
-                  onChange={(event) => setInterval(event.target.value as IntervalSelection)}
-                >
-                  <MenuItem value="auto">Auto</MenuItem>
-                  <MenuItem value="hour">Hour</MenuItem>
-                  <MenuItem value="day">Day</MenuItem>
-                  <MenuItem value="week">Week</MenuItem>
-                  <MenuItem value="month">Month</MenuItem>
-                </Select>
-              </FormControl>
+              <AnalyticsFiltersPanel
+                metricOptions={metricOptions}
+                selectedMetric={selectedMetric}
+                onMetricChange={(value) => {
+                  setSelectedMetric(value);
+                  setSelectedDimensions({});
+                }}
+                selectedDimensionKeys={selectedDimensionKeys}
+                selectedDimensions={selectedDimensions}
+                onDimensionChange={handleDimensionChange}
+                dimensionOptionsByKey={dimensionOptionsByKey}
+                isDimensionOptionsLoading={isDimensionOptionsLoading}
+                dimensionOptionsError={dimensionOptionsError}
+                rangeMode={rangeMode}
+                onRangeModeChange={setRangeMode}
+                timeRange={timeRange}
+                onTimeRangeChange={setTimeRange}
+                customFrom={customFrom}
+                onCustomFromChange={setCustomFrom}
+                customTo={customTo}
+                onCustomToChange={setCustomTo}
+                interval={interval}
+                onIntervalChange={setInterval}
+                forecastHorizon={forecastHorizon}
+                onForecastHorizonChange={setForecastHorizon}
+                isMetricsLoading={isMetricsLoading}
+                metricsError={metricsError}
+              />
 
               {selectedMetric ? (
                 <Stack spacing={3}>
-                  {chartError && <Alert severity="error" onClose={() => setChartError(null)}>{chartError}</Alert>}
-
                   {rangeMode === 'custom' && !baseQueryParams && (
                     <Alert severity="info">
-                      Enter both `from` and `to` values to load custom-range data.
+                      Enter both from and to values to load custom-range data.
                     </Alert>
                   )}
 
-                  {isChartLoading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                      <CircularProgress />
-                    </Box>
-                  ) : chartData.length > 0 ? (
-                    <Box sx={{ width: '100%', overflowX: 'auto' }}>
-                      <LineChart
-                        xAxis={[
-                          {
-                            scaleType: 'point',
-                            data: preparedData.timestamps,
-                          },
-                        ]}
-                        series={[
-                          {
-                            data: preparedData.values,
-                            label: selectedMetric,
-                            color: theme.palette.primary.main,
-                          },
-                        ]}
-                        width={Math.max(600, preparedData.timestamps.length * 60)}
-                        height={300}
-                        margin={{ top: 10, right: 20, bottom: 50, left: 60 }}
-                        sx={{
-                          '& .MuiChartsAxis-bottom .MuiChartsAxis-tickLabelStyle': {
-                            angle: 90,
-                          },
-                        }}
-                      />
-                    </Box>
-                  ) : (
-                    !chartError && (
-                      <Box sx={{ minHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
-                        No data available for the selected period.
-                      </Box>
-                    )
-                  )}
+                  <AnalyticsChartSection
+                    selectedMetric={selectedMetric}
+                    chartError={chartError}
+                    onDismissChartError={clearChartError}
+                    isChartLoading={isChartLoading}
+                    chartLabels={mergedChartData.labels}
+                    actualSeries={mergedChartData.actualSeries}
+                    forecastSeries={mergedChartData.forecastSeries}
+                    forecastError={forecastError}
+                    forecastUnavailableReason={forecastUnavailableReason}
+                    isForecastLoading={isForecastLoading}
+                    forecast={forecast}
+                    rangeMode={rangeMode}
+                    timeRangeLabel={timeRange}
+                    historyIntervalLabel={historyIntervalLabel}
+                    statsIntervalLabel={statsIntervalLabel}
+                    dimensionsCount={Object.keys(dimensionQueryParams).length}
+                    actualPointsCount={chartData.length}
+                  />
 
-                  <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                    <Chip size="small" label={`Metric: ${selectedMetric}`} />
-                    <Chip size="small" label={rangeMode === 'preset' ? `Range: ${timeRange}` : 'Range: custom'} />
-                    <Chip size="small" label={`History interval: ${historyIntervalLabel}`} />
-                    <Chip size="small" label={`Stats interval: ${statsIntervalLabel}`} />
-                    <Chip size="small" label={`Dimensions: ${Object.keys(dimensionQueryParams).length}`} />
-                    {chartData.length > 0 && <Chip size="small" label={`Points: ${chartData.length}`} />}
-                  </Stack>
+                  <AnalyticsInsightsCards
+                    trend={trend}
+                    trendMeta={trendMeta}
+                    trendQuality={trendQuality}
+                    isTrendLoading={isTrendLoading}
+                    trendError={trendError}
+                    volatility={volatility}
+                    volatilityMeta={volatilityMeta}
+                    cvPercent={cvPercent}
+                    isVolatilityLoading={isVolatilityLoading}
+                    volatilityError={volatilityError}
+                  />
 
                   <ParserStatsDisplay
                     parserSlug={selectedParserSlug}
                     metric={selectedMetric}
-                    queryParams={statsQueryParams}
+                    queryParams={statsRequest}
                   />
                 </Stack>
               ) : (

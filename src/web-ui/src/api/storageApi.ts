@@ -3,7 +3,6 @@ import type {
   PagedConfigsResponse,
   PagedCollectedDataResponse,
   PagedTasksResponse,
-  AnalyticsResponse,
   OverallStatsResponse,
   CollectedDataItem,
   ParserCatalogItem,
@@ -516,19 +515,6 @@ export const storageApi = {
   getConfigs: async (): Promise<PagedConfigsResponse> => {
     const { data } = await axiosInstance.get('/storage/configs');
     return normalizePagedConfigsResponse(data);
-  },
-
-  /**
-   * Fetch analytics data for a specific parser
-   * @param slug - Parser slug identifier
-   * @param days - Number of days of historical data (default: 7)
-   */
-  getAnalytics: async (slug: string, days: number = 7): Promise<AnalyticsResponse> => {
-    const { data } = await axiosInstance.get<AnalyticsResponse>(
-      `/storage/analytics/${slug}`,
-      { params: { days } }
-    );
-    return data;
   },
 
   /**

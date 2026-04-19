@@ -14,6 +14,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddMyHttpClient();
 builder.Services.AddScoped<IHistoryQueryService, HistoryQueryService>();
 builder.Services.AddScoped<IAnalyticsStatsService, AnalyticsStatsService>();
+builder.Services.AddScoped<IAdvancedAnalyticsService, AdvancedAnalyticsService>();
 
 var app = builder.Build();
 

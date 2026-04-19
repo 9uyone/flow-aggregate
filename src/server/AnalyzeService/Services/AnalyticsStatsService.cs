@@ -39,8 +39,10 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient) : IAnalyti
 		DateTime from;
 		DateTime to;
 
-		if (!string.IsNullOrWhiteSpace(request.Range))
-			(from, to) = ResolveRange(request.Range);
+		if (!string.IsNullOrWhiteSpace(request.Range)) {
+			if (!AnalyticsTimeRangeResolver.TryResolvePreset(request.Range, out from, out to, out _))
+				return new AnalyticsStatsResult(false, "Range must be one of: day, week, month, quarter, year, all, all-time.", null);
+		}
 		else {
 			if (request.From is null || request.To is null)
 				return new AnalyticsStatsResult(false, "from and to are required when range is not specified.", null);
@@ -84,17 +86,4 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient) : IAnalyti
 			stats.LastTimestamp));
 	}
 
-	private static (DateTime From, DateTime To) ResolveRange(string range) {
-		var now = DateTime.UtcNow;
-
-		return range.Trim().ToLowerInvariant() switch {
-			"day" => (now.AddDays(-1), now),
-			"week" => (now.AddDays(-7), now),
-			"month" => (now.AddMonths(-1), now),
-			"quarter" or "3m" or "3-month" or "3 months" => (now.AddMonths(-3), now),
-			"year" or "1y" => (now.AddYears(-1), now),
-			"all" or "all-time" or "all time" => (DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc), now),
-			_ => (default, default)
-		};
 	}
-}
