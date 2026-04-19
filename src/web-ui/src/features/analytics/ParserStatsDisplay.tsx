@@ -9,7 +9,6 @@ import {
   Grid,
   Stack,
   Typography,
-  Chip,
   Divider,
   useTheme,
 } from '@mui/material';
@@ -172,8 +171,8 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
               p: 2,
               borderRadius: 1.5,
               backgroundColor: isPositiveTrend
-                ? theme.palette.success.lighter || `${theme.palette.success.main}15`
-                : theme.palette.warning.lighter || `${theme.palette.warning.main}15`,
+                ? theme.palette.success.light
+                : theme.palette.warning.light,
             }}
           >
             <Box
@@ -225,7 +224,7 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
           {/* Statistics Grid */}
           <Grid container spacing={1.5}>
             {statItems.map((item, idx) => (
-              <Grid item xs={6} sm={4} key={idx}>
+              <Grid size={{ xs: 6, sm: 4 }} key={idx}>
                 <Box
                   sx={{
                     p: 1.5,

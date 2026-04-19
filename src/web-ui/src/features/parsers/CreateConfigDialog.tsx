@@ -1,6 +1,7 @@
 import cronstrue from 'cronstrue';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -28,32 +29,122 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
   dialog,
 }) => {
   const isCreateMode = dialog.mode === 'create';
+  const externalCreateCompleted = isCreateMode
+    && dialog.supportsPushIngest
+    && Boolean(dialog.createdExternalToken);
 
   return (
     <Dialog open={dialog.open} onClose={dialog.close} fullWidth maxWidth="sm">
       <DialogTitle>{isCreateMode ? 'Create config' : 'Edit config'}</DialogTitle>
       <DialogContent sx={{ pt: 1 }}>
-        <TextField
-          select
-          fullWidth
-          margin="dense"
-          label="Parser"
-          value={dialog.parserSlug}
-          onChange={(event) => dialog.setParserSlug(event.target.value)}
-          disabled={!isCreateMode}
-        >
-          {dialog.internalParsers.map((parser) => (
-            <MenuItem key={parser.slug} value={parser.slug}>
-              {parser.name}
-            </MenuItem>
-          ))}
-        </TextField>
+        {dialog.isExternalDefinitionMode ? (
+          <TextField
+            fullWidth
+            margin="dense"
+            label="External parser slug"
+            value={dialog.parserSlug}
+            onChange={(event) => dialog.setParserSlug(event.target.value)}
+            placeholder="e.g. weather-external"
+            helperText="Use unique slug for your external parser definition"
+            disabled={!isCreateMode}
+          />
+        ) : (
+          <TextField
+            select
+            fullWidth
+            margin="dense"
+            label="Parser"
+            value={dialog.parserSlug}
+            onChange={(event) => dialog.setParserSlug(event.target.value)}
+            disabled={!isCreateMode}
+          >
+            {dialog.internalParsers.map((parser) => (
+              <MenuItem key={parser.slug} value={parser.slug}>
+                {parser.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
 
         {dialog.supportsPushIngest ? (
           <>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              This parser supports push ingest. Creating config returns an ingest token.
+            <Typography variant="subtitle2" sx={{ mt: 1 }}>
+              Step 1: Definition
             </Typography>
+
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Display name"
+              value={dialog.externalDisplayName}
+              onChange={(event) => dialog.setExternalDisplayName(event.target.value)}
+            />
+
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Description"
+              value={dialog.externalDescription}
+              onChange={(event) => dialog.setExternalDescription(event.target.value)}
+              multiline
+              minRows={2}
+            />
+
+            <Autocomplete
+              multiple
+              freeSolo
+              options={[]}
+              value={dialog.externalMetricFields}
+              onChange={(_event, value) => dialog.setExternalMetricFields(value)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  margin="dense"
+                  label="Metric fields"
+                  helperText="Press Enter after each value"
+                />
+              )}
+            />
+
+            <Autocomplete
+              multiple
+              freeSolo
+              options={[]}
+              value={dialog.externalDimensions}
+              onChange={(_event, value) => dialog.setExternalDimensions(value)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  margin="dense"
+                  label="Dimensions"
+                  helperText="Press Enter after each value"
+                />
+              )}
+            />
+
+            <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={dialog.saveExternalDefinition}
+                disabled={dialog.isSavingExternalDefinition || !dialog.parserSlug}
+              >
+                {dialog.isSavingExternalDefinition ? 'Saving definition...' : 'Save definition'}
+              </Button>
+            </Stack>
+
+            <Typography variant="subtitle2" sx={{ mt: 2 }}>
+              Step 2: Create config
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              After definition is saved, create config to get ingest token.
+            </Typography>
+
+            {!dialog.canCreateExternalConfig && (
+              <Alert severity="warning" sx={{ mt: 1 }}>
+                Спочатку створіть external parser definition
+              </Alert>
+            )}
           </>
         ) : (
           <>
@@ -204,15 +295,32 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
             {dialog.createdExternalToken}
           </Alert>
         )}
+
+        {externalCreateCompleted && (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            Config already created in this dialog session. Close and reopen the dialog to create another config.
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={dialog.close}>Close</Button>
         {isCreateMode && dialog.createdExternalToken && <Button onClick={dialog.copyExternalToken}>Copy token</Button>}
-        <Button variant="contained" onClick={dialog.submit} disabled={dialog.isSubmitting || !dialog.parserSlug}>
+        <Button
+          variant="contained"
+          onClick={dialog.submit}
+          disabled={
+            dialog.isSubmitting
+            || !dialog.parserSlug
+            || (dialog.supportsPushIngest && !dialog.canCreateExternalConfig)
+            || externalCreateCompleted
+          }
+        >
           {dialog.isSubmitting
             ? isCreateMode
               ? 'Creating...'
               : 'Saving...'
+            : externalCreateCompleted
+              ? 'Created'
             : isCreateMode
               ? 'Create'
               : 'Save changes'}

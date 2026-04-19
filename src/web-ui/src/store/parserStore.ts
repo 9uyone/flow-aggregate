@@ -8,6 +8,7 @@ export interface Parser {
   name: string;
   description?: string;
   isCatalogParser: boolean;
+  isExternalOwnedByCurrentUser: boolean;
   sourceType: ParserSourceType;
   dimensions: string[];
   supportsScheduledRun: boolean;
@@ -103,6 +104,7 @@ const mapUserConfigToParser = (config: UserConfig): Parser => ({
         ? 'Plugin parser'
         : 'External parser · trigger via token',
   isCatalogParser: false,
+  isExternalOwnedByCurrentUser: false,
   sourceType: config.$type,
   dimensions: [],
   supportsScheduledRun: config.$type === 'internal' || config.$type === 'plugin',
@@ -144,6 +146,7 @@ const mapCatalogParser = (parser: ParserCatalogItem): Parser => {
     name: parser.displayName || parser.slug,
     description: parser.description || undefined,
     isCatalogParser: true,
+    isExternalOwnedByCurrentUser: parser.isExternalOwnedByCurrentUser,
     sourceType: parser.sourceType,
     dimensions: parser.dimensions,
     supportsScheduledRun: parser.supportsScheduledRun,
@@ -182,6 +185,7 @@ const mergeParsers = (catalogParsers: ParserCatalogItem[], configuredParsers: Us
         name: existing.name || configuredParser.name,
         description: existing.description || configuredParser.description,
         isCatalogParser: existing.isCatalogParser,
+        isExternalOwnedByCurrentUser: existing.isExternalOwnedByCurrentUser,
         metricOptions: existing.metricOptions,
         sourceType: existing.sourceType,
         dimensions: existing.dimensions,
@@ -199,6 +203,7 @@ const mergeParsers = (catalogParsers: ParserCatalogItem[], configuredParsers: Us
     mergedMap.set(configuredParser.slug, {
       ...configuredParser,
       isCatalogParser: false,
+      isExternalOwnedByCurrentUser: false,
       sourceType: configuredItem.$type,
       dimensions: [],
       supportsScheduledRun: configuredItem.$type === 'internal' || configuredItem.$type === 'plugin',

@@ -92,5 +92,6 @@ public static class CollectorEndpoints {
 		group.MapGet("/parser/{slug}/exists_internal", async (string slug, IParserRegistry registry) =>
 			Results.Ok( registry.GetParserType(slug) != null )
 		);
+
 	}
 }

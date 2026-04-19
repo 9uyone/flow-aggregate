@@ -14,6 +14,8 @@ import type {
   CreateInternalConfigDto,
   CreateExternalConfigDto,
   CreateExternalConfigResponse,
+  CreateExternalParserDefinitionDto,
+  UpdateExternalParserDefinitionDto,
   UpdateConfigDto,
   TaskStatusResponse,
   UserConfig,
@@ -498,6 +500,9 @@ const normalizeParserCatalogItem = (item: unknown): ParserCatalogItem | null => 
     supportsManualRun: Boolean(row.supportsManualRun ?? row.SupportsManualRun),
     supportsPushIngest: Boolean(row.supportsPushIngest ?? row.SupportsPushIngest),
     supportsParameters: Boolean(row.supportsParameters ?? row.SupportsParameters),
+    isExternalOwnedByCurrentUser: Boolean(
+      row.isExternalOwnedByCurrentUser ?? row.IsExternalOwnedByCurrentUser
+    ),
   };
 };
 
@@ -545,10 +550,6 @@ export const storageApi = {
    * Fetch full parser details with parameter definitions
    */
   getParserDetails: async (slug: string): Promise<ParserDetailsResponse> => {
-    if (import.meta.env.DEV) {
-      console.debug('[storageApi] getParserDetails', { slug });
-    }
-
     const { data } = await axiosInstance.get(`/collector/parsers/${slug}`);
     return normalizeParserDetailsResponse(data);
   },
@@ -560,13 +561,6 @@ export const storageApi = {
     slug: string,
     options?: Record<string, string>
   ): Promise<RunParserBySlugResponse> => {
-    if (import.meta.env.DEV) {
-      console.debug('[storageApi] runParserBySlug', {
-        slug,
-        optionKeys: options ? Object.keys(options) : [],
-      });
-    }
-
     const { data } = await axiosInstance.post<RunParserBySlugResponse>(
       `/collector/run/${slug}`,
       options && Object.keys(options).length > 0 ? options : undefined
@@ -590,6 +584,23 @@ export const storageApi = {
       dto
     );
     return data;
+  },
+
+  /**
+   * Create external parser definition owned by current user.
+   */
+  createExternalParserDefinition: async (dto: CreateExternalParserDefinitionDto): Promise<void> => {
+    await axiosInstance.post('/storage/parsers/external', dto);
+  },
+
+  /**
+   * Update external parser definition owned by current user.
+   */
+  updateExternalParserDefinition: async (
+    slug: string,
+    dto: UpdateExternalParserDefinitionDto
+  ): Promise<void> => {
+    await axiosInstance.put(`/storage/parsers/external/${slug}`, dto);
   },
 
   /**

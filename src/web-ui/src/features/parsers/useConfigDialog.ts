@@ -6,6 +6,10 @@ import { CRON_PRESETS } from './parserUiHelpers';
 
 type NotifyFn = (message: string, severity: 'success' | 'error') => void;
 
+const normalizeList = (items: string[]) => Array.from(
+  new Set(items.map((item) => item.trim()).filter(Boolean))
+);
+
 interface UseConfigDialogArgs {
   availableParsers: Parser[];
   latestTaskOptionsBySlug: Record<string, Record<string, string> | undefined>;
@@ -25,7 +29,9 @@ export interface ConfigDialogController {
   supportsScheduledRun: boolean;
   supportsManualRun: boolean;
   supportsPushIngest: boolean;
+  isExternalDefinitionMode: boolean;
   supportsParameters: boolean;
+  canCreateExternalConfig: boolean;
   parserSlug: string;
   customName: string;
   cronExpression: string;
@@ -35,8 +41,14 @@ export interface ConfigDialogController {
   parserDetailsLoading: boolean;
   isEnabled: boolean;
   createdExternalToken: string | null;
+  externalDisplayName: string;
+  externalDescription: string;
+  externalMetricFields: string[];
+  externalDimensions: string[];
+  isSavingExternalDefinition: boolean;
   isSubmitting: boolean;
   openCreate: (parserSlugOverride?: string) => void;
+  openCreateExternal: () => void;
   openEdit: (config: ParserConfig, event: React.MouseEvent) => void;
   close: () => void;
   setParserSlug: (value: string) => void;
@@ -46,6 +58,11 @@ export interface ConfigDialogController {
   changeCronPreset: (value: string) => void;
   changeParameter: (name: string, value: string) => void;
   setIsEnabled: (value: boolean) => void;
+  setExternalDisplayName: (value: string) => void;
+  setExternalDescription: (value: string) => void;
+  setExternalMetricFields: (value: string[]) => void;
+  setExternalDimensions: (value: string[]) => void;
+  saveExternalDefinition: () => Promise<void>;
   copyExternalToken: () => Promise<void>;
   submit: () => Promise<void>;
 }
@@ -60,6 +77,7 @@ export const useConfigDialog = ({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [editingConfig, setEditingConfig] = useState<ParserConfig | null>(null);
+  const [isExternalDefinitionMode, setIsExternalDefinitionMode] = useState(false);
   const [parserSlug, setParserSlug] = useState('');
   const [isEnabled, setIsEnabled] = useState(true);
   const [customName, setCustomName] = useState('');
@@ -69,6 +87,12 @@ export const useConfigDialog = ({
   const [parserDetailsLoading, setParserDetailsLoading] = useState(false);
   const [cronPreset, setCronPreset] = useState('');
   const [createdExternalToken, setCreatedExternalToken] = useState<string | null>(null);
+  const [externalDisplayName, setExternalDisplayName] = useState('');
+  const [externalDescription, setExternalDescription] = useState('');
+  const [externalMetricFields, setExternalMetricFields] = useState<string[]>([]);
+  const [externalDimensions, setExternalDimensions] = useState<string[]>([]);
+  const [externalDefinitionSaved, setExternalDefinitionSaved] = useState(false);
+  const [isSavingExternalDefinition, setIsSavingExternalDefinition] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const internalParsers = useMemo(() => availableParsers, [availableParsers]);
@@ -80,14 +104,28 @@ export const useConfigDialog = ({
 
   const supportsScheduledRun = selectedParser?.supportsScheduledRun ?? false;
   const supportsManualRun = selectedParser?.supportsManualRun ?? false;
-  const supportsPushIngest = selectedParser?.supportsPushIngest ?? false;
+  const supportsPushIngest = isExternalDefinitionMode || selectedParser?.supportsPushIngest || false;
   const supportsParameters = selectedParser?.supportsParameters ?? false;
+  const canCreateExternalConfig = !supportsPushIngest
+    || Boolean(selectedParser?.isExternalOwnedByCurrentUser)
+    || externalDefinitionSaved;
+
+  const resetExternalDraft = useCallback(() => {
+    setCreatedExternalToken(null);
+    setExternalDisplayName('');
+    setExternalDescription('');
+    setExternalMetricFields([]);
+    setExternalDimensions([]);
+    setExternalDefinitionSaved(false);
+    setIsSavingExternalDefinition(false);
+  }, []);
 
   const close = useCallback(() => {
     setOpen(false);
     setMode('create');
     setEditingConfig(null);
-    setCreatedExternalToken(null);
+    setIsExternalDefinitionMode(false);
+    resetExternalDraft();
     setParserSlug('');
     setIsEnabled(true);
     setCustomName('');
@@ -97,10 +135,25 @@ export const useConfigDialog = ({
     setParserDetailsLoading(false);
     setCronPreset('');
     setIsSubmitting(false);
-  }, []);
+  }, [resetExternalDraft]);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || !supportsPushIngest) {
+      return;
+    }
+
+    if (selectedParser) {
+      setExternalDisplayName(selectedParser.name || selectedParser.slug);
+      setExternalDescription(selectedParser.description ?? '');
+      setExternalMetricFields(normalizeList(selectedParser.metricOptions.map((option) => option.metric)));
+      setExternalDimensions(normalizeList(selectedParser.dimensions));
+    }
+
+    setExternalDefinitionSaved(false);
+  }, [open, supportsPushIngest, selectedParser]);
+
+  useEffect(() => {
+    if (!open || isExternalDefinitionMode) {
       return;
     }
 
@@ -108,7 +161,7 @@ export const useConfigDialog = ({
     if (nextParser && !internalParsers.some((parser) => parser.slug === parserSlug)) {
       setParserSlug(nextParser.slug);
     }
-  }, [open, internalParsers, parserSlug]);
+  }, [open, isExternalDefinitionMode, internalParsers, parserSlug]);
 
   useEffect(() => {
     if (!open || !parserSlug || !supportsParameters || supportsPushIngest) {
@@ -153,8 +206,9 @@ export const useConfigDialog = ({
   const openCreate = useCallback((parserSlugOverride?: string) => {
     setMode('create');
     setEditingConfig(null);
+    setIsExternalDefinitionMode(false);
     setOpen(true);
-    setCreatedExternalToken(null);
+    resetExternalDraft();
 
     if (parserSlugOverride) {
       setParserSlug(parserSlugOverride);
@@ -162,13 +216,24 @@ export const useConfigDialog = ({
       const defaultParser = internalParsers[0];
       setParserSlug(defaultParser?.slug ?? '');
     }
-  }, [internalParsers]);
+  }, [internalParsers, resetExternalDraft]);
+
+  const openCreateExternal = useCallback(() => {
+    setMode('create');
+    setEditingConfig(null);
+    setIsExternalDefinitionMode(true);
+    setOpen(true);
+    resetExternalDraft();
+    setParserSlug('');
+    setIsEnabled(true);
+  }, [resetExternalDraft]);
 
   const openEdit = useCallback((config: ParserConfig, event: React.MouseEvent) => {
     event.stopPropagation();
 
     setMode('edit');
     setEditingConfig(config);
+    setIsExternalDefinitionMode(false);
     setOpen(true);
     setParserSlug(config.slug);
     setIsEnabled(config.isActive);
@@ -208,6 +273,62 @@ export const useConfigDialog = ({
     await navigator.clipboard.writeText(createdExternalToken);
     notify('Token copied to clipboard', 'success');
   }, [createdExternalToken, notify]);
+
+  const saveExternalDefinition = useCallback(async () => {
+    if (!parserSlug) {
+      notify('Select a parser slug', 'error');
+      return;
+    }
+
+    const displayName = externalDisplayName.trim();
+    if (!displayName) {
+      notify('Display name is required for external parser definition', 'error');
+      return;
+    }
+
+    const metricFields = normalizeList(externalMetricFields);
+    const dimensions = normalizeList(externalDimensions);
+
+    setIsSavingExternalDefinition(true);
+    try {
+      if (selectedParser?.isExternalOwnedByCurrentUser) {
+        await storageApi.updateExternalParserDefinition(parserSlug, {
+          displayName,
+          description: externalDescription.trim() || undefined,
+          metricFields,
+          dimensions,
+        });
+      } else {
+        await storageApi.createExternalParserDefinition({
+          slug: parserSlug,
+          displayName,
+          description: externalDescription.trim() || undefined,
+          metricFields,
+          dimensions,
+        });
+      }
+
+      setExternalDefinitionSaved(true);
+      notify('External parser definition saved', 'success');
+      await fetchConfigs();
+    } catch (definitionError) {
+      const message = definitionError instanceof Error
+        ? definitionError.message
+        : 'Failed to save external parser definition';
+      notify(message, 'error');
+    } finally {
+      setIsSavingExternalDefinition(false);
+    }
+  }, [
+    parserSlug,
+    selectedParser,
+    externalDisplayName,
+    externalDescription,
+    externalMetricFields,
+    externalDimensions,
+    fetchConfigs,
+    notify,
+  ]);
 
   const submit = useCallback(async () => {
     if (!parserSlug) {
@@ -284,6 +405,11 @@ export const useConfigDialog = ({
         return;
       }
 
+      if (!canCreateExternalConfig) {
+        notify('Спочатку створіть external parser definition', 'error');
+        return;
+      }
+
       const response = await storageApi.createExternalConfig({
         parserSlug,
         isEnabled,
@@ -304,6 +430,7 @@ export const useConfigDialog = ({
     supportsScheduledRun,
     supportsPushIngest,
     supportsParameters,
+    canCreateExternalConfig,
     parserDetails,
     parameterValues,
     mode,
@@ -324,7 +451,9 @@ export const useConfigDialog = ({
     supportsScheduledRun,
     supportsManualRun,
     supportsPushIngest,
+    isExternalDefinitionMode,
     supportsParameters,
+    canCreateExternalConfig,
     parserSlug,
     customName,
     cronExpression,
@@ -334,8 +463,14 @@ export const useConfigDialog = ({
     parserDetailsLoading,
     isEnabled,
     createdExternalToken,
+    externalDisplayName,
+    externalDescription,
+    externalMetricFields,
+    externalDimensions,
+    isSavingExternalDefinition,
     isSubmitting,
     openCreate,
+    openCreateExternal,
     openEdit,
     close,
     setParserSlug,
@@ -345,6 +480,11 @@ export const useConfigDialog = ({
     changeCronPreset,
     changeParameter,
     setIsEnabled,
+    setExternalDisplayName,
+    setExternalDescription,
+    setExternalMetricFields,
+    setExternalDimensions,
+    saveExternalDefinition,
     copyExternalToken,
     submit,
   };

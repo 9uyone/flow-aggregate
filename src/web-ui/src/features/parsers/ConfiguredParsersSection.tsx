@@ -1,5 +1,5 @@
 import { Box, Button, Card, CardContent, Grid, Typography } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Input as InputIcon } from '@mui/icons-material';
 import type { Parser, ParserConfig } from '../../store/parserStore';
 import { ParserConfigCard } from './ParserConfigCard';
 
@@ -18,6 +18,7 @@ interface ConfiguredParsersSectionProps {
   onRun: (config: ParserConfig, event: React.MouseEvent) => void;
   onStop: (slug: string, event: React.MouseEvent) => void;
   onAddConfig: () => void;
+  onAddExternalConfig: () => void;
   onRefresh: () => void | Promise<void>;
 }
 
@@ -36,6 +37,7 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
   onRun,
   onStop,
   onAddConfig,
+  onAddExternalConfig,
   onRefresh,
 }) => {
   return (
@@ -50,9 +52,14 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
         }}
       >
         <Typography variant="h6">Saved configs</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onAddConfig}>
-          Add config
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Button variant="outlined" startIcon={<InputIcon />} onClick={onAddExternalConfig}>
+            Create external parser
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={onAddConfig}>
+            Add config
+          </Button>
+        </Box>
       </Box>
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {configuredParsers.length === 0 ? (
@@ -87,7 +94,7 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
                 : 'Parser configuration');
             const metricOptionsCount = parserDefinition?.metricOptions.length ?? 0;
             const dimensionCount = Array.from(new Set(parserDefinition?.metricOptions.flatMap((option) => option.dimensions) ?? [])).length;
-            const supportsManualRun = parserDefinition?.supportsManualRun ?? (config.sourceType !== 'external');
+            const supportsManualRun = parserDefinition?.supportsManualRun ?? false;
 
             return (
               <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={config.configId}>

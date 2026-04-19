@@ -6,7 +6,6 @@ using Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
 using Common.Interfaces;
-using Common.Interfaces.Parser;
 using MongoDB.Driver;
 using StorageService.Contracts.ParserUserConfig;
 using StorageService.Contracts.ParserUserConfig.Get;
@@ -20,8 +19,7 @@ internal class ParserConfigService(
 	IMongoRepository<ParserUserConfig> repo,
 	IMongoRepository<ParserDefinition> definitionsRepo,
 	IConfiguration config,
-	IIntegrationDispatcher dispatcher,
-	IHttpRestClient restClient)
+	IIntegrationDispatcher dispatcher)
 {
 	public async Task CreateInternalAsync(UserConfigCreateInternalDto dto, Guid userId) {
 		var parserDefinition = await GetParserDefinitionAsync(dto.ParserSlug);
@@ -72,22 +70,17 @@ internal class ParserConfigService(
 			throw new BadRequestException("Parser name must be unique");
 
 		var parserDefinition = await FindParserDefinitionAsync(dto.ParserSlug);
-		if (parserDefinition is null) {
-			await definitionsRepo.CreateAsync(new ParserDefinition {
-				Slug = dto.ParserSlug,
-				DisplayName = dto.ParserSlug,
-				Description = "External parser",
-				SourceType = ParserSourceType.External,
-				SupportsPushIngest = true,
-				SupportsManualRun = false,
-				SupportsScheduledRun = false,
-				SupportsParameters = false,
-				UpdatedAt = DateTime.UtcNow,
-			});
-		}
-		else if (!parserDefinition.SupportsPushIngest) {
+		if (parserDefinition is null)
+			throw new BadRequestException($"External parser definition for '{dto.ParserSlug}' is not registered. Create it in /storage/parsers/external first.");
+
+		if (parserDefinition.SourceType != ParserSourceType.External)
+			throw new BadRequestException($"Parser '{dto.ParserSlug}' is not an external parser");
+
+		if (!parserDefinition.SupportsPushIngest)
 			throw new BadRequestException($"Parser '{dto.ParserSlug}' does not support external push ingest");
-		}
+
+		if (parserDefinition.OwnerUserId is not null && parserDefinition.OwnerUserId != userId)
+			throw new BadRequestException($"External parser '{dto.ParserSlug}' belongs to another user");
 
 		var token = GenerateToken();
 		var tokenHash = SecurityHelper.HashToken(token);

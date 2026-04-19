@@ -52,6 +52,22 @@ export interface ParserCatalogItem {
   supportsManualRun: boolean;
   supportsPushIngest: boolean;
   supportsParameters: boolean;
+  isExternalOwnedByCurrentUser: boolean;
+}
+
+export interface CreateExternalParserDefinitionDto {
+  slug: string;
+  displayName: string;
+  description?: string;
+  metricFields: string[];
+  dimensions: string[];
+}
+
+export interface UpdateExternalParserDefinitionDto {
+  displayName: string;
+  description?: string;
+  metricFields: string[];
+  dimensions: string[];
 }
 
 export interface ParserParameterOption {

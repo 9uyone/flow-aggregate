@@ -396,6 +396,7 @@ export const ParserList: React.FC = () => {
         onRun={handleRunSavedConfig}
         onStop={handleStopParser}
         onAddConfig={configDialog.openCreate}
+        onAddExternalConfig={configDialog.openCreateExternal}
         onRefresh={fetchConfigs}
       />
 
