@@ -20,7 +20,7 @@ public interface IHistoryQueryService {
 	Task<HistoryQueryResult> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
 }
 
-public sealed class HistoryQueryService(IHttpRestClient httpClient) : IHistoryQueryService {
+public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCache cache) : IHistoryQueryService {
 	public async Task<HistoryQueryResult> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
 		if (string.IsNullOrWhiteSpace(request.Metric))
 			return new HistoryQueryResult(false, "Metric is required.", null);
@@ -64,10 +64,13 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient) : IHistoryQu
 			foreach (var dimension in request.Dimensions)
 				query[dimension.Key] = dimension.Value;
 
-		var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/history/{request.Slug}", query);
+		var cacheKey = AnalyticsCache.BuildKey("history", request.Slug, query);
+		var data = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () => {
+			var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/history/{request.Slug}", query);
+			return await httpClient.GetAsync<HistoryPointDto[]>(uri) ?? Array.Empty<HistoryPointDto>();
+		}, cancellationToken);
 
-		var data = await httpClient.GetAsync<HistoryPointDto[]>(uri);
 		return new HistoryQueryResult(true, null, data ?? Array.Empty<HistoryPointDto>());
 	}
+}
 
-	}

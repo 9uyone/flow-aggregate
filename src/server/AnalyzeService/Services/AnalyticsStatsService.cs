@@ -31,7 +31,7 @@ public interface IAnalyticsStatsService {
 	Task<AnalyticsStatsResult> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
 }
 
-public sealed class AnalyticsStatsService(IHttpRestClient httpClient) : IAnalyticsStatsService {
+public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsCache cache) : IAnalyticsStatsService {
 	public async Task<AnalyticsStatsResult> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
 		if (string.IsNullOrWhiteSpace(request.Metric))
 			return new AnalyticsStatsResult(false, "Metric is required.", null);
@@ -64,9 +64,11 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient) : IAnalyti
 			foreach (var dimension in request.Dimensions)
 				query[dimension.Key] = dimension.Value;
 
-		var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/stats/{request.Slug}", query);
-
-		var stats = await httpClient.GetAsync<StorageStatsDto>(uri);
+		var cacheKey = AnalyticsCache.BuildKey("stats", request.Slug, query);
+		var stats = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () => {
+			var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/stats/{request.Slug}", query);
+			return await httpClient.GetAsync<StorageStatsDto>(uri);
+		}, cancellationToken);
 		if (stats is null)
 			return new AnalyticsStatsResult(true, null, new AnalyticsStatsDto(0, 0, 0, 0, 0, 0, 0, null, null, null));
 
@@ -85,5 +87,5 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient) : IAnalyti
 			stats.FirstTimestamp,
 			stats.LastTimestamp));
 	}
+}
 
-	}
