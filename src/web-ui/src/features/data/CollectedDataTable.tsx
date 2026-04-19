@@ -144,14 +144,16 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
                         </span>
                       </Tooltip>
                       <Tooltip title="Open history">
-                        <IconButton
-                          size="small"
-                          onClick={() => onOpenHistory(item.correlationId ?? '')}
-                          disabled={!item.correlationId}
-                          aria-label="Open history"
-                        >
-                          <HistoryIcon fontSize="inherit" />
-                        </IconButton>
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={() => onOpenHistory(item.correlationId ?? '')}
+                            disabled={!item.correlationId}
+                            aria-label="Open history"
+                          >
+                            <HistoryIcon fontSize="inherit" />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                     </Stack>
                   </TableCell>

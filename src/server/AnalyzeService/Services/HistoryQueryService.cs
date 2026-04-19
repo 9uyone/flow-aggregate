@@ -22,9 +22,8 @@ public interface IHistoryQueryService {
 
 public sealed class HistoryQueryService(IHttpRestClient httpClient) : IHistoryQueryService {
 	public async Task<HistoryQueryResult> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
-		if (string.IsNullOrWhiteSpace(request.Metric)) {
+		if (string.IsNullOrWhiteSpace(request.Metric))
 			return new HistoryQueryResult(false, "Metric is required.", null);
-		}
 
 		DateTime effectiveFrom;
 		DateTime effectiveTo;
@@ -32,18 +31,15 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient) : IHistoryQu
 
 		if (!string.IsNullOrWhiteSpace(request.Range)) {
 			(effectiveFrom, effectiveTo, effectiveInterval) = ResolveRange(request.Range);
-			if (effectiveInterval.Length == 0) {
+			if (effectiveInterval.Length == 0)
 				return new HistoryQueryResult(false, "Range must be one of: day, week, month, quarter, year, all, all-time.", null);
-			}
 
-			if (!string.IsNullOrWhiteSpace(request.Interval)) {
+			if (!string.IsNullOrWhiteSpace(request.Interval))
 				effectiveInterval = request.Interval.Trim().ToLowerInvariant();
-			}
 		}
 		else {
-			if (request.From is null || request.To is null) {
+			if (request.From is null || request.To is null)
 				return new HistoryQueryResult(false, "from and to are required when range is not specified.", null);
-			}
 
 			effectiveFrom = request.From.Value;
 			effectiveTo = request.To.Value;
@@ -52,13 +48,11 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient) : IHistoryQu
 				: request.Interval.Trim().ToLowerInvariant();
 		}
 
-		if (effectiveInterval is not ("hour" or "day" or "week" or "month")) {
+		if (effectiveInterval is not ("hour" or "day" or "week" or "month"))
 			return new HistoryQueryResult(false, "Interval must be one of: hour, day, week, month.", null);
-		}
 
-		if (effectiveFrom > effectiveTo) {
+		if (effectiveFrom > effectiveTo)
 			return new HistoryQueryResult(false, "'from' must be less than or equal to 'to'.", null);
-		}
 
 		var query = new Dictionary<string, string?> {
 			["metric"] = request.Metric,
@@ -67,11 +61,9 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient) : IHistoryQu
 			["to"] = effectiveTo.ToString("O")
 		};
 
-		if (request.Dimensions is not null) {
-			foreach (var dimension in request.Dimensions) {
+		if (request.Dimensions is not null)
+			foreach (var dimension in request.Dimensions)
 				query[dimension.Key] = dimension.Value;
-			}
-		}
 
 		var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/history/{request.Slug}", query);
 

@@ -10,7 +10,16 @@ using CollectorService.Extensions;
 namespace CollectorService.Services;
 
 public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
-	private sealed record ParserRegistration(Type ParserType, ParserInfoAttribute Info, ParserSourceType SourceType, IEnumerable<string>? MetricFields, IEnumerable<string>? Dimensions);
+	private sealed record ParserRegistration(
+		Type ParserType,
+		ParserInfoAttribute Info,
+		ParserSourceType SourceType,
+		IEnumerable<string>? MetricFields,
+		IEnumerable<string>? Dimensions,
+		bool SupportsScheduledRun,
+		bool SupportsManualRun,
+		bool SupportsPushIngest,
+		bool SupportsParameters);
 
 	private readonly Dictionary<string, ParserRegistration> _parsers = new(StringComparer.OrdinalIgnoreCase);
 
@@ -34,7 +43,21 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 				.Distinct()
 				.ToList();
 
-			_parsers[info.Slug] = new ParserRegistration(type, info, source, metricFields, dimensions);
+			var supportsScheduledRun = source is ParserSourceType.Internal or ParserSourceType.Plugin;
+			var supportsManualRun = source is ParserSourceType.Internal or ParserSourceType.Plugin;
+			var supportsPushIngest = false;
+			var supportsParameters = true;
+
+			_parsers[info.Slug] = new ParserRegistration(
+				type,
+				info,
+				source,
+				metricFields,
+				dimensions,
+				supportsScheduledRun,
+				supportsManualRun,
+				supportsPushIngest,
+				supportsParameters);
 		}
 	}
 
@@ -43,12 +66,23 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 
 	public IEnumerable<ParserDescriptorDto> GetAvailableParsers() {
 		return _parsers.Values.Select(r =>
-			new ParserDescriptorDto(r.Info.Slug.ToSlug(), r.Info.DisplayName, r.Info.Description, r.SourceType, r.MetricFields));
+			new ParserDescriptorDto(
+				r.Info.Slug.ToSlug(),
+				r.Info.DisplayName,
+				r.Info.Description,
+				r.SourceType,
+				r.MetricFields,
+				r.Dimensions,
+				r.SupportsScheduledRun,
+				r.SupportsManualRun,
+				r.SupportsPushIngest,
+				r.SupportsParameters));
 	}
 
 	public async Task<ParserDetailsDto?> GetParserDetailsAsync(string slug) {
 		if (!_parsers.TryGetValue(slug, out var reg))
-			throw new ParserNotFoundException(slug);
+			//throw new ParserNotFoundException(slug);
+			return null;
 
 		var paramsAttr = reg.ParserType.GetCustomAttributes<ParserParameterAttribute>();
 		var parser = sp.GetRequiredService(reg.ParserType) as IDataParser;
@@ -60,6 +94,17 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 		}
 
 		var info = reg.Info;
-		return new ParserDetailsDto(info.Slug, info.DisplayName, info.Description, reg.SourceType, reg.MetricFields, reg.Dimensions, parameters);
+		return new ParserDetailsDto(
+			info.Slug,
+			info.DisplayName,
+			info.Description,
+			reg.SourceType,
+			reg.MetricFields,
+			reg.Dimensions,
+			reg.SupportsScheduledRun,
+			reg.SupportsManualRun,
+			reg.SupportsPushIngest,
+			reg.SupportsParameters,
+			parameters);
 	}
 }

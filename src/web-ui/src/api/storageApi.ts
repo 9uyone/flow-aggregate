@@ -455,6 +455,52 @@ const normalizeTaskStatusResponse = (payload: unknown): TaskStatusResponse | nul
   };
 };
 
+const normalizeParserCatalogItem = (item: unknown): ParserCatalogItem | null => {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const row = item as Record<string, unknown>;
+  const slug = String(row.slug ?? row.Slug ?? '').trim();
+
+  if (!slug) {
+    return null;
+  }
+
+  const sourceTypeRaw = row.sourceType ?? row.SourceType;
+  const sourceTypeNormalized = typeof sourceTypeRaw === 'string' ? sourceTypeRaw.toLowerCase() : 'internal';
+  const sourceType = sourceTypeNormalized === 'external'
+    ? 'external'
+    : sourceTypeNormalized === 'plugin'
+      ? 'plugin'
+      : 'internal';
+
+  const metricFieldsRaw = Array.isArray(row.metricFields)
+    ? row.metricFields
+    : Array.isArray(row.MetricFields)
+      ? (row.MetricFields as unknown[])
+      : [];
+
+  const dimensionsRaw = Array.isArray(row.dimensions)
+    ? row.dimensions
+    : Array.isArray(row.Dimensions)
+      ? (row.Dimensions as unknown[])
+      : [];
+
+  return {
+    slug,
+    displayName: String(row.displayName ?? row.DisplayName ?? slug),
+    description: String(row.description ?? row.Description ?? ''),
+    sourceType,
+    metricFields: metricFieldsRaw.map((value) => String(value)).filter(Boolean),
+    dimensions: dimensionsRaw.map((value) => String(value)).filter(Boolean),
+    supportsScheduledRun: Boolean(row.supportsScheduledRun ?? row.SupportsScheduledRun),
+    supportsManualRun: Boolean(row.supportsManualRun ?? row.SupportsManualRun),
+    supportsPushIngest: Boolean(row.supportsPushIngest ?? row.SupportsPushIngest),
+    supportsParameters: Boolean(row.supportsParameters ?? row.SupportsParameters),
+  };
+};
+
 /**
  * Storage API service for parser configs and analytics
  */
@@ -481,17 +527,28 @@ export const storageApi = {
   },
 
   /**
-   * Fetch available parser definitions from collector
+   * Fetch unified parser catalog from storage.
    */
   getAvailableParsers: async (): Promise<ParserCatalogItem[]> => {
-    const { data } = await axiosInstance.get<ParserCatalogItem[]>('/collector/parsers');
-    return data;
+    const { data } = await axiosInstance.get('/storage/parsers');
+
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    return data
+      .map(normalizeParserCatalogItem)
+      .filter((item): item is ParserCatalogItem => item !== null);
   },
 
   /**
    * Fetch full parser details with parameter definitions
    */
   getParserDetails: async (slug: string): Promise<ParserDetailsResponse> => {
+    if (import.meta.env.DEV) {
+      console.debug('[storageApi] getParserDetails', { slug });
+    }
+
     const { data } = await axiosInstance.get(`/collector/parsers/${slug}`);
     return normalizeParserDetailsResponse(data);
   },
@@ -503,6 +560,13 @@ export const storageApi = {
     slug: string,
     options?: Record<string, string>
   ): Promise<RunParserBySlugResponse> => {
+    if (import.meta.env.DEV) {
+      console.debug('[storageApi] runParserBySlug', {
+        slug,
+        optionKeys: options ? Object.keys(options) : [],
+      });
+    }
+
     const { data } = await axiosInstance.post<RunParserBySlugResponse>(
       `/collector/run/${slug}`,
       options && Object.keys(options).length > 0 ? options : undefined

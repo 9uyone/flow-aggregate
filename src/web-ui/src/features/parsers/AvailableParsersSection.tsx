@@ -36,7 +36,7 @@ export const AvailableParsersSection: React.FC<AvailableParsersSectionProps> = (
             <Card>
               <CardContent sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="body2" color="text.secondary">
-                  No manageable parsers available from collector
+                  No parsers available from unified catalog
                 </Typography>
               </CardContent>
             </Card>

@@ -230,9 +230,11 @@ export const CollectedDataGrid: React.FC = () => {
         description="Browse collected parser results with filters and quick metric preview"
         action={(
           <Tooltip title="Refresh">
-            <IconButton onClick={() => void fetchCollectedData()} disabled={isLoading}>
-              <RefreshIcon />
-            </IconButton>
+            <span>
+              <IconButton onClick={() => void fetchCollectedData()} disabled={isLoading}>
+                <RefreshIcon />
+              </IconButton>
+            </span>
           </Tooltip>
         )}
       />

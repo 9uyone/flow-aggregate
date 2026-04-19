@@ -39,9 +39,8 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 
 		if (dimensions is not null) {
 			foreach (var dimension in dimensions) {
-				if (string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value)) {
+				if (string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value))
 					continue;
-				}
 
 				filter &= Builders<DataCollectedEvent>.Filter.Eq($"Metadata.{dimension.Key}", dimension.Value);
 			}
@@ -97,9 +96,8 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 
 		if (dimensions is not null) {
 			foreach (var dimension in dimensions) {
-				if (string.Equals(dimension.Key, dimensionKey, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value)) {
+				if (string.Equals(dimension.Key, dimensionKey, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value))
 					continue;
-				}
 
 				filter &= Builders<DataCollectedEvent>.Filter.Eq($"Metadata.{dimension.Key}", dimension.Value);
 			}

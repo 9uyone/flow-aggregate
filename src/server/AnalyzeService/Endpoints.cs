@@ -1,5 +1,4 @@
 ﻿using AnalyzeService.Services;
-using Common.Contracts.Events;
 using Common.Interfaces.Parser;
 using Microsoft.AspNetCore.Mvc;
 

@@ -55,6 +55,28 @@ const normalizeMetricOptions = (options: MetricOption[]): MetricOption[] => {
   }));
 };
 
+const areStringArraysEqual = (first: string[], second: string[]) => {
+  if (first.length !== second.length) {
+    return false;
+  }
+
+  return first.every((value, index) => value === second[index]);
+};
+
+const areDimensionOptionsEqual = (
+  first: Record<string, string[]>,
+  second: Record<string, string[]>
+) => {
+  const firstKeys = Object.keys(first).sort();
+  const secondKeys = Object.keys(second).sort();
+
+  if (!areStringArraysEqual(firstKeys, secondKeys)) {
+    return false;
+  }
+
+  return firstKeys.every((key) => areStringArraysEqual(first[key] ?? [], second[key] ?? []));
+};
+
 const toIsoStringOrNull = (value: string) => {
   if (!value) {
     return null;
@@ -170,13 +192,16 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
     [metricOptions, selectedMetric]
   );
 
-  const selectedDimensionKeys = selectedMetricOption?.dimensions ?? [];
+  const selectedDimensionKeys = useMemo(
+    () => selectedMetricOption?.dimensions ?? [],
+    [selectedMetricOption]
+  );
 
   useEffect(() => {
     if (!selectedParserSlug || !selectedMetricOption) {
-      setDimensionOptionsByKey({});
-      setDimensionOptionsError(null);
-      setIsDimensionOptionsLoading(false);
+      setDimensionOptionsByKey((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+      setDimensionOptionsError((prev) => (prev === null ? prev : null));
+      setIsDimensionOptionsLoading((prev) => (prev ? false : prev));
       return;
     }
 
@@ -184,9 +209,9 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
 
     const fetchDimensionOptions = async () => {
       if (selectedDimensionKeys.length === 0) {
-        setDimensionOptionsByKey({});
-        setDimensionOptionsError(null);
-        setIsDimensionOptionsLoading(false);
+        setDimensionOptionsByKey((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+        setDimensionOptionsError((prev) => (prev === null ? prev : null));
+        setIsDimensionOptionsLoading((prev) => (prev ? false : prev));
         return;
       }
 
@@ -224,17 +249,16 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
         }
       });
 
-      setDimensionOptionsByKey(nextOptions);
+      setDimensionOptionsByKey((prev) => (areDimensionOptionsEqual(prev, nextOptions) ? prev : nextOptions));
 
       const firstError = results.find((result) => result.status === 'rejected');
       if (firstError && firstError.status === 'rejected') {
-        setDimensionOptionsError(
-          firstError.reason instanceof Error
-            ? firstError.reason.message
-            : 'Failed to load dimension options'
-        );
+        const nextError = firstError.reason instanceof Error
+          ? firstError.reason.message
+          : 'Failed to load dimension options';
+        setDimensionOptionsError((prev) => (prev === nextError ? prev : nextError));
       } else {
-        setDimensionOptionsError(null);
+        setDimensionOptionsError((prev) => (prev === null ? prev : null));
       }
 
       setSelectedDimensions((prev) => {

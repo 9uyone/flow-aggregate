@@ -84,10 +84,6 @@ public static class CollectorEndpoints {
 			});
 		}).RequireAuthorization();
 
-		group.MapGet("/parsers", (IParserRegistry registry) => 
-			Results.Ok(registry.GetAvailableParsers())
-		);
-
 		group.MapGet("/parsers/{slug}", async (string slug, IParserRegistry registry) => {
 			var details = await registry.GetParserDetailsAsync(slug);
 			return details != null ? Results.Ok(details) : Results.NotFound();

@@ -21,6 +21,7 @@ interface ParserConfigCardProps {
   parserDescription: string;
   metricOptionsCount: number;
   dimensionCount: number;
+  supportsManualRun: boolean;
   selected: boolean;
   isRunning: boolean;
   isPreparingRun: boolean;
@@ -39,6 +40,7 @@ export const ParserConfigCard: React.FC<ParserConfigCardProps> = ({
   parserDescription,
   metricOptionsCount,
   dimensionCount,
+  supportsManualRun,
   selected,
   isRunning,
   isPreparingRun,
@@ -161,25 +163,29 @@ export const ParserConfigCard: React.FC<ParserConfigCardProps> = ({
         </Tooltip>
         {isRunning || displayedStatus === 'Running' ? (
           <Tooltip title="Stop">
-            <IconButton
-              size="small"
-              color="warning"
-              onClick={(e) => onStop(config.slug, e)}
-              disabled={isRunning}
-            >
-              {isRunning ? <CircularProgress size={20} /> : <StopIcon fontSize="small" />}
-            </IconButton>
+            <span>
+              <IconButton
+                size="small"
+                color="warning"
+                onClick={(e) => onStop(config.slug, e)}
+                disabled={isRunning}
+              >
+                {isRunning ? <CircularProgress size={20} /> : <StopIcon fontSize="small" />}
+              </IconButton>
+            </span>
           </Tooltip>
         ) : (
           <Tooltip title="Run">
-            <IconButton
-              size="small"
-              color="primary"
-              onClick={(e) => onRun(config, e)}
-              disabled={isRunning || isPreparingRun || config.sourceType === 'external'}
-            >
-              {isRunning || isPreparingRun ? <CircularProgress size={20} /> : <PlayIcon fontSize="small" />}
-            </IconButton>
+            <span>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={(e) => onRun(config, e)}
+                disabled={isRunning || isPreparingRun || !supportsManualRun}
+              >
+                {isRunning || isPreparingRun ? <CircularProgress size={20} /> : <PlayIcon fontSize="small" />}
+              </IconButton>
+            </span>
           </Tooltip>
         )}
       </Box>

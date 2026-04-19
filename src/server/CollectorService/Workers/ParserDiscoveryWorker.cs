@@ -22,6 +22,11 @@ internal class ParserDiscoveryWorker(
 					Description = p.Description,
 					DisplayName = p.DisplayName,
 					MetricFields = p.MetricFields,
+					Dimensions = p.Dimensions,
+					SupportsScheduledRun = p.SupportsScheduledRun,
+					SupportsManualRun = p.SupportsManualRun,
+					SupportsPushIngest = p.SupportsPushIngest,
+					SupportsParameters = p.SupportsParameters,
 					SourceType = p.SourceType,
 				})
 				.ToList();

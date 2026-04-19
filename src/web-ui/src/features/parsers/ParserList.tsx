@@ -47,10 +47,12 @@ export const ParserList: React.FC = () => {
   const configuredParsers = parserConfigs;
   const availableParsers = parsers;
   const parsersWithRunnableOptions = useMemo(
-    () => availableParsers.filter((parser) => parser.sourceType !== 'external'),
+    () => availableParsers.filter((parser) => parser.supportsManualRun),
     [availableParsers]
   );
-  const displayedAvailableParsers = availableParsers.filter((parser) => parser.sourceType !== 'external');
+  const displayedAvailableParsers = availableParsers.filter(
+    (parser) => parser.isCatalogParser && !parser.supportsPushIngest
+  );
   const parserBySlug = new Map(parsers.map((parser) => [parser.slug, parser]));
   const { latestTaskOptionsBySlug } = useLatestTaskOptions(parsersWithRunnableOptions, taskCompletionVersion);
 
@@ -220,9 +222,11 @@ export const ParserList: React.FC = () => {
   const handleRunSavedConfig = async (config: ParserConfig, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    if (config.sourceType === 'external') {
+    const parser = parserBySlug.get(config.slug);
+
+    if (!parser?.supportsManualRun) {
       setNotification({
-        message: 'External parsers are triggered via ingest API and cannot be run manually',
+        message: 'This parser does not support manual run',
         severity: 'error',
       });
       return;
@@ -248,11 +252,16 @@ export const ParserList: React.FC = () => {
     event.stopPropagation();
 
     const parser = parsers.find((item) => item.slug === slug);
-    if (parser?.sourceType === 'external') {
+    if (!parser?.supportsManualRun) {
       setNotification({
-        message: 'External parsers are triggered via ingest API and cannot be run manually',
+        message: 'This parser does not support manual run',
         severity: 'error',
       });
+      return;
+    }
+
+    if (!parser.supportsParameters) {
+      await runParserWithParams(slug, {});
       return;
     }
 

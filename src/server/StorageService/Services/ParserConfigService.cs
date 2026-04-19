@@ -10,6 +10,7 @@ using Common.Interfaces.Parser;
 using MongoDB.Driver;
 using StorageService.Contracts.ParserUserConfig;
 using StorageService.Contracts.ParserUserConfig.Get;
+using StorageService.Entities;
 using StorageService.Validation;
 using System.Security.Cryptography;
 
@@ -17,14 +18,18 @@ namespace StorageService.Services;
 
 internal class ParserConfigService(
 	IMongoRepository<ParserUserConfig> repo,
+	IMongoRepository<ParserDefinition> definitionsRepo,
 	IConfiguration config,
 	IIntegrationDispatcher dispatcher,
 	IHttpRestClient restClient)
 {
 	public async Task CreateInternalAsync(UserConfigCreateInternalDto dto, Guid userId) {
-		var response = await restClient.GetAsync<bool>($"/api/collector/parser/{dto.ParserSlug}/exists_internal");
-		if (!response)
-			throw new BadRequestException($"Parser '{dto.ParserSlug}' not found");
+		var parserDefinition = await GetParserDefinitionAsync(dto.ParserSlug);
+		if (!parserDefinition.SupportsManualRun)
+			throw new BadRequestException($"Parser '{dto.ParserSlug}' does not support internal/manual execution");
+
+		if (!string.IsNullOrEmpty(dto.CronExpression) && !parserDefinition.SupportsScheduledRun)
+			throw new BadRequestException($"Parser '{dto.ParserSlug}' does not support scheduled execution");
 
 		if (!string.IsNullOrEmpty(dto.CronExpression)) {
 			var interval = config.GetValue<int>("ParserConfigs:minIntervalSeconds");
@@ -53,7 +58,7 @@ internal class ParserConfigService(
 			UserId = userId,
 			ParserSlug = dto.ParserSlug,
 			IsEnabled = dto.IsEnabled,
-			SourceType = ParserSourceType.Internal,
+			SourceType = parserDefinition.SourceType,
 			Internal = new InternalOptions {
 				CustomName = dto.CustomName,
 				CronExpression = dto.CronExpression,
@@ -65,6 +70,24 @@ internal class ParserConfigService(
 	public async Task<string> CreateExternalAsync(UserConfigCreateExternalDto dto, Guid userId) {
 		if (await repo.AnyAsync(x => x.UserId == userId && x.ParserSlug == dto.ParserSlug))
 			throw new BadRequestException("Parser name must be unique");
+
+		var parserDefinition = await FindParserDefinitionAsync(dto.ParserSlug);
+		if (parserDefinition is null) {
+			await definitionsRepo.CreateAsync(new ParserDefinition {
+				Slug = dto.ParserSlug,
+				DisplayName = dto.ParserSlug,
+				Description = "External parser",
+				SourceType = ParserSourceType.External,
+				SupportsPushIngest = true,
+				SupportsManualRun = false,
+				SupportsScheduledRun = false,
+				SupportsParameters = false,
+				UpdatedAt = DateTime.UtcNow,
+			});
+		}
+		else if (!parserDefinition.SupportsPushIngest) {
+			throw new BadRequestException($"Parser '{dto.ParserSlug}' does not support external push ingest");
+		}
 
 		var token = GenerateToken();
 		var tokenHash = SecurityHelper.HashToken(token);
@@ -175,20 +198,34 @@ internal class ParserConfigService(
 		if (config == null || config.UserId != userId)
 			throw new NotFoundException("Parser configuration not found");
 
-		if (config.SourceType != ParserSourceType.Internal)
-			throw new BadRequestException("Only internal configs can be run manually");
+		var parserDefinition = await GetParserDefinitionAsync(config.ParserSlug);
+		if (!parserDefinition.SupportsManualRun)
+			throw new BadRequestException($"Parser '{config.ParserSlug}' does not support manual run");
 
 		var command = new RunParserEvent
 		{
 			ConfigId = config.Id,
 			ParserSlug = config.ParserSlug,
 			UserId = config.UserId,
-			Options = config.Internal.Options,
+			Options = config.Internal?.Options,
 			CorrelationId = Guid.GenCorrelationId(),
 		};
 
 		await dispatcher.DispatchAsync(command);
 		return new RunParserResult { CorrelationId = command.CorrelationId.Value };
+	}
+
+	private async Task<ParserDefinition> GetParserDefinitionAsync(string slug) {
+		var parserDefinition = await FindParserDefinitionAsync(slug);
+		if (parserDefinition is null)
+			throw new BadRequestException($"Parser '{slug}' not found in parser catalog");
+
+		return parserDefinition;
+	}
+
+	private async Task<ParserDefinition?> FindParserDefinitionAsync(string slug) {
+		var (items, _) = await definitionsRepo.FindAsync(x => x.Slug == slug, page: 1, pageSize: 1);
+		return items.FirstOrDefault();
 	}
 
 	private static string GenerateToken() {

@@ -19,11 +19,13 @@ interface UseConfigDialogArgs {
 
 export interface ConfigDialogController {
   internalParsers: Parser[];
+  selectedParser: Parser | null;
   open: boolean;
   mode: 'create' | 'edit';
-  allowTypeChange: boolean;
-  configType: 'internal' | 'plugin' | 'external';
-  isCustomizable: boolean;
+  supportsScheduledRun: boolean;
+  supportsManualRun: boolean;
+  supportsPushIngest: boolean;
+  supportsParameters: boolean;
   parserSlug: string;
   customName: string;
   cronExpression: string;
@@ -37,7 +39,6 @@ export interface ConfigDialogController {
   openCreate: (parserSlugOverride?: string) => void;
   openEdit: (config: ParserConfig, event: React.MouseEvent) => void;
   close: () => void;
-  changeType: (value: 'internal' | 'external') => void;
   setParserSlug: (value: string) => void;
   setCustomName: (value: string) => void;
   setCronExpression: (value: string) => void;
@@ -59,7 +60,6 @@ export const useConfigDialog = ({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [editingConfig, setEditingConfig] = useState<ParserConfig | null>(null);
-  const [configType, setConfigType] = useState<'internal' | 'plugin' | 'external'>('internal');
   const [parserSlug, setParserSlug] = useState('');
   const [isEnabled, setIsEnabled] = useState(true);
   const [customName, setCustomName] = useState('');
@@ -71,15 +71,17 @@ export const useConfigDialog = ({
   const [createdExternalToken, setCreatedExternalToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const internalParsers = useMemo(
-    () => availableParsers.filter((parser) => parser.sourceType === 'internal'),
-    [availableParsers]
+  const internalParsers = useMemo(() => availableParsers, [availableParsers]);
+
+  const selectedParser = useMemo(
+    () => availableParsers.find((parser) => parser.slug === parserSlug) ?? null,
+    [availableParsers, parserSlug]
   );
 
-  const isCustomizable = useMemo(
-    () => configType === 'internal' || configType === 'plugin',
-    [configType]
-  );
+  const supportsScheduledRun = selectedParser?.supportsScheduledRun ?? false;
+  const supportsManualRun = selectedParser?.supportsManualRun ?? false;
+  const supportsPushIngest = selectedParser?.supportsPushIngest ?? false;
+  const supportsParameters = selectedParser?.supportsParameters ?? false;
 
   const close = useCallback(() => {
     setOpen(false);
@@ -103,15 +105,15 @@ export const useConfigDialog = ({
     }
 
     const nextParser = internalParsers[0];
-    if (isCustomizable && nextParser && !internalParsers.some((parser) => parser.slug === parserSlug)) {
+    if (nextParser && !internalParsers.some((parser) => parser.slug === parserSlug)) {
       setParserSlug(nextParser.slug);
     }
-  }, [open, internalParsers, isCustomizable, parserSlug]);
+  }, [open, internalParsers, parserSlug]);
 
   useEffect(() => {
-    if (!open || !isCustomizable || !parserSlug) {
-      setParserDetails(null);
-      setParameterValues({});
+    if (!open || !parserSlug || !supportsParameters || supportsPushIngest) {
+      setParserDetails((prev) => (prev === null ? prev : null));
+      setParameterValues((prev) => (Object.keys(prev).length === 0 ? prev : {}));
       return;
     }
 
@@ -140,8 +142,9 @@ export const useConfigDialog = ({
     open,
     mode,
     editingConfig,
-    configType,
     parserSlug,
+    supportsParameters,
+    supportsPushIngest,
     latestTaskOptionsBySlug,
     notify,
     buildParametersFromDefaultsAndTaskOptions,
@@ -151,7 +154,6 @@ export const useConfigDialog = ({
     setMode('create');
     setEditingConfig(null);
     setOpen(true);
-    setConfigType('internal');
     setCreatedExternalToken(null);
 
     if (parserSlugOverride) {
@@ -168,7 +170,6 @@ export const useConfigDialog = ({
     setMode('edit');
     setEditingConfig(config);
     setOpen(true);
-    setConfigType(config.sourceType as 'internal' | 'plugin' | 'external');
     setParserSlug(config.slug);
     setIsEnabled(config.isActive);
     setCustomName(config.customName ?? '');
@@ -181,17 +182,6 @@ export const useConfigDialog = ({
     setParameterValues(config.configOptions ?? {});
     setCreatedExternalToken(null);
   }, []);
-
-  const changeType = useCallback((value: 'internal' | 'external') => {
-    if (mode === 'edit') {
-      return;
-    }
-
-    setConfigType(value);
-    const nextParser = value === 'internal' ? internalParsers[0] : null;
-    setParserSlug(nextParser?.slug ?? '');
-    setCreatedExternalToken(null);
-  }, [mode, internalParsers]);
 
   const changeCronPreset = useCallback((value: string) => {
     setCronPreset(value);
@@ -225,10 +215,15 @@ export const useConfigDialog = ({
       return;
     }
 
+    if (!selectedParser) {
+      notify('Selected parser was not found in unified catalog', 'error');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      if (isCustomizable && parserDetails) {
+      if (supportsParameters && parserDetails) {
         const missingRequired = parserDetails.parameters.some(
           (parameter) =>
             parameter.isRequired &&
@@ -243,7 +238,7 @@ export const useConfigDialog = ({
       }
 
       const options = Object.fromEntries(
-        (parserDetails?.parameters ?? [])
+        (supportsParameters ? (parserDetails?.parameters ?? []) : [])
           .filter((parameter) => parameter.allowCustomValues || parameter.options.length > 0)
           .map((parameter) => [parameter.name, parameterValues[parameter.name] ?? ''])
           .filter(([, value]) => value.trim().length > 0)
@@ -258,10 +253,10 @@ export const useConfigDialog = ({
 
         await storageApi.updateConfig(editingConfig.configId, {
           isEnabled,
-          customName: isCustomizable ? customName.trim() || undefined : undefined,
-          cronExpression: isCustomizable ? cronExpression.trim() || undefined : undefined,
+          customName: !supportsPushIngest ? customName.trim() || undefined : undefined,
+          cronExpression: supportsScheduledRun ? cronExpression.trim() || undefined : undefined,
           options:
-            isCustomizable
+            supportsParameters
               ? Object.keys(options).length > 0
                 ? options
                 : {}
@@ -274,13 +269,13 @@ export const useConfigDialog = ({
         return;
       }
 
-      if (configType === 'internal') {
+      if (!supportsPushIngest) {
         await storageApi.createInternalConfig({
           parserSlug,
           isEnabled,
           customName: customName.trim() || undefined,
-          cronExpression: cronExpression.trim() || undefined,
-          options: Object.keys(options).length > 0 ? options : undefined,
+          cronExpression: supportsScheduledRun ? cronExpression.trim() || undefined : undefined,
+          options: supportsParameters && Object.keys(options).length > 0 ? options : undefined,
         });
 
         notify(`Internal config created for ${parserSlug}`, 'success');
@@ -305,8 +300,10 @@ export const useConfigDialog = ({
     }
   }, [
     parserSlug,
-    configType,
-    isCustomizable,
+    selectedParser,
+    supportsScheduledRun,
+    supportsPushIngest,
+    supportsParameters,
     parserDetails,
     parameterValues,
     mode,
@@ -321,11 +318,13 @@ export const useConfigDialog = ({
 
   return {
     internalParsers,
+    selectedParser,
     open,
     mode,
-    allowTypeChange: mode === 'create',
-    configType,
-    isCustomizable,
+    supportsScheduledRun,
+    supportsManualRun,
+    supportsPushIngest,
+    supportsParameters,
     parserSlug,
     customName,
     cronExpression,
@@ -339,7 +338,6 @@ export const useConfigDialog = ({
     openCreate,
     openEdit,
     close,
-    changeType,
     setParserSlug,
     setCustomName,
     setCronExpression,

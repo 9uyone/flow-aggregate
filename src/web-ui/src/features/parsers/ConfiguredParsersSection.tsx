@@ -82,11 +82,12 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
             const parserName = config.customName || parserDefinition?.name || config.slug;
             const parserDescription =
               parserDefinition?.description ||
-              (config.sourceType === 'internal'
-                ? 'Internal parser configuration'
-                : 'External parser configuration');
+              (parserDefinition?.supportsPushIngest
+                ? 'Push-ingest parser configuration'
+                : 'Parser configuration');
             const metricOptionsCount = parserDefinition?.metricOptions.length ?? 0;
             const dimensionCount = Array.from(new Set(parserDefinition?.metricOptions.flatMap((option) => option.dimensions) ?? [])).length;
+            const supportsManualRun = parserDefinition?.supportsManualRun ?? (config.sourceType !== 'external');
 
             return (
               <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={config.configId}>
@@ -96,6 +97,7 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
                   parserDescription={parserDescription}
                   metricOptionsCount={metricOptionsCount}
                   dimensionCount={dimensionCount}
+                  supportsManualRun={supportsManualRun}
                   selected={selectedParserSlug === config.slug}
                   isRunning={isSlugRunning(config.slug)}
                   isPreparingRun={isPreparingRun}

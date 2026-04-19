@@ -29,6 +29,7 @@ builder.Services.AddHealthChecks();
 
 builder.Services.AddScoped<ParserConfigService>();
 builder.Services.AddScoped<ParserConfigInternalService>();
+builder.Services.AddScoped<ParserCatalogService>();
 builder.Services.AddScoped<CollectedDataService>();
 builder.Services.AddScoped<TaskStatusService>();
 builder.Services.AddScoped<IHistoryAggregationService, HistoryAggregationService>();
@@ -49,6 +50,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapParserConfigEndpoints();
+app.MapParserCatalogEndpoints();
 app.MapInternalParserConfigEndpoints();
 app.MapCollectedDataEndpoints();
 app.MapTasksEndpoints();

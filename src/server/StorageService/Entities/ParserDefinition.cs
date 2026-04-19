@@ -11,6 +11,11 @@ public class ParserDefinition: BaseEntity {
 	public string Description { get; set; } = string.Empty;
 
 	public IEnumerable<string> MetricFields { get; set; } = Enumerable.Empty<string>();
+	public IEnumerable<string> Dimensions { get; set; } = Enumerable.Empty<string>();
+	public bool SupportsScheduledRun { get; set; }
+	public bool SupportsManualRun { get; set; }
+	public bool SupportsPushIngest { get; set; }
+	public bool SupportsParameters { get; set; }
 	[BsonRepresentation(BsonType.String)]
 	public ParserSourceType SourceType { get; init; }
 	public Guid? OwnerUserId { get; set; } = null;

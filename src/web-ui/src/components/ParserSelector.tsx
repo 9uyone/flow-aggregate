@@ -44,7 +44,6 @@ export const ParserSelector: React.FC<ParserSelectorProps> = ({
           <MenuItem key={parser.slug} value={parser.slug}>
             {parser.name}
             {parser.name !== parser.slug ? ` (${parser.slug})` : ''}
-            {parser.isActive ? ' • active' : ''}
           </MenuItem>
         ))}
       </Select>

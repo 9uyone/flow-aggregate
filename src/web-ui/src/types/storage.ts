@@ -47,6 +47,11 @@ export interface ParserCatalogItem {
   description: string;
   sourceType: ParserSourceType;
   metricFields: string[];
+  dimensions: string[];
+  supportsScheduledRun: boolean;
+  supportsManualRun: boolean;
+  supportsPushIngest: boolean;
+  supportsParameters: boolean;
 }
 
 export interface ParserParameterOption {

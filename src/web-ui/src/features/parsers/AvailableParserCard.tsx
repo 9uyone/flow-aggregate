@@ -65,6 +65,7 @@ export const AvailableParserCard: React.FC<AvailableParserCardProps> = ({
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
             <Chip size="small" label={`Metrics: ${parser.metricOptions.length}`} variant="outlined" />
             <Chip size="small" label={`Dimensions: ${dimensionCount}`} variant="outlined" />
+            {parser.supportsPushIngest && <Chip size="small" label="Push ingest" color="info" variant="outlined" />}
           </Box>
           {latestOptionsPreview && (
             <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
@@ -92,7 +93,7 @@ export const AvailableParserCard: React.FC<AvailableParserCardProps> = ({
               size="small"
               color="primary"
               onClick={(e) => onRun(parser.slug, e)}
-              disabled={isRunning || isPreparingRun || parser.sourceType === 'external'}
+              disabled={isRunning || isPreparingRun || !parser.supportsManualRun}
             >
               {isRunning || isPreparingRun ? <CircularProgress size={20} /> : <PlayIcon fontSize="small" />}
             </IconButton>

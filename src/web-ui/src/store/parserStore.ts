@@ -7,7 +7,13 @@ export interface Parser {
   slug: string;
   name: string;
   description?: string;
+  isCatalogParser: boolean;
   sourceType: ParserSourceType;
+  dimensions: string[];
+  supportsScheduledRun: boolean;
+  supportsManualRun: boolean;
+  supportsPushIngest: boolean;
+  supportsParameters: boolean;
   metricOptions: MetricOption[];
   hasConfig: boolean;
   url?: string;
@@ -96,7 +102,13 @@ const mapUserConfigToParser = (config: UserConfig): Parser => ({
       : config.$type === 'plugin'
         ? 'Plugin parser'
         : 'External parser · trigger via token',
+  isCatalogParser: false,
   sourceType: config.$type,
+  dimensions: [],
+  supportsScheduledRun: config.$type === 'internal' || config.$type === 'plugin',
+  supportsManualRun: config.$type !== 'external',
+  supportsPushIngest: config.$type === 'external',
+  supportsParameters: config.$type === 'internal' || config.$type === 'plugin',
   metricOptions: [],
   hasConfig: true,
   url:
@@ -131,7 +143,13 @@ const mapCatalogParser = (parser: ParserCatalogItem): Parser => {
     slug: parser.slug,
     name: parser.displayName || parser.slug,
     description: parser.description || undefined,
+    isCatalogParser: true,
     sourceType: parser.sourceType,
+    dimensions: parser.dimensions,
+    supportsScheduledRun: parser.supportsScheduledRun,
+    supportsManualRun: parser.supportsManualRun,
+    supportsPushIngest: parser.supportsPushIngest,
+    supportsParameters: parser.supportsParameters,
     metricOptions: [],
     hasConfig: false,
     url: undefined,
@@ -163,8 +181,14 @@ const mergeParsers = (catalogParsers: ParserCatalogItem[], configuredParsers: Us
         ...configuredParser,
         name: existing.name || configuredParser.name,
         description: existing.description || configuredParser.description,
+        isCatalogParser: existing.isCatalogParser,
         metricOptions: existing.metricOptions,
         sourceType: existing.sourceType,
+        dimensions: existing.dimensions,
+        supportsScheduledRun: existing.supportsScheduledRun,
+        supportsManualRun: existing.supportsManualRun,
+        supportsPushIngest: existing.supportsPushIngest,
+        supportsParameters: existing.supportsParameters,
         hasConfig: true,
         cronExpression: configuredParser.cronExpression,
         configOptions: configuredParser.configOptions,
@@ -174,7 +198,13 @@ const mergeParsers = (catalogParsers: ParserCatalogItem[], configuredParsers: Us
 
     mergedMap.set(configuredParser.slug, {
       ...configuredParser,
+      isCatalogParser: false,
       sourceType: configuredItem.$type,
+      dimensions: [],
+      supportsScheduledRun: configuredItem.$type === 'internal' || configuredItem.$type === 'plugin',
+      supportsManualRun: configuredItem.$type !== 'external',
+      supportsPushIngest: configuredItem.$type === 'external',
+      supportsParameters: configuredItem.$type === 'internal' || configuredItem.$type === 'plugin',
       metricOptions: [],
       hasConfig: true,
     });

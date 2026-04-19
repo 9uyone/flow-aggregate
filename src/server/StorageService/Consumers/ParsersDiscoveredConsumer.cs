@@ -16,6 +16,11 @@ public class ParsersDiscoveredConsumer(IMongoDatabase db) : IConsumer<ParsersDis
 			var update = Builders<ParserDefinition>.Update
 				.Set(x => x.Slug, dto.Slug)
 				.Set(x => x.MetricFields, dto.MetricFields)
+				.Set(x => x.Dimensions, dto.Dimensions)
+				.Set(x => x.SupportsScheduledRun, dto.SupportsScheduledRun)
+				.Set(x => x.SupportsManualRun, dto.SupportsManualRun)
+				.Set(x => x.SupportsPushIngest, dto.SupportsPushIngest)
+				.Set(x => x.SupportsParameters, dto.SupportsParameters)
 				.Set(x => x.SourceType, dto.SourceType)
 				.Set(x => x.DisplayName, dto.DisplayName)
 				.Set(x => x.Description, dto.Description)

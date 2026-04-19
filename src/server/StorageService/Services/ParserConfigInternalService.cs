@@ -2,7 +2,6 @@ using Common.Constants;
 using Common.Contracts;
 using Common.Contracts.ParserConfig;
 using Common.Entities;
-using Common.Enums;
 using Common.Interfaces;
 using MongoDB.Driver;
 using StorageService.Entities;
@@ -35,12 +34,21 @@ internal class ParserConfigInternalService(IMongoRepository<ParserUserConfig> re
 	public async Task<(IEnumerable<ParserConfigDto> configs, int totalCount)> GetActiveInternalConfigsAsync(
 		int page, int pageSize)
 	{
-		var (configs, totalCount) = await repo.FindAsync(
-			c => c.IsEnabled == true
-			&& (c.SourceType == ParserSourceType.Internal || c.SourceType == ParserSourceType.Plugin)
-			&& c.Internal.CronExpression != null,
-			page, pageSize);
-		return (configs.Select(MapToDto), totalCount);
+		var definitions = mongoDb.GetCollection<ParserDefinition>(MongoCollections.ParserDefinitions);
+		var allowedSlugs = await definitions.Find(x => x.SupportsScheduledRun)
+			.Project(x => x.Slug)
+			.ToListAsync();
+
+		if (allowedSlugs.Count == 0)
+			return (Enumerable.Empty<ParserConfigDto>(), 0);
+
+		var filter = Builders<ParserUserConfig>.Filter.Eq(x => x.IsEnabled, true)
+			& Builders<ParserUserConfig>.Filter.Ne(x => x.Internal.CronExpression, null)
+			& Builders<ParserUserConfig>.Filter.In(x => x.ParserSlug, allowedSlugs);
+
+		var sort = Builders<ParserUserConfig>.Sort.Descending(x => x.Timestamp);
+		var (items, totalCount) = await repo.FindAsync(filter, sort, page, pageSize);
+		return (items.Select(MapToDto), totalCount);
 	}
 
 	private static ParserConfigDto MapToDto(ParserUserConfig config) => new() {

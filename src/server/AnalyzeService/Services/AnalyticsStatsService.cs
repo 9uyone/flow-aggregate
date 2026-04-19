@@ -33,28 +33,24 @@ public interface IAnalyticsStatsService {
 
 public sealed class AnalyticsStatsService(IHttpRestClient httpClient) : IAnalyticsStatsService {
 	public async Task<AnalyticsStatsResult> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
-		if (string.IsNullOrWhiteSpace(request.Metric)) {
+		if (string.IsNullOrWhiteSpace(request.Metric))
 			return new AnalyticsStatsResult(false, "Metric is required.", null);
-		}
 
 		DateTime from;
 		DateTime to;
 
-		if (!string.IsNullOrWhiteSpace(request.Range)) {
+		if (!string.IsNullOrWhiteSpace(request.Range))
 			(from, to) = ResolveRange(request.Range);
-		}
 		else {
-			if (request.From is null || request.To is null) {
+			if (request.From is null || request.To is null)
 				return new AnalyticsStatsResult(false, "from and to are required when range is not specified.", null);
-			}
 
 			from = request.From.Value;
 			to = request.To.Value;
 		}
 
-		if (from > to) {
+		if (from > to)
 			return new AnalyticsStatsResult(false, "'from' must be less than or equal to 'to'.", null);
-		}
 
 		var query = new Dictionary<string, string?> {
 			["metric"] = request.Metric,
@@ -62,18 +58,15 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient) : IAnalyti
 			["to"] = to.ToString("O")
 		};
 
-		if (request.Dimensions is not null) {
-			foreach (var dimension in request.Dimensions) {
+		if (request.Dimensions is not null)
+			foreach (var dimension in request.Dimensions)
 				query[dimension.Key] = dimension.Value;
-			}
-		}
 
 		var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/stats/{request.Slug}", query);
 
 		var stats = await httpClient.GetAsync<StorageStatsDto>(uri);
-		if (stats is null) {
+		if (stats is null)
 			return new AnalyticsStatsResult(true, null, new AnalyticsStatsDto(0, 0, 0, 0, 0, 0, 0, null, null, null));
-		}
 
 		var delta = stats.LastValue - stats.FirstValue;
 		double? percentChange = stats.FirstValue == 0 ? null : (delta / stats.FirstValue) * 100;

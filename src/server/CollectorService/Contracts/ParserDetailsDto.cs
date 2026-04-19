@@ -9,5 +9,9 @@ public record ParserDetailsDto(
 	ParserSourceType SourceType,
 	IEnumerable<string>? MetricFields,
 	IEnumerable<string>? Dimensions,
+	bool SupportsScheduledRun,
+	bool SupportsManualRun,
+	bool SupportsPushIngest,
+	bool SupportsParameters,
 	IEnumerable<ParameterDetailsDto> Parameters
 );

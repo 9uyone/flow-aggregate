@@ -37,9 +37,8 @@ public sealed class HistoryStatsService(IMongoDatabase db) : IHistoryStatsServic
 
 		if (dimensions is not null) {
 			foreach (var dimension in dimensions) {
-				if (string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value)) {
+				if (string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value))
 					continue;
-				}
 
 				filter &= Builders<DataCollectedEvent>.Filter.Eq($"Metadata.{dimension.Key}", dimension.Value);
 			}
