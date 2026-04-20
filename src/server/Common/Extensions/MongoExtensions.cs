@@ -15,19 +15,9 @@ public static class MongoExtensions {
 	public static IServiceCollection AddAppMongo(this IServiceCollection services, IConfiguration config) {
 		BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
-		var urlEnc = UrlEncoder.Create();
-
-		var section = config.GetSection("Mongo");
-		var user = urlEnc.Encode(section["User"]);
-		var pass = urlEnc.Encode(section["Pass"]);
-		var host = section["Host"] ?? "localhost";
-		var port = section["Port"] ?? "27017";
-
-		var connectionString = $"mongodb://{user}:{pass}@{host}:{port}";
-
+		var connectionString = config.GetConnectionString("Mongo");
 		var client = new MongoClient(connectionString);
 		services.AddSingleton<IMongoClient>(client);
-
 		var dbName = config["Mongo:Database"] ?? "DiplomaDB";
 		services.AddScoped(sp => sp.GetRequiredService<IMongoClient>().GetDatabase(dbName));
 

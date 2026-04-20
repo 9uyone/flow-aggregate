@@ -133,17 +133,17 @@ services:
     container_name: diploma-mongo
     image: mongo:8.0
     ports:
-      - "${MONGO__PORT}:27017"
+      - "27017:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO__USER}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO__PASS}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO__ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO__ROOT_PASS}
     networks:
       - internal
       - public
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "-u", "${MONGO__USER}", "-p", "${MONGO__PASS}"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "-u", "${MONGO__ROOT_USER}", "-p", "${MONGO__ROOT_PASS}"]
       interval: 10s
       timeout: 5s
       retries: 5
