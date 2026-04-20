@@ -24,6 +24,8 @@ public class ParsersDiscoveredConsumer(IMongoDatabase db) : IConsumer<ParsersDis
 				.Set(x => x.SourceType, dto.SourceType)
 				.Set(x => x.DisplayName, dto.DisplayName)
 				.Set(x => x.Description, dto.Description)
+				.SetOnInsert(x => x.Id, Guid.NewGuid())
+				.SetOnInsert(x => x.Timestamp, DateTime.UtcNow)
 				.SetOnInsert(x => x.OwnerUserId, dto.OwnerUserId)
 				.SetOnInsert(x => x.UpdatedAt, DateTime.UtcNow);
 
