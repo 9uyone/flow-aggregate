@@ -1,0 +1,11 @@
+version: '3'
+
+tasks:
+  docker:up-services:
+    desc: Start redis, mongo, rabbitmq and mongo-express containers
+    cmds:
+      - docker compose -f docker-compose.yml -f docker-compose.override.yml up -d redis mongo rabbitmq mongo-express
+  docker:stop-all:
+    desc: Stop all containers from compose project
+    cmds:
+      - docker compose -f docker-compose.yml -f docker-compose.override.yml stop
