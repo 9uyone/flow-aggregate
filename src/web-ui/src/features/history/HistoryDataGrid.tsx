@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -18,9 +18,10 @@ export const HistoryDataGrid: React.FC = () => {
   const taskCompletionVersion = useParserStore((state) => state.taskCompletionVersion);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const latestFetchRequestIdRef = useRef(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [correlationIdFilter, setCorrelationIdFilter] = useState('');
+  const [correlationIdFilter, setCorrelationIdFilter] = useState(() => searchParams.get('correlationId') ?? '');
   const [tasks, setTasks] = useState<ParserTaskItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -75,6 +76,7 @@ export const HistoryDataGrid: React.FC = () => {
   }, []);
 
   const fetchTasks = useCallback(async () => {
+    const requestId = ++latestFetchRequestIdRef.current;
     setIsLoading(true);
     setError(null);
     try {
@@ -86,15 +88,23 @@ export const HistoryDataGrid: React.FC = () => {
         from: fromFilter || undefined,
         to: toFilter || undefined,
       });
+      if (requestId !== latestFetchRequestIdRef.current) {
+        return;
+      }
       setTasks(response.items);
       setTotalCount(response.totalCount);
     } catch (err) {
+      if (requestId !== latestFetchRequestIdRef.current) {
+        return;
+      }
       const message = err instanceof Error ? err.message : 'Failed to load tasks';
       setError(message);
       setTasks([]);
       setTotalCount(0);
     } finally {
-      setIsLoading(false);
+      if (requestId === latestFetchRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [page, rowsPerPage, statusFilter, parserSlugFilter, correlationIdFilter, fromFilter, toFilter, sortOrder]);
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   IconButton,
@@ -17,6 +17,7 @@ import { CollectedDataTable } from './CollectedDataTable';
 export const CollectedDataGrid: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const latestFetchRequestIdRef = useRef(0);
   const [items, setItems] = useState<CollectedDataItem[]>([]);
   const [parsers, setParsers] = useState<ParserCatalogItem[]>([]);
   const [userConfigs, setUserConfigs] = useState<UserConfig[]>([]);
@@ -28,8 +29,8 @@ export const CollectedDataGrid: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
   const [parserSlugFilter, setParserSlugFilter] = useState('');
-  const [correlationIdFilter, setCorrelationIdFilter] = useState('');
-  const [configIdFilter, setConfigIdFilter] = useState('');
+  const [correlationIdFilter, setCorrelationIdFilter] = useState(() => searchParams.get('correlationId') ?? '');
+  const [configIdFilter, setConfigIdFilter] = useState(() => searchParams.get('configId') ?? '');
   const [fromFilter, setFromFilter] = useState('');
   const [toFilter, setToFilter] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
@@ -79,6 +80,7 @@ export const CollectedDataGrid: React.FC = () => {
   }, []);
 
   const fetchCollectedData = useCallback(async () => {
+    const requestId = ++latestFetchRequestIdRef.current;
     setIsLoading(true);
     setError(null);
 
@@ -96,11 +98,17 @@ export const CollectedDataGrid: React.FC = () => {
         storageApi.getAvailableParsers(),
         storageApi.getConfigs(),
       ]);
+      if (requestId !== latestFetchRequestIdRef.current) {
+        return;
+      }
       setItems(collectedResponse.items);
       setParsers(parsersResponse);
       setUserConfigs(configsResponse.items);
       setTotalCount(collectedResponse.totalCount);
     } catch (err) {
+      if (requestId !== latestFetchRequestIdRef.current) {
+        return;
+      }
       const message = err instanceof Error ? err.message : 'Failed to load collected data';
       setError(message);
       setItems([]);
@@ -108,7 +116,9 @@ export const CollectedDataGrid: React.FC = () => {
       setUserConfigs([]);
       setTotalCount(0);
     } finally {
-      setIsLoading(false);
+      if (requestId === latestFetchRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [
     page,
