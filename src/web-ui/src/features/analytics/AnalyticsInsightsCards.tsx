@@ -48,7 +48,7 @@ export const AnalyticsInsightsCards: React.FC<AnalyticsInsightsCardsProps> = ({
                   </Typography>
                 </Stack>
                 <Typography variant="body2">slope: {formatNumber(trend.slope, 4)}</Typography>
-                <Typography variant="body2">Якість тренду: {trendQuality.toFixed(1)}%</Typography>
+                <Typography variant="body2">Trend quality: {trendQuality.toFixed(1)}%</Typography>
                 <Typography variant="body2">pointsCount: {trend.pointsCount}</Typography>
               </Stack>
             ) : (

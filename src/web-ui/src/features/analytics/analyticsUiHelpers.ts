@@ -106,19 +106,19 @@ export const getTrendMeta = (direction: ParserTrendResponse['direction']) => {
     case 'up':
       return {
         label: 'up',
-        text: 'Позитивний тренд',
+        text: 'Positive trend',
         color: 'success' as const,
       };
     case 'down':
       return {
         label: 'down',
-        text: 'Негативний тренд',
+        text: 'Negative trend',
         color: 'error' as const,
       };
     default:
       return {
         label: 'flat',
-        text: 'Стабільний тренд',
+        text: 'Stable trend',
         color: 'default' as const,
       };
   }
@@ -126,12 +126,12 @@ export const getTrendMeta = (direction: ParserTrendResponse['direction']) => {
 
 export const getVolatilityMeta = (cvPercent: number) => {
   if (cvPercent < 10) {
-    return { label: 'stable', text: 'Стабільність ряду: stable', color: 'success' as const };
+    return { label: 'stable', text: 'Series stability: stable', color: 'success' as const };
   }
 
   if (cvPercent <= 25) {
-    return { label: 'moderate', text: 'Стабільність ряду: moderate', color: 'warning' as const };
+    return { label: 'moderate', text: 'Series stability: moderate', color: 'warning' as const };
   }
 
-  return { label: 'high volatility', text: 'Стабільність ряду: high volatility', color: 'error' as const };
+  return { label: 'high volatility', text: 'Series stability: high volatility', color: 'error' as const };
 };

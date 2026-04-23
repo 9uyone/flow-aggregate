@@ -15,7 +15,7 @@ interface AnalyticsChartSectionProps {
   chartError: string | null;
   onDismissChartError: () => void;
   isChartLoading: boolean;
-  chartLabels: string[];
+  chartTimestamps: string[];
   actualSeries: Array<number | null>;
   forecastSeries: Array<number | null>;
   forecastError: string | null;
@@ -35,7 +35,7 @@ export const AnalyticsChartSection: React.FC<AnalyticsChartSectionProps> = ({
   chartError,
   onDismissChartError,
   isChartLoading,
-  chartLabels,
+  chartTimestamps,
   actualSeries,
   forecastSeries,
   forecastError,
@@ -50,6 +50,10 @@ export const AnalyticsChartSection: React.FC<AnalyticsChartSectionProps> = ({
   actualPointsCount,
 }) => {
   const theme = useTheme();
+  const rightHoverBuffer = 84;
+  const hasMultipleYears = new Set(
+    chartTimestamps.map((timestamp) => new Date(timestamp).getFullYear())
+  ).size > 1;
 
   return (
     <Stack spacing={3}>
@@ -59,13 +63,23 @@ export const AnalyticsChartSection: React.FC<AnalyticsChartSectionProps> = ({
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress />
         </Box>
-      ) : chartLabels.length > 0 ? (
+      ) : chartTimestamps.length > 0 ? (
         <Box sx={{ width: '100%', overflowX: 'auto' }}>
           <LineChart
             xAxis={[
               {
                 scaleType: 'point',
-                data: chartLabels,
+                data: chartTimestamps,
+                valueFormatter: (value: string) => {
+                  const date = new Date(value);
+                  return date.toLocaleString('en-GB', {
+                    year: hasMultipleYears ? 'numeric' : undefined,
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+                },
               },
             ]}
             series={[
@@ -78,14 +92,14 @@ export const AnalyticsChartSection: React.FC<AnalyticsChartSectionProps> = ({
               {
                 id: 'forecast',
                 data: forecastSeries,
-                label: 'Forecast (прогноз)',
+                label: 'Forecast',
                 color: theme.palette.warning.main,
                 showMark: true,
               },
             ]}
-            width={Math.max(680, chartLabels.length * 62)}
+            width={Math.max(680, chartTimestamps.length * 62 + rightHoverBuffer)}
             height={320}
-            margin={{ top: 10, right: 20, bottom: 50, left: 60 }}
+            margin={{ top: 10, right: 56, bottom: 50, left: 60 }}
             sx={{
               '& .MuiChartsAxis-bottom .MuiChartsAxis-tickLabelStyle': {
                 angle: 90,

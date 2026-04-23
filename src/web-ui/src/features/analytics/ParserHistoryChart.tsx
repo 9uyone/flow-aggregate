@@ -332,18 +332,8 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
       ...forecastByTimestamp.keys(),
     ])).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
-    const labels = allTimestamps.map((timestamp) => {
-      const date = new Date(timestamp);
-      return date.toLocaleString('uk-UA', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    });
-
     return {
-      labels,
+      timestamps: allTimestamps,
       actualSeries: allTimestamps.map((timestamp) => actualByTimestamp.get(timestamp) ?? null),
       forecastSeries: allTimestamps.map((timestamp) => forecastByTimestamp.get(timestamp) ?? null),
     };
@@ -483,7 +473,7 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
                     chartError={chartError}
                     onDismissChartError={clearChartError}
                     isChartLoading={isChartLoading}
-                    chartLabels={mergedChartData.labels}
+                    chartTimestamps={mergedChartData.timestamps}
                     actualSeries={mergedChartData.actualSeries}
                     forecastSeries={mergedChartData.forecastSeries}
                     forecastError={forecastError}
