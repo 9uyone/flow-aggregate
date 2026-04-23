@@ -404,7 +404,7 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
 
   return (
     <Card sx={{ height: '100%' }}>
-      <CardContent>
+      <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
         <Stack spacing={3}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             <Box>

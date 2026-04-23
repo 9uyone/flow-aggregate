@@ -10,11 +10,8 @@ import {
   Stack,
   Typography,
   Divider,
-  useTheme,
 } from '@mui/material';
 import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { analyzeApi, type MetricQueryParams, type ParserMetricStats } from '../../api';
@@ -38,7 +35,6 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
   metric,
   queryParams,
 }) => {
-  const theme = useTheme();
   const hasRequiredInputs = Boolean(parserSlug && metric && queryParams);
   const [stats, setStats] = useState<ParserMetricStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -115,7 +111,6 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
   }
 
   const isPositiveTrend = stats.percentChange === null || stats.percentChange >= 0;
-  const TrendIcon = isPositiveTrend ? TrendingUpIcon : TrendingDownIcon;
 
   const formatNumber = (value: number): string => {
     if (Number.isInteger(value)) {
@@ -159,43 +154,22 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
 
   return (
     <Card sx={{ height: '100%' }}>
-      <CardHeader title="Metric Statistics" subheader={metric} />
-      <CardContent>
-        <Stack spacing={2.5}>
+      <CardHeader title="Metric Statistics" subheader={metric} sx={{ px: 3, pt: 3, pb: 1.5 }} />
+      <CardContent sx={{ p: 3, pt: 1.5, '&:last-child': { pb: 3 } }}>
+        <Stack spacing={3}>
           {/* Trend Summary */}
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              p: 2,
-              borderRadius: 1.5,
-              backgroundColor: isPositiveTrend
-                ? theme.palette.success.light
-                : theme.palette.warning.light,
+              border: (theme) => `1px solid ${theme.palette.divider}`,
+              borderRadius: 2,
+              p: 3,
             }}
           >
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                backgroundColor: isPositiveTrend
-                  ? theme.palette.success.main
-                  : theme.palette.warning.main,
-                color: 'white',
-              }}
-            >
-              <TrendIcon sx={{ fontSize: 28 }} />
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+            <Stack spacing={1}>
+              <Typography variant="caption" color="text.secondary">
                 Change
               </Typography>
-              <Typography variant="h6" fontWeight="bold">
+              <Typography variant="h4" fontWeight={600}>
                 {stats.percentChange !== null ? (
                   <>
                     {isPositiveTrend ? '+' : ''}
@@ -205,40 +179,34 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
                   'N/A'
                 )}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="body2" color="text.secondary">
                 {formatNumber(stats.delta)} ({isPositiveTrend ? 'increase' : 'decrease'})
               </Typography>
-            </Box>
-            <Box sx={{ textAlign: 'right' }}>
-              <Typography variant="caption" color="text.secondary" display="block">
+              <Typography variant="caption" color="text.secondary">
                 From: {stats.firstValue.toFixed(2)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
+                {' • '}
                 To: {stats.lastValue.toFixed(2)}
               </Typography>
-            </Box>
+            </Stack>
           </Box>
 
           <Divider />
 
           {/* Statistics Grid */}
-          <Grid container spacing={1.5}>
+          <Grid container spacing={3}>
             {statItems.map((item, idx) => (
               <Grid size={{ xs: 6, sm: 4 }} key={idx}>
                 <Box
                   sx={{
-                    p: 1.5,
-                    borderRadius: 1,
-                    backgroundColor: theme.palette.mode === 'light'
-                      ? theme.palette.grey[50]
-                      : theme.palette.grey[900],
-                    border: `1px solid ${theme.palette.divider}`,
+                    p: 2,
+                    borderRadius: 1.5,
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
                   }}
                 >
-                  <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                  <Typography variant="caption" color="text.secondary" display="block">
                     {item.label}
                   </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mt: 0.5 }}>
                     {item.value}
                   </Typography>
                   {item.unit && (
@@ -254,8 +222,8 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
           <Divider />
 
           {/* Timestamp Info */}
-          <Box sx={{ p: 1.5, backgroundColor: theme.palette.action.hover, borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+          <Box sx={{ p: 3, borderRadius: 1.5, border: (theme) => `1px solid ${theme.palette.divider}` }}>
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
               Data Range
             </Typography>
             <Stack spacing={0.5}>

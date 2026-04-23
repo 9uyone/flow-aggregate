@@ -28,11 +28,11 @@ export const AnalyticsInsightsCards: React.FC<AnalyticsInsightsCardsProps> = ({
   volatilityError,
 }) => {
   return (
-    <Grid container spacing={2}>
+    <Grid container spacing={3}>
       <Grid size={{ xs: 12, md: 6 }}>
         <Card variant="outlined" sx={{ height: '100%' }}>
-          <CardHeader title="Trend" subheader="/trend" />
-          <CardContent>
+          <CardHeader title="Trend" subheader="/trend" sx={{ px: 3, pt: 3, pb: 1.5 }} />
+          <CardContent sx={{ p: 3, pt: 1.5, '&:last-child': { pb: 3 } }}>
             {isTrendLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
                 <CircularProgress size={26} />
@@ -60,8 +60,8 @@ export const AnalyticsInsightsCards: React.FC<AnalyticsInsightsCardsProps> = ({
 
       <Grid size={{ xs: 12, md: 6 }}>
         <Card variant="outlined" sx={{ height: '100%' }}>
-          <CardHeader title="Volatility" subheader="/volatility" />
-          <CardContent>
+          <CardHeader title="Volatility" subheader="/volatility" sx={{ px: 3, pt: 3, pb: 1.5 }} />
+          <CardContent sx={{ p: 3, pt: 1.5, '&:last-child': { pb: 3 } }}>
             {isVolatilityLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
                 <CircularProgress size={26} />

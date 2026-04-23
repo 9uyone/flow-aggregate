@@ -185,15 +185,9 @@ export const AnalyticsDashboard: React.FC = () => {
               sx={{
                 height: '100%',
                 borderRadius: 2,
-                boxShadow: 3,
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 6,
-                },
               }}
             >
-              <CardContent>
+              <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
                 <Stack spacing={2}>
                   <Box
                     sx={{
@@ -282,9 +276,8 @@ export const AnalyticsDashboard: React.FC = () => {
       <Box sx={{ mt: 3 }}>
         <Paper
           sx={{
-            p: 2,
+            p: 3,
             borderRadius: 2,
-            boxShadow: 2,
             mb: 2,
           }}
         >

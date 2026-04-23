@@ -10,7 +10,7 @@ import {
 import {
   Tune as TuneIcon,
 } from '@mui/icons-material';
-import { FilterTextField, ParserFilterAutocomplete, type ParserSuggestion } from '../../components';
+import { DateRangeFilter, FilterTextField, ParserFilterAutocomplete, type ParserSuggestion } from '../../components';
 import type { ParserRunStatus } from '../../types/storage';
 
 export type HistoryStatusFilter = 'all' | ParserRunStatus;
@@ -56,87 +56,94 @@ export const HistoryFilters: React.FC<HistoryFiltersProps> = ({
     <>
       <Stack
         direction={{ xs: 'column', md: 'row' }}
-        spacing={1}
+        spacing={2}
         sx={{ mb: 2, alignItems: { xs: 'stretch', md: 'center' } }}
       >
-        <ToggleButtonGroup
-          value={statusFilter}
-          exclusive
-          onChange={(_, value: HistoryStatusFilter | null) => {
-            if (value !== null) {
-              onStatusFilterChange(value);
-            }
-          }}
-          size="small"
-          sx={{ width: { xs: '100%', md: 'auto' } }}
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          sx={{ flex: 1, minWidth: 0, alignItems: { md: 'center' } }}
         >
-          <ToggleButton
-            value="all"
-            sx={{
-              px: { xs: 1, md: 2 },
-              py: 0.7,
-              flex: { xs: 1, md: 'none' },
-              color: 'text.primary',
-              '&.Mui-selected, &.Mui-selected:hover': {
+          <ToggleButtonGroup
+            value={statusFilter}
+            exclusive
+            onChange={(_, value: HistoryStatusFilter | null) => {
+              if (value !== null) {
+                onStatusFilterChange(value);
+              }
+            }}
+            size="small"
+            sx={{ width: { xs: '100%', md: 'auto' }, flexWrap: { xs: 'wrap', md: 'nowrap' } }}
+          >
+            <ToggleButton
+              value="all"
+              sx={{
+                px: { xs: 1, md: 2 },
+                py: 0.7,
+                flex: { xs: 1, md: 'none' },
                 color: 'text.primary',
-              },
-            }}
-          >
-            All
-          </ToggleButton>
-          <ToggleButton
-            value="Running"
-            sx={{
-              px: { xs: 1, md: 2 },
-              py: 0.7,
-              flex: { xs: 1, md: 'none' },
-              color: 'info.main',
-              '&.Mui-selected, &.Mui-selected:hover': {
+                '&.Mui-selected, &.Mui-selected:hover': {
+                  color: 'text.primary',
+                },
+              }}
+            >
+              All
+            </ToggleButton>
+            <ToggleButton
+              value="Running"
+              sx={{
+                px: { xs: 1, md: 2 },
+                py: 0.7,
+                flex: { xs: 1, md: 'none' },
                 color: 'info.main',
-              },
-            }}
-          >
-            Running
-          </ToggleButton>
-          <ToggleButton
-            value="Success"
-            sx={{
-              px: { xs: 1, md: 2 },
-              py: 0.7,
-              flex: { xs: 1, md: 'none' },
-              color: 'success.main',
-              '&.Mui-selected, &.Mui-selected:hover': {
+                '&.Mui-selected, &.Mui-selected:hover': {
+                  color: 'info.main',
+                },
+              }}
+            >
+              Running
+            </ToggleButton>
+            <ToggleButton
+              value="Success"
+              sx={{
+                px: { xs: 1, md: 2 },
+                py: 0.7,
+                flex: { xs: 1, md: 'none' },
                 color: 'success.main',
-              },
-            }}
-          >
-            Success
-          </ToggleButton>
-          <ToggleButton
-            value="Failed"
-            sx={{
-              px: { xs: 1, md: 2 },
-              py: 0.7,
-              flex: { xs: 1, md: 'none' },
-              color: 'error.main',
-              '&.Mui-selected, &.Mui-selected:hover': {
+                '&.Mui-selected, &.Mui-selected:hover': {
+                  color: 'success.main',
+                },
+              }}
+            >
+              Success
+            </ToggleButton>
+            <ToggleButton
+              value="Failed"
+              sx={{
+                px: { xs: 1, md: 2 },
+                py: 0.7,
+                flex: { xs: 1, md: 'none' },
                 color: 'error.main',
-              },
-            }}
-          >
-            Failed
-          </ToggleButton>
-        </ToggleButtonGroup>
+                '&.Mui-selected, &.Mui-selected:hover': {
+                  color: 'error.main',
+                },
+              }}
+            >
+              Failed
+            </ToggleButton>
+          </ToggleButtonGroup>
 
-        <Box
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            width: '100%',
-            border: '1px solid',
-            borderColor: 'divider',
-            my: 0.5,
-          }}
-        />
+          <ParserFilterAutocomplete
+            value={parserSlugFilter}
+            options={parserSuggestions}
+            onChange={onParserSlugFilterChange}
+            placeholder="Parser"
+            sx={{
+              minWidth: { xs: '100%', md: 250 },
+              maxWidth: { md: 300 },
+            }}
+          />
+        </Stack>
 
         <ToggleButtonGroup
           value={sortOrder}
@@ -147,7 +154,7 @@ export const HistoryFilters: React.FC<HistoryFiltersProps> = ({
             }
           }}
           size="small"
-          sx={{ ml: { xs: 0, md: 'auto' }, width: { xs: '100%', md: 'auto' } }}
+          sx={{ ml: { xs: 0, md: 2 }, width: { xs: '100%', md: 'auto' } }}
         >
           <ToggleButton
             value="newest"
@@ -184,51 +191,32 @@ export const HistoryFilters: React.FC<HistoryFiltersProps> = ({
         </ToggleButtonGroup>
       </Stack>
 
-      <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-        <ParserFilterAutocomplete
-          value={parserSlugFilter}
-          options={parserSuggestions}
-          onChange={onParserSlugFilterChange}
+      <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+        <DateRangeFilter
+          fromValue={fromFilter}
+          toValue={toFilter}
+          onFromChange={onFromFilterChange}
+          onToChange={onToFilterChange}
         />
 
-        <FilterTextField
-          label="From"
-          type="datetime-local"
-          size="small"
-          value={fromFilter}
-          onChange={onFromFilterChange}
-          slotProps={{
-            inputLabel: { shrink: true },
-          }}
-        />
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', ml: { md: 'auto' } }}>
+          <Button
+            variant="outlined"
+            startIcon={<TuneIcon />}
+            onClick={onToggleAdvancedFilters}
+            sx={{ height: 40, textTransform: 'none' }}
+          >
+            Advanced filters
+          </Button>
 
-        <FilterTextField
-          label="To"
-          type="datetime-local"
-          size="small"
-          value={toFilter}
-          onChange={onToFilterChange}
-          slotProps={{
-            inputLabel: { shrink: true },
-          }}
-        />
-
-        <Button
-          variant="outlined"
-          startIcon={<TuneIcon />}
-          onClick={onToggleAdvancedFilters}
-          sx={{ alignSelf: 'center', height: 40, textTransform: 'none' }}
-        >
-          Advanced filters
-        </Button>
-
-        <Button
-          variant="text"
-          onClick={onClearFilters}
-          sx={{ alignSelf: 'center', height: 40 }}
-        >
-          Clear filters
-        </Button>
+          <Button
+            variant="text"
+            onClick={onClearFilters}
+            sx={{ height: 40 }}
+          >
+            Clear filters
+          </Button>
+        </Box>
       </Box>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -2, mb: 2 }}>

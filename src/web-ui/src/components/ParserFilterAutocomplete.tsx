@@ -1,6 +1,8 @@
 import {
   Autocomplete,
   TextField,
+  type SxProps,
+  type Theme,
 } from '@mui/material';
 
 export type ParserSuggestion = {
@@ -12,12 +14,16 @@ interface ParserFilterAutocompleteProps {
   value: string;
   options: ParserSuggestion[];
   onChange: (value: string) => void;
+  placeholder?: string;
+  sx?: SxProps<Theme>;
 }
 
 export const ParserFilterAutocomplete: React.FC<ParserFilterAutocompleteProps> = ({
   value,
   options,
   onChange,
+  placeholder = 'Filter by parser slug',
+  sx,
 }) => {
   return (
     <Autocomplete<ParserSuggestion, false, false, true>
@@ -61,11 +67,11 @@ export const ParserFilterAutocomplete: React.FC<ParserFilterAutocompleteProps> =
       renderInput={(params) => (
         <TextField
           {...params}
-          placeholder="Filter by parser slug"
+          placeholder={placeholder}
           size="small"
           sx={{
             '& .MuiInputBase-input': {
-              fontSize: '0.85rem',
+              fontSize: '0.95rem',
             },
           }}
         />
@@ -100,7 +106,7 @@ export const ParserFilterAutocomplete: React.FC<ParserFilterAutocompleteProps> =
           },
         },
       }}
-      sx={{ minWidth: 280 }}
+      sx={[{ minWidth: 280 }, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
     />
   );
 };

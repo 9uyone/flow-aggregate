@@ -15,7 +15,7 @@ import {
   Search as SearchIcon,
   Tune as TuneIcon,
 } from '@mui/icons-material';
-import { FilterTextField, ParserFilterAutocomplete, type ParserSuggestion } from '../../components';
+import { DateRangeFilter, FilterTextField, ParserFilterAutocomplete, type ParserSuggestion } from '../../components';
 
 interface CollectedDataFiltersProps {
   searchQuery: string;
@@ -62,48 +62,62 @@ export const CollectedDataFilters: React.FC<CollectedDataFiltersProps> = ({
     <>
       <Stack
         direction={{ xs: 'column', md: 'row' }}
-        spacing={1}
+        spacing={2}
         sx={{ mb: 2, alignItems: { xs: 'stretch', md: 'center' } }}
       >
-        <TextField
-          placeholder="Search parser / IDs / metric value"
-          size="small"
-          value={searchQuery}
-          onChange={(event) => onSearchQueryChange(event.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-              endAdornment: searchQuery ? (
-                <InputAdornment position="end">
-                  <IconButton
-                    size="small"
-                    edge="end"
-                    aria-label="Clear search"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => onSearchQueryChange('')}
-                  >
-                    <ClearIcon fontSize="inherit" />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
-            },
-          }}
-          sx={{ minWidth: { xs: '100%', md: 340 } }}
-        />
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          sx={{ flex: 1, minWidth: 0, alignItems: { md: 'center' } }}
+        >
+          <Box sx={{ flex: 1, minWidth: { xs: '100%', md: 300 } }}>
+            <TextField
+              placeholder="Search"
+              size="small"
+              value={searchQuery}
+              onChange={(event) => onSearchQueryChange(event.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        edge="end"
+                        aria-label="Clear search"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => onSearchQueryChange('')}
+                      >
+                        <ClearIcon fontSize="inherit" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                },
+              }}
+              fullWidth
+              sx={{
+                '& .MuiInputBase-input': {
+                  fontSize: '0.95rem',
+                },
+              }}
+            />
+          </Box>
 
-        <Box
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            width: '100%',
-            border: '1px solid',
-            borderColor: 'divider',
-            my: 0.5,
-          }}
-        />
+          <ParserFilterAutocomplete
+            value={parserSlugFilter}
+            options={parserSuggestions}
+            onChange={onParserSlugFilterChange}
+            placeholder="Parser"
+            sx={{
+              minWidth: { xs: '100%', md: 250 },
+              maxWidth: { md: 300 },
+            }}
+          />
+        </Stack>
 
         <ToggleButtonGroup
           value={sortOrder}
@@ -114,7 +128,7 @@ export const CollectedDataFilters: React.FC<CollectedDataFiltersProps> = ({
             }
           }}
           size="small"
-          sx={{ ml: { xs: 0, md: 'auto' }, width: { xs: '100%', md: 'auto' } }}
+          sx={{ ml: { xs: 0, md: 2 }, width: { xs: '100%', md: 'auto' } }}
         >
           <ToggleButton
             value="newest"
@@ -143,55 +157,36 @@ export const CollectedDataFilters: React.FC<CollectedDataFiltersProps> = ({
         </ToggleButtonGroup>
       </Stack>
 
-      <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-        <ParserFilterAutocomplete
-          value={parserSlugFilter}
-          options={parserSuggestions}
-          onChange={onParserSlugFilterChange}
+      <Box sx={{ mb: 3, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+        <DateRangeFilter
+          fromValue={fromFilter}
+          toValue={toFilter}
+          onFromChange={onFromFilterChange}
+          onToChange={onToFilterChange}
         />
 
-        <FilterTextField
-          label="From"
-          type="datetime-local"
-          size="small"
-          value={fromFilter}
-          onChange={onFromFilterChange}
-          slotProps={{
-            inputLabel: { shrink: true },
-          }}
-        />
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', ml: { md: 'auto' } }}>
+          <Button
+            variant="outlined"
+            startIcon={<TuneIcon />}
+            onClick={onToggleAdvancedFilters}
+            sx={{ height: 40, textTransform: 'none' }}
+          >
+            Advanced filters
+          </Button>
 
-        <FilterTextField
-          label="To"
-          type="datetime-local"
-          size="small"
-          value={toFilter}
-          onChange={onToFilterChange}
-          slotProps={{
-            inputLabel: { shrink: true },
-          }}
-        />
-
-        <Button
-          variant="outlined"
-          startIcon={<TuneIcon />}
-          onClick={onToggleAdvancedFilters}
-          sx={{ alignSelf: 'center', height: 40, textTransform: 'none' }}
-        >
-          Advanced filters
-        </Button>
-
-        <Button
-          variant="text"
-          onClick={onClearFilters}
-          sx={{ alignSelf: 'center', height: 40 }}
-        >
-          Clear filters
-        </Button>
+          <Button
+            variant="text"
+            onClick={onClearFilters}
+            sx={{ height: 40 }}
+          >
+            Clear filters
+          </Button>
+        </Box>
       </Box>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -2, mb: 2 }}>
-        Suggestions match slug and display name; filter is applied by slug.
+        Parser suggestions match slug and display name; filter is applied by slug.
       </Typography>
 
       <Collapse in={isAdvancedFiltersOpen}>
