@@ -1,11 +1,31 @@
-version: '3'
+version: "3"
 
 tasks:
-  docker:up-services:
+  up-rr:
+    desc: Start redis, rabbitmq containers
+    cmds:
+      - docker compose up -d redis mongo rabbitmq
+
+  up-deps:
     desc: Start redis, mongo, rabbitmq and mongo-express containers
     cmds:
-      - docker compose -f docker-compose.yml -f docker-compose.override.yml up -d redis mongo rabbitmq mongo-express
-  docker:stop-all:
+      - docker compose up -d redis mongo rabbitmq mongo-express
+
+  up-aspnet:
+    desc: Start all containers from compose project
+    cmds:
+      - docker compose up -d gateway analyze auth collector storage scheduler
+
+  up-all:
+    desc: Start all containers from compose project (except mongo)
+    deps: [up-deps, up-aspnet]
+
+  up-all-mongo:
+    desc: Start all containers from compose project
+    cmds:
+      - docker compose up -d
+
+  stop:
     desc: Stop all containers from compose project
     cmds:
-      - docker compose -f docker-compose.yml -f docker-compose.override.yml stop
+      - docker compose stop
