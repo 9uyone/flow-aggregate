@@ -39,14 +39,14 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
   queryParams,
 }) => {
   const theme = useTheme();
+  const hasRequiredInputs = Boolean(parserSlug && metric && queryParams);
   const [stats, setStats] = useState<ParserMetricStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch stats data
   useEffect(() => {
-    if (!parserSlug || !metric || !queryParams) {
-      setStats(null);
+    if (!hasRequiredInputs || !parserSlug || !metric || !queryParams) {
       return;
     }
 
@@ -70,9 +70,9 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
     };
 
     void fetchStats();
-  }, [parserSlug, metric, queryParams]);
+  }, [hasRequiredInputs, parserSlug, metric, queryParams]);
 
-  if (!parserSlug || !metric) {
+  if (!hasRequiredInputs) {
     return (
       <Card>
         <CardContent>

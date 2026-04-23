@@ -1,5 +1,5 @@
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { Alert } from '@mui/material';
+import { Alert, Stack } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/authApi';
@@ -51,10 +51,8 @@ export const GoogleLoginButton: React.FC = () => {
     setError('Google login was cancelled or failed');
   };
 
-  let googleButton: React.ReactNode = null;
-
-  try {
-    googleButton = (
+  return (
+    <Stack spacing={2}>
       <GoogleLogin
         onSuccess={handleSuccess}
         onError={handleError}
@@ -63,26 +61,13 @@ export const GoogleLoginButton: React.FC = () => {
         width="400"
         logo_alignment="left"
       />
-    );
-  } catch (gsiError) {
-    console.error('Google GSI initialization error:', gsiError);
-    googleButton = (
-      <Alert severity="warning">
-        Google Sign-In is temporarily unavailable. Please try again later.
-      </Alert>
-    );
-  }
-
-  return (
-    <>
-      {googleButton}
 
       {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
+        <Alert severity="error">
           {error}
         </Alert>
       )}
-    </>
+    </Stack>
   );
 };
 

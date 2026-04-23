@@ -618,6 +618,7 @@ export const storageApi = {
    * @deprecated - endpoint not available yet
    */
   stopParser: async (_slug: string): Promise<void> => {
+    void _slug;
     // TODO: implement when backend endpoint is ready
     // Will use correlationId instead of slug
     throw new Error('Stop parser endpoint not yet implemented');

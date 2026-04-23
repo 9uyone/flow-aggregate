@@ -53,6 +53,7 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
 
   useEffect(() => {
     if (!selectedParserSlug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMetricOptions([]);
       setSelectedMetric('');
       setSelectedDimensions({});
@@ -108,6 +109,7 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
 
   useEffect(() => {
     if (!selectedParserSlug || !selectedMetricOption) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDimensionOptionsByKey((prev) => (Object.keys(prev).length === 0 ? prev : {}));
       setDimensionOptionsError((prev) => (prev === null ? prev : null));
       setIsDimensionOptionsLoading((prev) => (prev ? false : prev));

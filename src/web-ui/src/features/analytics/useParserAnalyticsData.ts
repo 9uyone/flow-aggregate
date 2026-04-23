@@ -21,6 +21,8 @@ export const useParserAnalyticsData = ({
   insightRequest,
   forecastRequest,
 }: UseParserAnalyticsDataArgs) => {
+  const canFetchHistory = Boolean(selectedParserSlug && historyRequest);
+  const canFetchInsights = Boolean(selectedParserSlug && insightRequest);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [isChartLoading, setIsChartLoading] = useState(false);
   const [chartError, setChartError] = useState<string | null>(null);
@@ -40,9 +42,7 @@ export const useParserAnalyticsData = ({
   const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
-    if (!selectedParserSlug || !historyRequest) {
-      setChartData([]);
-      setChartError(null);
+    if (!canFetchHistory || !selectedParserSlug || !historyRequest) {
       return;
     }
 
@@ -64,12 +64,10 @@ export const useParserAnalyticsData = ({
     };
 
     void fetchHistoryData();
-  }, [selectedParserSlug, historyRequest, refreshVersion]);
+  }, [canFetchHistory, selectedParserSlug, historyRequest, refreshVersion]);
 
   useEffect(() => {
-    if (!selectedParserSlug || !insightRequest) {
-      setTrend(null);
-      setTrendError(null);
+    if (!canFetchInsights || !selectedParserSlug || !insightRequest) {
       return;
     }
 
@@ -90,12 +88,10 @@ export const useParserAnalyticsData = ({
     };
 
     void fetchTrend();
-  }, [selectedParserSlug, insightRequest, refreshVersion]);
+  }, [canFetchInsights, selectedParserSlug, insightRequest, refreshVersion]);
 
   useEffect(() => {
-    if (!selectedParserSlug || !insightRequest) {
-      setVolatility(null);
-      setVolatilityError(null);
+    if (!canFetchInsights || !selectedParserSlug || !insightRequest) {
       return;
     }
 
@@ -116,14 +112,11 @@ export const useParserAnalyticsData = ({
     };
 
     void fetchVolatility();
-  }, [selectedParserSlug, insightRequest, refreshVersion]);
+  }, [canFetchInsights, selectedParserSlug, insightRequest, refreshVersion]);
 
+  const canFetchForecast = Boolean(selectedParserSlug && forecastRequest && chartData.length > 1);
   useEffect(() => {
-    const canFetchForecast = chartData.length > 1;
-
-    if (!selectedParserSlug || !forecastRequest || !canFetchForecast) {
-      setForecast(null);
-      setForecastError(null);
+    if (!canFetchForecast || !selectedParserSlug || !forecastRequest) {
       return;
     }
 
@@ -144,7 +137,7 @@ export const useParserAnalyticsData = ({
     };
 
     void fetchForecast();
-  }, [selectedParserSlug, forecastRequest, chartData.length, refreshVersion]);
+  }, [canFetchForecast, selectedParserSlug, forecastRequest, refreshVersion]);
 
   const refresh = () => {
     setRefreshVersion((prev) => prev + 1);
@@ -153,19 +146,19 @@ export const useParserAnalyticsData = ({
   const clearChartError = () => setChartError(null);
 
   return {
-    chartData,
-    isChartLoading,
-    chartError,
+    chartData: canFetchHistory ? chartData : [],
+    isChartLoading: canFetchHistory ? isChartLoading : false,
+    chartError: canFetchHistory ? chartError : null,
     clearChartError,
-    trend,
-    isTrendLoading,
-    trendError,
-    volatility,
-    isVolatilityLoading,
-    volatilityError,
-    forecast,
-    isForecastLoading,
-    forecastError,
+    trend: canFetchInsights ? trend : null,
+    isTrendLoading: canFetchInsights ? isTrendLoading : false,
+    trendError: canFetchInsights ? trendError : null,
+    volatility: canFetchInsights ? volatility : null,
+    isVolatilityLoading: canFetchInsights ? isVolatilityLoading : false,
+    volatilityError: canFetchInsights ? volatilityError : null,
+    forecast: canFetchForecast ? forecast : null,
+    isForecastLoading: canFetchForecast ? isForecastLoading : false,
+    forecastError: canFetchForecast ? forecastError : null,
     refresh,
   };
 };
