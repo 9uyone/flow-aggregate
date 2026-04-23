@@ -4,6 +4,7 @@ using Common.Interfaces.Parser;
 using Common.Exceptions;
 using Common.Constants;
 using Common.Contracts.Parser;
+using System.Globalization;
 
 namespace CollectorService.Parsers.OpenWeather;
 
@@ -44,8 +45,8 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 				[MetadataKeys.Provider] = "OpenWeatherMap",
 				["city"] = city.ToLower().Replace(" ", "_"),
 				["description"] = weather.Weather.FirstOrDefault()?.Description ?? "No description",
-				["humidityPercent"] = $"{weather.Main.Humidity}",
-				["windSpeed"] = $"{weather.Wind.Speed}",
+				["humidityPercent"] = weather.Main.Humidity.ToString(CultureInfo.InvariantCulture),
+				["windSpeed"] = weather.Wind.Speed.ToString(CultureInfo.InvariantCulture),
 				["location"] = $"{location.Name}, {location.Country}"
 			}
 		}];

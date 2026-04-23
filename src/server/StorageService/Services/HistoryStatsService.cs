@@ -31,7 +31,6 @@ public sealed class HistoryStatsService(IMongoDatabase db) : IHistoryStatsServic
 
 		var collection = db.GetCollection<DataCollectedEvent>(MongoCollections.CollectedData);
 		var filter = Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug)
-			& Builders<DataCollectedEvent>.Filter.Eq(x => x.Metric, metric)
 			& Builders<DataCollectedEvent>.Filter.Gte(x => x.CapturedAt, from)
 			& Builders<DataCollectedEvent>.Filter.Lte(x => x.CapturedAt, to);
 
@@ -44,18 +43,22 @@ public sealed class HistoryStatsService(IMongoDatabase db) : IHistoryStatsServic
 			}
 		}
 
+		var metricValueExpr = MetricValueExpressionBuilder.Build(metric);
+
 		var data = await collection.Aggregate()
 			.Match(filter)
-			.SortBy(x => x.CapturedAt)
+			.AppendStage<BsonDocument>(new BsonDocument("$addFields", new BsonDocument("metricValue", metricValueExpr)))
+			.AppendStage<BsonDocument>(new BsonDocument("$match", new BsonDocument("metricValue", new BsonDocument("$ne", BsonNull.Value))))
+			.AppendStage<BsonDocument>(new BsonDocument("$sort", new BsonDocument("CapturedAt", 1)))
 			.AppendStage<BsonDocument>(new BsonDocument("$group", new BsonDocument
 			{
 				{ "_id", BsonNull.Value },
 				{ "count", new BsonDocument("$sum", 1) },
-				{ "min", new BsonDocument("$min", new BsonDocument("$toDouble", "$Value")) },
-				{ "max", new BsonDocument("$max", new BsonDocument("$toDouble", "$Value")) },
-				{ "average", new BsonDocument("$avg", new BsonDocument("$toDouble", "$Value")) },
-				{ "firstValue", new BsonDocument("$first", new BsonDocument("$toDouble", "$Value")) },
-				{ "lastValue", new BsonDocument("$last", new BsonDocument("$toDouble", "$Value")) },
+				{ "min", new BsonDocument("$min", "$metricValue") },
+				{ "max", new BsonDocument("$max", "$metricValue") },
+				{ "average", new BsonDocument("$avg", "$metricValue") },
+				{ "firstValue", new BsonDocument("$first", "$metricValue") },
+				{ "lastValue", new BsonDocument("$last", "$metricValue") },
 				{ "firstTimestamp", new BsonDocument("$first", "$CapturedAt") },
 				{ "lastTimestamp", new BsonDocument("$last", "$CapturedAt") }
 			}))

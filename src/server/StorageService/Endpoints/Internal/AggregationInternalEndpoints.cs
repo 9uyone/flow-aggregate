@@ -1,6 +1,7 @@
 ﻿using Common.Constants;
 using Common.Contracts.Events;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using StorageService.Services;
 
@@ -42,8 +43,55 @@ public static partial class StorageEndpoints {
 
 		group.MapGet("/metrics/{slug}", async (string slug, IMongoDatabase db) => {
 			var collection = db.GetCollection<DataCollectedEvent>(MongoCollections.CollectedData);
-			var metrics = await collection.Distinct<string>("Metric", Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug)).ToListAsync();
-			return Results.Ok(metrics);
+			var parserFilter = Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug);
+
+			var directMetrics = await collection.Distinct<string>("Metric", parserFilter).ToListAsync();
+			var metadataMetricKeys = await collection.Aggregate()
+				.Match(parserFilter)
+				.AppendStage<BsonDocument>(new BsonDocument("$project", new BsonDocument("metadataArray", new BsonDocument("$objectToArray", new BsonDocument("$ifNull", new BsonArray { "$Metadata", new BsonDocument() })))))
+				.AppendStage<BsonDocument>(new BsonDocument("$unwind", "$metadataArray"))
+				.AppendStage<BsonDocument>(new BsonDocument("$match", new BsonDocument("$expr", new BsonDocument("$ne", new BsonArray {
+					new BsonDocument("$convert", new BsonDocument {
+						{ "input", new BsonDocument("$replaceAll", new BsonDocument {
+							{ "input", new BsonDocument("$toString", "$metadataArray.v") },
+							{ "find", "," },
+							{ "replacement", "." }
+						})},
+						{ "to", "double" },
+						{ "onError", BsonNull.Value },
+						{ "onNull", BsonNull.Value }
+					}),
+					BsonNull.Value
+				}))))
+				.AppendStage<BsonDocument>(new BsonDocument("$group", new BsonDocument("_id", "$metadataArray.k")))
+				.ToListAsync();
+
+			var excludedMetadataKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+				MetadataKeys.Provider,
+				"description",
+				"location"
+			};
+
+			var primaryMetrics = directMetrics
+				.Where(x => !string.IsNullOrWhiteSpace(x))
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.OrderBy(x => x)
+				.ToArray();
+
+			var secondaryMetrics = metadataMetricKeys
+				.Select(x => x["_id"].AsString)
+				.Where(x => !string.IsNullOrWhiteSpace(x))
+				.Where(x => !excludedMetadataKeys.Contains(x))
+				.Where(x => !primaryMetrics.Contains(x, StringComparer.OrdinalIgnoreCase))
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.OrderBy(x => x)
+				.ToArray();
+
+			var result = primaryMetrics
+				.Concat(secondaryMetrics)
+				.ToArray();
+
+			return Results.Ok(result);
 		});
 
 		group.MapGet("/dimension-options/{slug}", async (HttpContext context, string slug,

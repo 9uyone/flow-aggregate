@@ -82,7 +82,6 @@ public static class Endpoints {
 			var result = recordMetrics
 				.Where(x => !string.IsNullOrWhiteSpace(x))
 				.Distinct(StringComparer.OrdinalIgnoreCase)
-				.OrderBy(x => x)
 				.Select(metric => new MetricOptionResponse(metric, dimensions))
 				.ToArray();
 

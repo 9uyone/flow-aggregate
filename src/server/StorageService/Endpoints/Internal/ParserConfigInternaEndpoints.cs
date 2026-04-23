@@ -5,7 +5,7 @@ using StorageService.Services;
 namespace StorageService.Endpoints;
 
 public static partial class StorageEndpoints {
-	public static void MapInternalParserConfigEndpoints(this IEndpointRouteBuilder app) {
+	public static void MapParserConfigInternaEndpoints(this IEndpointRouteBuilder app) {
 		var group = app.MapGroup("/internal/storage/parser-cfg");
 
 		group.MapGet("/full-context/{configId}", async (Guid configId, ParserConfigInternalService service) => {

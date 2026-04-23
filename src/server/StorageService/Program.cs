@@ -51,7 +51,7 @@ app.UseAuthorization();
 
 app.MapParserConfigEndpoints();
 app.MapParserCatalogEndpoints();
-app.MapInternalParserConfigEndpoints();
+app.MapParserConfigInternaEndpoints();
 app.MapCollectedDataEndpoints();
 app.MapTasksEndpoints();
 app.MapAggregationInternalEndpoints();

@@ -33,7 +33,6 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 
 		var collection = db.GetCollection<DataCollectedEvent>(MongoCollections.CollectedData);
 		var filter = Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug)
-			& Builders<DataCollectedEvent>.Filter.Eq(x => x.Metric, metric)
 			& Builders<DataCollectedEvent>.Filter.Gte(x => x.CapturedAt, from)
 			& Builders<DataCollectedEvent>.Filter.Lte(x => x.CapturedAt, to);
 
@@ -46,8 +45,12 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 			}
 		}
 
+		var metricValueExpr = MetricValueExpressionBuilder.Build(metric);
+
 		var data = await collection.Aggregate()
 			.Match(filter)
+			.AppendStage<BsonDocument>(new BsonDocument("$addFields", new BsonDocument("metricValue", metricValueExpr)))
+			.AppendStage<BsonDocument>(new BsonDocument("$match", new BsonDocument("metricValue", new BsonDocument("$ne", BsonNull.Value))))
 			.AppendStage<BsonDocument>(new BsonDocument("$group", new BsonDocument
 			{
 				{
@@ -58,7 +61,7 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 						{ "timezone", "UTC" }
 					})
 				},
-				{ "value", new BsonDocument("$avg", new BsonDocument("$toDouble", "$Value")) }
+				{ "value", new BsonDocument("$avg", "$metricValue") }
 			}))
 			.AppendStage<BsonDocument>(new BsonDocument("$project", new BsonDocument
 			{
@@ -91,8 +94,11 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 			return new DimensionOptionsResult(false, "Dimension key is required.", null);
 
 		var collection = db.GetCollection<DataCollectedEvent>(MongoCollections.CollectedData);
+		var metricFilter = Builders<DataCollectedEvent>.Filter.Or(
+			Builders<DataCollectedEvent>.Filter.Eq(x => x.Metric, metric),
+			Builders<DataCollectedEvent>.Filter.Exists($"Metadata.{metric}", true));
 		var filter = Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug)
-			& Builders<DataCollectedEvent>.Filter.Eq(x => x.Metric, metric);
+			& metricFilter;
 
 		if (dimensions is not null) {
 			foreach (var dimension in dimensions) {
