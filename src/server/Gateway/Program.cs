@@ -19,10 +19,12 @@ builder.Services.AddGlobalExceptionHandler();
 builder.Services.AddCors(options => {
 	options.AddPolicy("AllowFrontend",
 		policy => {
-			policy.WithOrigins("http://localhost:3000")
-				  .AllowAnyHeader()
-				  .AllowAnyMethod();
-				  //.AllowCredentials(); // Use with caution, often required for authenticated requests
+			//policy.WithOrigins("http://localhost:3000")
+				//.WithOrigins("https://diploma-ui.9uyone.pp.ua")
+			policy.AllowAnyOrigin()
+				.AllowAnyHeader()
+				.AllowAnyMethod();
+			//.AllowCredentials(); // Use with caution, often required for authenticated requests
 		});
 });
 
