@@ -3,11 +3,12 @@ import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { darkTheme } from './theme/theme';
+import { darkTheme, lightTheme } from './theme/theme';
 import { AppShell } from './components/layout';
 import { LoadingSpinner } from './components';
 import { LoginPage } from './features/auth';
 import { useAuthStore } from './store/authStore';
+import { useThemeStore } from './store/themeStore';
 import { googleConfig } from './config/google';
 import { useMe } from './hooks';
 
@@ -18,6 +19,7 @@ import { useMe } from './hooks';
  * so the UI renders only after authentication state is stable.
  */
 function App() {
+  const mode = useThemeStore((state) => state.mode);
   const {
     isAuthenticated,
     isInitialized,
@@ -29,6 +31,7 @@ function App() {
     isFetched: isMeFetched,
     isError: isMeError,
   } = useMe();
+  const selectedTheme = mode === 'dark' ? darkTheme : lightTheme;
 
   useEffect(() => {
     if (isInitialized) {
@@ -60,7 +63,7 @@ function App() {
   // Loading state while initializing authenticated session
   if (isAuthenticated && !isInitialized && isMeLoading && !isMeFetched) {
     return (
-      <ThemeProvider theme={darkTheme}>
+      <ThemeProvider theme={selectedTheme}>
         <CssBaseline />
         <LoadingSpinner message="Loading..." />
       </ThemeProvider>
@@ -69,7 +72,7 @@ function App() {
 
   return (
     <GoogleOAuthProvider clientId={googleConfig.clientId}>
-      <ThemeProvider theme={darkTheme}>
+      <ThemeProvider theme={selectedTheme}>
         <CssBaseline />
         <Routes>
           <Route

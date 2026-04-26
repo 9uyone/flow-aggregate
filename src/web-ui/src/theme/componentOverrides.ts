@@ -65,6 +65,7 @@ export const darkComponentOverrides = {
     styleOverrides: {
       root: {
         backgroundImage: 'none',
+        borderRadius: 10,
         border: '1px solid rgba(255, 255, 255, 0.08)',
         boxShadow: 'none',
       },
@@ -77,6 +78,7 @@ export const darkComponentOverrides = {
     styleOverrides: {
       root: {
         backgroundImage: 'none',
+        borderRadius: 10,
         border: '1px solid rgba(255, 255, 255, 0.08)',
         boxShadow: 'none',
       },
@@ -129,6 +131,20 @@ export const lightComponentOverrides = {
         padding: '6px 12px',
         borderRadius: 8,
         boxShadow: 'none',
+      },
+    },
+  },
+  MuiPaper: {
+    styleOverrides: {
+      root: {
+        borderRadius: 10,
+      },
+    },
+  },
+  MuiCard: {
+    styleOverrides: {
+      root: {
+        borderRadius: 10,
       },
     },
   },

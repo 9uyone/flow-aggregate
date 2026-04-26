@@ -20,12 +20,13 @@ import {
   ListItemButton,
 } from '@mui/material';
 import {
-  Dashboard as DashboardIcon,
   Menu as MenuIcon,
   Assessment as AssessmentIcon,
   Storage as StorageIcon,
   History as HistoryIcon,
   Dataset as DatasetIcon,
+  DarkModeOutlined as DarkModeIcon,
+  LightModeOutlined as LightModeIcon,
 } from '@mui/icons-material';
 import { AnalyticsDashboard } from '../../features/analytics';
 import { CollectedDataGrid } from '../../features/data';
@@ -33,9 +34,12 @@ import { HistoryDataGrid } from '../../features/history';
 import { ParserList } from '../../features/parsers';
 import { useAuthStore } from '../../store/authStore';
 import { useParserStore } from '../../store/parserStore';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useThemeStore } from '../../store/themeStore';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGlobalTaskPolling } from '../../hooks';
 import { UserProfileMenu } from './UserProfileMenu';
+import Logo from '../../../assets/logo-no-light.svg';
+//import Logo from '../../../assets/logo.svg';
 
 type ViewType = 'overview' | 'history' | 'data' | 'management';
 
@@ -53,6 +57,8 @@ export const AppShell: React.FC = () => {
   
   const { user, logout } = useAuthStore();
   const { fetchConfigs } = useParserStore();
+  const mode = useThemeStore((state) => state.mode);
+  const toggleMode = useThemeStore((state) => state.toggleMode);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -104,7 +110,7 @@ export const AppShell: React.FC = () => {
     <Box sx={{ width: 250, pt: 2 }}>
       <Box sx={{ px: 2, mb: 3 }}>
         <Typography variant="h6" fontWeight="bold" color="primary">
-          Flow Aggregate
+          FlowAggregate
         </Typography>
       </Box>
       <Divider />
@@ -181,27 +187,23 @@ export const AppShell: React.FC = () => {
             )}
 
             {/* Logo/Title */}
-            <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-              <DashboardIcon
-                sx={{
-                  fontSize: 32,
-                  mr: 1.5,
-                  color: 'primary.main',
-                }}
-              />
-              <Typography
-                variant="h6"
-                fontWeight="bold"
-                sx={{
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                Flow Aggregate
-              </Typography>
-            </Box>
+            <Link to="/overview" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+                <img src={Logo} alt="FlowAggregate Logo" style={{ height: 40, marginRight: 12 }} />
+                <Typography
+                  variant="h6"
+                  fontWeight="bold"
+                  sx={{
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  FlowAggregate
+                </Typography>
+              </Box>
+            </Link>
 
             {/* Desktop Navigation Tabs */}
             {!isMobile && (
@@ -246,25 +248,28 @@ export const AppShell: React.FC = () => {
               </Tabs>
             )}
 
-            {/* System Status Chip */}
-            <Chip
-              label="System online"
-              color="success"
-              size="small"
-              sx={{
-                mr: 2,
-                fontWeight: 600,
-                display: { xs: 'none', sm: 'flex' },
-              }}
-            />
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconButton
+                size="small"
+                onClick={toggleMode}
+                aria-label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                sx={{
+                  border: `1px solid ${theme.palette.divider}`,
+                  color: 'text.primary',
+                  marginRight: 1
+                }}
+              >
+                {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+              </IconButton>
 
-            {/* User Avatar */}
-            <UserProfileMenu
-              user={user}
-              onLogout={handleLogout}
-              size="medium"
-              bordered
-            />
+              {/* User Avatar */}
+              <UserProfileMenu
+                user={user}
+                onLogout={handleLogout}
+                size={isMobile ? 'small' : 'medium'}
+                bordered={!isMobile}
+              />
+            </Box>
           </Container>
         </Toolbar>
       </AppBar>
