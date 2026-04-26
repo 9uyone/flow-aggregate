@@ -4,7 +4,6 @@ import {
   Box,
   Toolbar,
   Typography,
-  Chip,
   Tabs,
   Tab,
   Container,
@@ -189,7 +188,7 @@ export const AppShell: React.FC = () => {
             {/* Logo/Title */}
             <Link to="/overview" style={{ textDecoration: 'none', color: 'inherit' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                <img src={Logo} alt="FlowAggregate Logo" style={{ height: 40, marginRight: 12 }} />
+                <Box component="img" src={Logo} alt="FlowAggregate Logo" style={{ height: 40, marginRight: 12, filter: 'drop-shadow(0 0 2px rgba(129, 140, 248, 0.2))' }} />
                 <Typography
                   variant="h6"
                   fontWeight="bold"
