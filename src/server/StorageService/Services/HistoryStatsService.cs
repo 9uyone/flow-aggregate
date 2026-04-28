@@ -17,12 +17,15 @@ public sealed record HistoryStatsDto(
 
 public sealed record HistoryStatsResult(bool Success, string? ErrorMessage, HistoryStatsDto? Data);
 
-public interface IHistoryStatsService {
-	Task<HistoryStatsResult> GetStatsAsync(string slug, string metric, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default);
+public interface IHistoryStatsService
+{
+	Task<HistoryStatsResult> GetStatsAsync(Guid? userId, string slug, string metric, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default);
 }
 
-public sealed class HistoryStatsService(IMongoDatabase db) : IHistoryStatsService {
-	public async Task<HistoryStatsResult> GetStatsAsync(string slug, string metric, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default) {
+public sealed class HistoryStatsService(IMongoDatabase db) : IHistoryStatsService
+{
+	public async Task<HistoryStatsResult> GetStatsAsync(Guid? userId, string slug, string metric, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default)
+	{
 		if (string.IsNullOrWhiteSpace(metric))
 			return new HistoryStatsResult(false, "Metric is required.", null);
 
@@ -31,11 +34,18 @@ public sealed class HistoryStatsService(IMongoDatabase db) : IHistoryStatsServic
 
 		var collection = db.GetCollection<DataCollectedEvent>(MongoCollections.CollectedData);
 		var filter = Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug)
-			& Builders<DataCollectedEvent>.Filter.Gte(x => x.CapturedAt, from)
-			& Builders<DataCollectedEvent>.Filter.Lte(x => x.CapturedAt, to);
+	& Builders<DataCollectedEvent>.Filter.Gte(x => x.CapturedAt, from)
+	& Builders<DataCollectedEvent>.Filter.Lte(x => x.CapturedAt, to);
 
-		if (dimensions is not null) {
-			foreach (var dimension in dimensions) {
+		if (userId.HasValue)
+		{
+			filter &= Builders<DataCollectedEvent>.Filter.Eq(x => x.UserId, userId.Value);
+		}
+
+		if (dimensions is not null)
+		{
+			foreach (var dimension in dimensions)
+			{
 				if (string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value))
 					continue;
 
@@ -64,7 +74,8 @@ public sealed class HistoryStatsService(IMongoDatabase db) : IHistoryStatsServic
 			}))
 			.FirstOrDefaultAsync(cancellationToken);
 
-		if (data is null) {
+		if (data is null)
+		{
 			return new HistoryStatsResult(true, null, new HistoryStatsDto(0, 0, 0, 0, 0, 0, null, null));
 		}
 

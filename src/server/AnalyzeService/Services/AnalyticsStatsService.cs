@@ -27,23 +27,28 @@ public sealed record StorageStatsDto(
 	string? FirstTimestamp,
 	string? LastTimestamp);
 
-public interface IAnalyticsStatsService {
+public interface IAnalyticsStatsService
+{
 	Task<AnalyticsStatsResult> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
 }
 
-public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsCache cache) : IAnalyticsStatsService {
-	public async Task<AnalyticsStatsResult> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
+public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsCache cache) : IAnalyticsStatsService
+{
+	public async Task<AnalyticsStatsResult> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default)
+	{
 		if (string.IsNullOrWhiteSpace(request.Metric))
 			return new AnalyticsStatsResult(false, "Metric is required.", null);
 
 		DateTime from;
 		DateTime to;
 
-		if (!string.IsNullOrWhiteSpace(request.Range)) {
+		if (!string.IsNullOrWhiteSpace(request.Range))
+		{
 			if (!AnalyticsTimeRangeResolver.TryResolvePreset(request.Range, out from, out to, out _))
 				return new AnalyticsStatsResult(false, "Range must be one of: day, week, month, quarter, year, all, all-time.", null);
 		}
-		else {
+		else
+		{
 			if (request.From is null || request.To is null)
 				return new AnalyticsStatsResult(false, "from and to are required when range is not specified.", null);
 
@@ -54,10 +59,12 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 		if (from > to)
 			return new AnalyticsStatsResult(false, "'from' must be less than or equal to 'to'.", null);
 
-		var query = new Dictionary<string, string?> {
+		var query = new Dictionary<string, string?>
+		{
 			["metric"] = request.Metric,
 			["from"] = from.ToString("O"),
-			["to"] = to.ToString("O")
+			["to"] = to.ToString("O"),
+			["userId"] = request.UserId.ToString()
 		};
 
 		if (request.Dimensions is not null)
@@ -65,7 +72,8 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 				query[dimension.Key] = dimension.Value;
 
 		var cacheKey = AnalyticsCache.BuildKey("stats", request.Slug, query);
-		var stats = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () => {
+		var stats = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () =>
+		{
 			var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/stats/{request.Slug}", query);
 			return await httpClient.GetAsync<StorageStatsDto>(uri);
 		}, cancellationToken);

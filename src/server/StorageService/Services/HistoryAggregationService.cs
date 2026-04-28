@@ -10,13 +10,16 @@ public sealed record DimensionOptionsResult(bool Success, string? ErrorMessage, 
 
 public sealed record HistoryAggregationResult(bool Success, string? ErrorMessage, HistoryPointDto[]? Data);
 
-public interface IHistoryAggregationService {
-	Task<HistoryAggregationResult> GetHistoryAsync(string slug, string metric, string interval, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default);
-	Task<DimensionOptionsResult> GetDimensionOptionsAsync(string slug, string metric, string dimensionKey, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default);
+public interface IHistoryAggregationService
+{
+	Task<HistoryAggregationResult> GetHistoryAsync(Guid? userId, string slug, string metric, string interval, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default);
+	Task<DimensionOptionsResult> GetDimensionOptionsAsync(Guid? userId, string slug, string metric, string dimensionKey, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default);
 }
 
-public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggregationService {
-	public async Task<HistoryAggregationResult> GetHistoryAsync(string slug, string metric, string interval, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default) {
+public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggregationService
+{
+	public async Task<HistoryAggregationResult> GetHistoryAsync(Guid? userId, string slug, string metric, string interval, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default)
+	{
 		if (string.IsNullOrWhiteSpace(metric))
 			return new HistoryAggregationResult(false, "Metric is required.", null);
 
@@ -33,11 +36,18 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 
 		var collection = db.GetCollection<DataCollectedEvent>(MongoCollections.CollectedData);
 		var filter = Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug)
-			& Builders<DataCollectedEvent>.Filter.Gte(x => x.CapturedAt, from)
-			& Builders<DataCollectedEvent>.Filter.Lte(x => x.CapturedAt, to);
+	& Builders<DataCollectedEvent>.Filter.Gte(x => x.CapturedAt, from)
+	& Builders<DataCollectedEvent>.Filter.Lte(x => x.CapturedAt, to);
 
-		if (dimensions is not null) {
-			foreach (var dimension in dimensions) {
+		if (userId.HasValue)
+		{
+			filter &= Builders<DataCollectedEvent>.Filter.Eq(x => x.UserId, userId.Value);
+		}
+
+		if (dimensions is not null)
+		{
+			foreach (var dimension in dimensions)
+			{
 				if (string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value))
 					continue;
 
@@ -86,7 +96,8 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 		return new HistoryAggregationResult(true, null, result);
 	}
 
-	public async Task<DimensionOptionsResult> GetDimensionOptionsAsync(string slug, string metric, string dimensionKey, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default) {
+	public async Task<DimensionOptionsResult> GetDimensionOptionsAsync(Guid? userId, string slug, string metric, string dimensionKey, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default)
+	{
 		if (string.IsNullOrWhiteSpace(metric))
 			return new DimensionOptionsResult(false, "Metric is required.", null);
 
@@ -98,10 +109,17 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 			Builders<DataCollectedEvent>.Filter.Eq(x => x.Metric, metric),
 			Builders<DataCollectedEvent>.Filter.Exists($"Metadata.{metric}", true));
 		var filter = Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug)
-			& metricFilter;
+	& metricFilter;
 
-		if (dimensions is not null) {
-			foreach (var dimension in dimensions) {
+		if (userId.HasValue)
+		{
+			filter &= Builders<DataCollectedEvent>.Filter.Eq(x => x.UserId, userId.Value);
+		}
+
+		if (dimensions is not null)
+		{
+			foreach (var dimension in dimensions)
+			{
 				if (string.Equals(dimension.Key, dimensionKey, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value))
 					continue;
 

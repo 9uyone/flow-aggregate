@@ -14,14 +14,18 @@ public sealed record HistoryQueryRequest(
 	string? Interval,
 	DateTime? From,
 	DateTime? To,
+	Guid UserId,
 	IReadOnlyDictionary<string, string>? Dimensions = null);
 
-public interface IHistoryQueryService {
+public interface IHistoryQueryService
+{
 	Task<HistoryQueryResult> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
 }
 
-public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCache cache) : IHistoryQueryService {
-	public async Task<HistoryQueryResult> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
+public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCache cache) : IHistoryQueryService
+{
+	public async Task<HistoryQueryResult> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default)
+	{
 		if (string.IsNullOrWhiteSpace(request.Metric))
 			return new HistoryQueryResult(false, "Metric is required.", null);
 
@@ -29,14 +33,16 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 		DateTime effectiveTo;
 		string effectiveInterval;
 
-		if (!string.IsNullOrWhiteSpace(request.Range)) {
+		if (!string.IsNullOrWhiteSpace(request.Range))
+		{
 			if (!AnalyticsTimeRangeResolver.TryResolvePreset(request.Range, out effectiveFrom, out effectiveTo, out effectiveInterval))
 				return new HistoryQueryResult(false, "Range must be one of: day, week, month, quarter, year, all, all-time.", null);
 
 			if (!string.IsNullOrWhiteSpace(request.Interval))
 				effectiveInterval = request.Interval.Trim().ToLowerInvariant();
 		}
-		else {
+		else
+		{
 			if (request.From is null || request.To is null)
 				return new HistoryQueryResult(false, "from and to are required when range is not specified.", null);
 
@@ -53,11 +59,13 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 		if (effectiveFrom > effectiveTo)
 			return new HistoryQueryResult(false, "'from' must be less than or equal to 'to'.", null);
 
-		var query = new Dictionary<string, string?> {
+		var query = new Dictionary<string, string?>
+		{
 			["metric"] = request.Metric,
 			["interval"] = effectiveInterval,
 			["from"] = effectiveFrom.ToString("O"),
-			["to"] = effectiveTo.ToString("O")
+			["to"] = effectiveTo.ToString("O"),
+			["userId"] = request.UserId.ToString()
 		};
 
 		if (request.Dimensions is not null)
@@ -65,7 +73,8 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 				query[dimension.Key] = dimension.Value;
 
 		var cacheKey = AnalyticsCache.BuildKey("history", request.Slug, query);
-		var data = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () => {
+		var data = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () =>
+		{
 			var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/history/{request.Slug}", query);
 			return await httpClient.GetAsync<HistoryPointDto[]>(uri) ?? Array.Empty<HistoryPointDto>();
 		}, cancellationToken);
