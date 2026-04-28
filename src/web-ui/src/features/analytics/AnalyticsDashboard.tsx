@@ -61,6 +61,7 @@ export const AnalyticsDashboard: React.FC = () => {
   const [recentTasks, setRecentTasks] = useState<ParserTaskItem[]>([]);
   const [recentTasksLoading, setRecentTasksLoading] = useState(false);
   const [isRecentTasksExpanded, setIsRecentTasksExpanded] = useState(false);
+  const [isParserMetricsExpanded, setIsParserMetricsExpanded] = useState(true);
   const [previewCorrelationId, setPreviewCorrelationId] = useState<string | null>(null);
 
   const overallStats = useMemo(() => ({
@@ -272,26 +273,67 @@ export const AnalyticsDashboard: React.FC = () => {
         </Stack>
       </Paper>
 
-      {/* Parser metrics panel */}
-      <Box sx={{ mt: 3 }}>
-        <Paper
+            {/* Parser metrics panel */}
+      <Paper
+        sx={{
+          p: 3,
+          borderRadius: 2,
+          mt: 3,
+          boxShadow: 3,
+        }}
+      >
+        <Box
           sx={{
-            p: 3,
-            borderRadius: 2,
-            mb: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            userSelect: 'none',
           }}
+          onClick={() => setIsParserMetricsExpanded(!isParserMetricsExpanded)}
         >
-          <ParserSelector
-            parsers={parsers}
-            selectedParserSlug={selectedParserSlug}
-            onChange={setSelectedParserSlug}
-            label="Parser for analytics"
-            helperText="You can choose parser here or in Management. Selection is shared."
-          />
-        </Paper>
+          <Box>
+            <Typography variant="h6" fontWeight="600">
+              Parser metrics
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Explore parser performance trends and forecasts
+            </Typography>
+          </Box>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsParserMetricsExpanded(!isParserMetricsExpanded);
+            }}
+          >
+            {isParserMetricsExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+        </Box>
 
-        <ParserHistoryChart selectedParserSlug={selectedParserSlug} />
-      </Box>
+                <Collapse in={isParserMetricsExpanded} sx={{ mt: 2 }}>
+          <Stack spacing={2.5}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.divider}`,
+                backgroundColor: theme.palette.background.default,
+              }}
+            >
+              <ParserSelector
+                parsers={parsers}
+                selectedParserSlug={selectedParserSlug}
+                onChange={setSelectedParserSlug}
+                label="Parser for analytics"
+                helperText="Selection is shared across Analytics and Management."
+              />
+            </Box>
+
+            <ParserHistoryChart selectedParserSlug={selectedParserSlug} />
+          </Stack>
+        </Collapse>
+      </Paper>
 
       <Paper
         sx={{

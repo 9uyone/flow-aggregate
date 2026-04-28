@@ -161,7 +161,7 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
           <Box
             sx={{
               border: (theme) => `1px solid ${theme.palette.divider}`,
-              borderRadius: (theme) => theme.shape.borderRadius,
+              borderRadius: 2,
               p: 3,
             }}
           >
@@ -199,7 +199,7 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
                 <Box
                   sx={{
                     p: 2,
-                    borderRadius: (theme) => theme.shape.borderRadius,
+                    borderRadius: 2,
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                   }}
                 >
@@ -222,7 +222,7 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
           <Divider />
 
           {/* Timestamp Info */}
-          <Box sx={{ p: 3, borderRadius: (theme) => theme.shape.borderRadius, border: (theme) => `1px solid ${theme.palette.divider}` }}>
+          <Box sx={{ p: 3, borderRadius: 2, border: (theme) => `1px solid ${theme.palette.divider}` }}>
             <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
               Data Range
             </Typography>

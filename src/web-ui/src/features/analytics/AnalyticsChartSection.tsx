@@ -31,7 +31,6 @@ interface AnalyticsChartSectionProps {
 }
 
 export const AnalyticsChartSection: React.FC<AnalyticsChartSectionProps> = ({
-  selectedMetric,
   chartError,
   onDismissChartError,
   isChartLoading,
@@ -42,10 +41,6 @@ export const AnalyticsChartSection: React.FC<AnalyticsChartSectionProps> = ({
   forecastUnavailableReason,
   isForecastLoading,
   forecast,
-  rangeMode,
-  timeRangeLabel,
-  historyIntervalLabel,
-  statsIntervalLabel,
   dimensionsCount,
   actualPointsCount,
 }) => {
@@ -113,7 +108,7 @@ export const AnalyticsChartSection: React.FC<AnalyticsChartSectionProps> = ({
         </Box>
       ) : (
         !chartError && (
-          <Box sx={{ minHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
+          <Box sx={{ minHeight: { xs: 100, sm: 150 }, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
             No data available for the selected period.
           </Box>
         )
@@ -135,27 +130,25 @@ export const AnalyticsChartSection: React.FC<AnalyticsChartSectionProps> = ({
         <Alert severity="info">{forecast.note}</Alert>
       )}
 
-      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-        <Chip size="small" label={`Metric: ${selectedMetric}`} />
-        <Chip size="small" label={rangeMode === 'preset' ? `Range: ${timeRangeLabel}` : 'Range: custom'} />
-        <Chip size="small" label={`History interval: ${historyIntervalLabel}`} />
-        <Chip size="small" label={`Stats interval: ${statsIntervalLabel}`} />
-        <Chip size="small" label={`Dimensions: ${dimensionsCount}`} />
-        {actualPointsCount > 0 && <Chip size="small" label={`Actual points: ${actualPointsCount}`} />}
-        {forecast?.points.length ? <Chip size="small" label={`Forecast points: ${forecast.points.length}`} /> : null}
-        <Chip
-          size="small"
-          variant="outlined"
-          label="Legend: Actual"
-          sx={{ borderColor: theme.palette.primary.main, color: theme.palette.primary.main }}
-        />
-        <Chip
-          size="small"
-          variant="outlined"
-          label="Legend: Forecast"
-          sx={{ borderStyle: 'dashed', borderColor: theme.palette.warning.main, color: theme.palette.warning.main }}
-        />
-      </Stack>
+      {chartTimestamps.length > 0 && !chartError && (
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+          <Chip size="small" label={`Dimensions: ${dimensionsCount}`} />
+          {actualPointsCount > 0 && <Chip size="small" label={`Actual points: ${actualPointsCount}`} />}
+          {forecast?.points.length ? <Chip size="small" label={`Forecast points: ${forecast.points.length}`} /> : null}
+          <Chip
+            size="small"
+            variant="outlined"
+            label="Legend: Actual"
+            sx={{ borderColor: theme.palette.primary.main, color: theme.palette.primary.main }}
+          />
+          <Chip
+            size="small"
+            variant="outlined"
+            label="Legend: Forecast"
+            sx={{ borderStyle: 'dashed', borderColor: theme.palette.warning.main, color: theme.palette.warning.main }}
+          />
+        </Stack>
+      )}
     </Stack>
   );
 };

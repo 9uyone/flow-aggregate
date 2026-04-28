@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import { RefreshOutlined as RefreshIcon } from '@mui/icons-material';
 import {
   analyzeApi,
@@ -379,6 +379,11 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
     ? 'Forecast unavailable: at least 2 actual points are required.'
     : null;
 
+  const isNoDataForSelectedPeriod =
+    !isChartLoading &&
+    !chartError &&
+    mergedChartData.timestamps.length === 0;
+
   const handleRefresh = () => {
     if (!selectedParserSlug || !selectedMetric || !historyRequest) {
       return;
@@ -402,92 +407,106 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
     });
   };
 
-  return (
-    <Card sx={{ height: '100%', borderRadius: 2 }}>
-      <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-        <Stack spacing={3}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            <Box>
-              <Typography variant="h6">Parser Metrics</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {selectedParserSlug ? `Parser: ${selectedParserSlug}` : 'Choose a parser from Management'}
-              </Typography>
-            </Box>
-            <Button
-              size="small"
-              startIcon={<RefreshIcon />}
-              onClick={handleRefresh}
-              disabled={isChartLoading || !selectedParserSlug || !selectedMetric || !historyRequest}
-            >
-              Refresh
-            </Button>
-          </Box>
-
-          {!selectedParserSlug && (
-            <Alert severity="info">
-              Select a parser in Management to load its available metrics.
-            </Alert>
-          )}
-
+    return (
+    <Stack spacing={3}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box>
+          <Typography variant="h6">Parser metrics</Typography>
           {selectedParserSlug && (
-            <>
-              <AnalyticsFiltersPanel
-                metricOptions={metricOptions}
+            <Typography variant="body2" color="text.secondary">
+              Parser: {selectedParserSlug}
+            </Typography>
+          )}
+        </Box>
+        <Button
+          size="small"
+          startIcon={<RefreshIcon />}
+          onClick={handleRefresh}
+          disabled={isChartLoading || !selectedParserSlug || !selectedMetric || !historyRequest}
+        >
+          Refresh
+        </Button>
+      </Box>
+
+      {!selectedParserSlug ? (
+        <Box
+          sx={{
+            px: 3,
+            py: 4,
+            borderRadius: 2,
+            border: '1px dashed',
+            borderColor: 'divider',
+            backgroundColor: 'action.hover',
+          }}
+        >
+          <Typography variant="body1" fontWeight={600} gutterBottom>
+            Select a parser to explore metrics
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Once selected, you can review trends, dimensions, forecasts, and summary stats here.
+          </Typography>
+        </Box>
+      ) : (
+        <>
+          <AnalyticsFiltersPanel
+            metricOptions={metricOptions}
+            selectedMetric={selectedMetric}
+            onMetricChange={(value) => {
+              setSelectedMetric(value);
+              setSelectedDimensions({});
+            }}
+            selectedDimensionKeys={selectedDimensionKeys}
+            selectedDimensions={selectedDimensions}
+            onDimensionChange={handleDimensionChange}
+            dimensionOptionsByKey={dimensionOptionsByKey}
+            isDimensionOptionsLoading={isDimensionOptionsLoading}
+            dimensionOptionsError={dimensionOptionsError}
+            rangeMode={rangeMode}
+            onRangeModeChange={setRangeMode}
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+            customFrom={customFrom}
+            onCustomFromChange={setCustomFrom}
+            customTo={customTo}
+            onCustomToChange={setCustomTo}
+            interval={interval}
+            onIntervalChange={setInterval}
+            forecastHorizon={forecastHorizon}
+            onForecastHorizonChange={setForecastHorizon}
+            isMetricsLoading={isMetricsLoading}
+            metricsError={metricsError}
+          />
+
+          {selectedMetric ? (
+            <Stack spacing={3}>
+              {rangeMode === 'custom' && !baseQueryParams && (
+                <Alert severity="info">
+                  Enter both from and to values to load custom-range data.
+                </Alert>
+              )}
+
+              <AnalyticsChartSection
                 selectedMetric={selectedMetric}
-                onMetricChange={(value) => {
-                  setSelectedMetric(value);
-                  setSelectedDimensions({});
-                }}
-                selectedDimensionKeys={selectedDimensionKeys}
-                selectedDimensions={selectedDimensions}
-                onDimensionChange={handleDimensionChange}
-                dimensionOptionsByKey={dimensionOptionsByKey}
-                isDimensionOptionsLoading={isDimensionOptionsLoading}
-                dimensionOptionsError={dimensionOptionsError}
+                chartError={chartError}
+                onDismissChartError={clearChartError}
+                isChartLoading={isChartLoading}
+                chartTimestamps={mergedChartData.timestamps}
+                actualSeries={mergedChartData.actualSeries}
+                forecastSeries={mergedChartData.forecastSeries}
+                forecastError={forecastError}
+                forecastUnavailableReason={forecastUnavailableReason}
+                isForecastLoading={isForecastLoading}
+                forecast={forecast}
                 rangeMode={rangeMode}
-                onRangeModeChange={setRangeMode}
-                timeRange={timeRange}
-                onTimeRangeChange={setTimeRange}
-                customFrom={customFrom}
-                onCustomFromChange={setCustomFrom}
-                customTo={customTo}
-                onCustomToChange={setCustomTo}
-                interval={interval}
-                onIntervalChange={setInterval}
-                forecastHorizon={forecastHorizon}
-                onForecastHorizonChange={setForecastHorizon}
-                isMetricsLoading={isMetricsLoading}
-                metricsError={metricsError}
+                timeRangeLabel={timeRange}
+                historyIntervalLabel={historyIntervalLabel}
+                statsIntervalLabel={statsIntervalLabel}
+                dimensionsCount={Object.keys(dimensionQueryParams).length}
+                actualPointsCount={chartData.length}
               />
 
-              {selectedMetric ? (
-                <Stack spacing={3}>
-                  {rangeMode === 'custom' && !baseQueryParams && (
-                    <Alert severity="info">
-                      Enter both from and to values to load custom-range data.
-                    </Alert>
-                  )}
-
-                  <AnalyticsChartSection
-                    selectedMetric={selectedMetric}
-                    chartError={chartError}
-                    onDismissChartError={clearChartError}
-                    isChartLoading={isChartLoading}
-                    chartTimestamps={mergedChartData.timestamps}
-                    actualSeries={mergedChartData.actualSeries}
-                    forecastSeries={mergedChartData.forecastSeries}
-                    forecastError={forecastError}
-                    forecastUnavailableReason={forecastUnavailableReason}
-                    isForecastLoading={isForecastLoading}
-                    forecast={forecast}
-                    rangeMode={rangeMode}
-                    timeRangeLabel={timeRange}
-                    historyIntervalLabel={historyIntervalLabel}
-                    statsIntervalLabel={statsIntervalLabel}
-                    dimensionsCount={Object.keys(dimensionQueryParams).length}
-                    actualPointsCount={chartData.length}
-                  />
-
+              {!isNoDataForSelectedPeriod && (
+                <>
                   <AnalyticsInsightsCards
                     trend={trend}
                     trendMeta={trendMeta}
@@ -506,16 +525,16 @@ export const ParserHistoryChart: React.FC<ParserHistoryChartProps> = ({ selected
                     metric={selectedMetric}
                     queryParams={statsRequest}
                   />
-                </Stack>
-              ) : (
-                <Alert severity="info">
-                  Choose a metric to load history and stats.
-                </Alert>
+                </>
               )}
-            </>
+            </Stack>
+          ) : (
+            <Alert severity="info">
+              Choose a metric to load history and stats.
+            </Alert>
           )}
-        </Stack>
-      </CardContent>
-    </Card>
+        </>
+      )}
+    </Stack>
   );
 };

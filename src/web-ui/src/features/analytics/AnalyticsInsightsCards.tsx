@@ -31,7 +31,7 @@ export const AnalyticsInsightsCards: React.FC<AnalyticsInsightsCardsProps> = ({
     <Grid container spacing={3}>
       <Grid size={{ xs: 12, md: 6 }}>
         <Card variant="outlined" sx={{ height: '100%' }}>
-          <CardHeader title="Trend" subheader="/trend" sx={{ px: 3, pt: 3, pb: 1.5 }} />
+          <CardHeader title="Trend" sx={{ px: 3, pt: 3, pb: 1.5 }} />
           <CardContent sx={{ p: 3, pt: 1.5, '&:last-child': { pb: 3 } }}>
             {isTrendLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
@@ -47,9 +47,9 @@ export const AnalyticsInsightsCards: React.FC<AnalyticsInsightsCardsProps> = ({
                     {trendMeta.text}
                   </Typography>
                 </Stack>
-                <Typography variant="body2">slope: {formatNumber(trend.slope, 4)}</Typography>
+                <Typography variant="body2">Slope: {formatNumber(trend.slope, 4)}</Typography>
                 <Typography variant="body2">Trend quality: {trendQuality.toFixed(1)}%</Typography>
-                <Typography variant="body2">pointsCount: {trend.pointsCount}</Typography>
+                {/* <Typography variant="body2">pointsCount: {trend.pointsCount}</Typography> */}
               </Stack>
             ) : (
               <Alert severity="info">No trend data.</Alert>
@@ -60,7 +60,7 @@ export const AnalyticsInsightsCards: React.FC<AnalyticsInsightsCardsProps> = ({
 
       <Grid size={{ xs: 12, md: 6 }}>
         <Card variant="outlined" sx={{ height: '100%' }}>
-          <CardHeader title="Volatility" subheader="/volatility" sx={{ px: 3, pt: 3, pb: 1.5 }} />
+          <CardHeader title="Volatility" sx={{ px: 3, pt: 3, pb: 1.5 }} />
           <CardContent sx={{ p: 3, pt: 1.5, '&:last-child': { pb: 3 } }}>
             {isVolatilityLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
@@ -79,8 +79,8 @@ export const AnalyticsInsightsCards: React.FC<AnalyticsInsightsCardsProps> = ({
                   <Chip size="small" label={`min: ${formatNumber(volatility.min)}`} />
                   <Chip size="small" label={`max: ${formatNumber(volatility.max)}`} />
                 </Stack>
-                <Typography variant="body2">stdDev: {formatNumber(volatility.stdDev)}</Typography>
-                <Typography variant="body2">CV: {cvPercent.toFixed(2)}%</Typography>
+                <Typography variant="body2">Standard deviation: {formatNumber(volatility.stdDev)}</Typography>
+                <Typography variant="body2">Coefficient of variation: {cvPercent.toFixed(2)}%</Typography>
               </Stack>
             ) : (
               <Alert severity="info">No volatility data.</Alert>

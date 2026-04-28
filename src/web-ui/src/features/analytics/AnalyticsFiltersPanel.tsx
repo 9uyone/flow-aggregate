@@ -209,10 +209,12 @@ export const AnalyticsFiltersPanel: React.FC<AnalyticsFiltersPanelProps> = ({
       </FormControl>
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth size="small">
-            <FormLabel sx={{ mb: 1 }}>Aggregation interval</FormLabel>
+            <InputLabel id="aggregation-interval-label">Aggregation interval</InputLabel>
             <Select
+              labelId="aggregation-interval-label"
+              label="Aggregation interval"
               value={interval}
               onChange={(event) => onIntervalChange(event.target.value as IntervalSelection)}
             >
