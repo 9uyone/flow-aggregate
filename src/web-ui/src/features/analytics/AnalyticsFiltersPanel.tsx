@@ -156,8 +156,19 @@ export const AnalyticsFiltersPanel: React.FC<AnalyticsFiltersPanelProps> = ({
         </Stack>
       )}
 
-      <FormControl component="fieldset" fullWidth>
-        <FormLabel component="legend" sx={{ mb: 1 }}>Range mode</FormLabel>
+            <FormControl component="fieldset" fullWidth>
+        <FormLabel
+          component="legend"
+          sx={{
+            mb: 1,
+            color: 'text.secondary',
+            '&.Mui-focused': {
+              color: 'text.secondary',
+            },
+          }}
+        >
+          Range mode
+        </FormLabel>
         <RadioGroup
           row
           value={rangeMode}

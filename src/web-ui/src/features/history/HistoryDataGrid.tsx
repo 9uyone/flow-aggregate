@@ -60,20 +60,7 @@ export const HistoryDataGrid: React.FC = () => {
     }
   }, []);
 
-  const formatParserOptions = useCallback((options?: ParserTaskItem['parserOptions']) => {
-    if (!options) {
-      return null;
-    }
-
-    const entries = Object.entries(options);
-    if (entries.length === 0) {
-      return null;
-    }
-
-    const preview = entries.slice(0, 3).map(([key, value]) => `${key}=${String(value ?? 'null')}`);
-    const extra = entries.length - preview.length;
-    return `${preview.join(', ')}${extra > 0 ? ` +${extra}` : ''}`;
-  }, []);
+  
 
   const fetchTasks = useCallback(async () => {
     const requestId = ++latestFetchRequestIdRef.current;
@@ -238,10 +225,9 @@ export const HistoryDataGrid: React.FC = () => {
         onClearFilters={handleClearFilters}
       />
 
-      <HistoryTable
+            <HistoryTable
         displayedTasks={displayedTasks}
         parserBySlug={parserBySlug}
-        formatParserOptions={formatParserOptions}
         isLoading={isLoading}
         error={error}
         page={page}

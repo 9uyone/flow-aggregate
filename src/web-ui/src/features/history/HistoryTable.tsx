@@ -1,8 +1,14 @@
+import { useState } from 'react';
 import {
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Paper,
   Stack,
@@ -40,7 +46,6 @@ const getStatusColor = (status: ParserRunStatus) => {
 interface HistoryTableProps {
   displayedTasks: ParserTaskItem[];
   parserBySlug: Map<string, string>;
-  formatParserOptions: (options?: ParserTaskItem['parserOptions']) => string | null;
   isLoading: boolean;
   error: string | null;
   page: number;
@@ -54,10 +59,37 @@ interface HistoryTableProps {
   onOpenCollectedData: (correlationId: string) => void;
 }
 
+const formatDuration = (startedAt: string, finishedAt: string | null): string => {
+  if (!finishedAt) {
+    return '—';
+  }
+
+  const startedMs = new Date(startedAt).getTime();
+  const finishedMs = new Date(finishedAt).getTime();
+
+  if (!Number.isFinite(startedMs) || !Number.isFinite(finishedMs) || finishedMs < startedMs) {
+    return '—';
+  }
+
+  const durationMs = finishedMs - startedMs;
+  if (durationMs < 1000) {
+    return `${durationMs} ms`;
+  }
+
+  return `${(durationMs / 1000).toFixed(durationMs < 10_000 ? 2 : 1)} s`;
+};
+
+const formatOptionValue = (value: string | number | boolean | null): string => {
+  if (value === null) {
+    return 'null';
+  }
+
+  return String(value);
+};
+
 export const HistoryTable: React.FC<HistoryTableProps> = ({
   displayedTasks,
   parserBySlug,
-  formatParserOptions,
   isLoading,
   error,
   page,
@@ -67,9 +99,11 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
   onRowsPerPageChange,
   onJumpPageChange,
   onPreviewCollectedData,
-  onCopyCorrelationId,
+    onCopyCorrelationId,
   onOpenCollectedData,
 }) => {
+  const [errorDialog, setErrorDialog] = useState<{ correlationId: string; message: string } | null>(null);
+
   return (
     <Paper sx={{ width: '100%', overflow: 'hidden' }}>
       {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
@@ -103,6 +137,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
               <TableCell align="right">Records</TableCell>
               <TableCell>Started</TableCell>
               <TableCell>Finished</TableCell>
+              <TableCell>Duration</TableCell>
               <TableCell>Error</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -126,10 +161,29 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                     )}
                   </Stack>
                 </TableCell>
-                <TableCell sx={{ maxWidth: '180px', wordBreak: 'break-word' }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'normal' }}>
-                    {formatParserOptions(record.parserOptions) ?? '—'}
-                  </Typography>
+                                <TableCell sx={{ maxWidth: 260 }}>
+                  {record.parserOptions && Object.entries(record.parserOptions).length > 0 ? (
+                    <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+                      {Object.entries(record.parserOptions).slice(0, 4).map(([key, value]) => (
+                        <Chip
+                          key={`${record.correlationId}-${key}`}
+                          size="small"
+                          variant="outlined"
+                          label={`${key}: ${formatOptionValue(value)}`}
+                          sx={{ maxWidth: 230, '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                        />
+                      ))}
+                      {Object.entries(record.parserOptions).length > 4 && (
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          label={`+${Object.entries(record.parserOptions).length - 4}`}
+                        />
+                      )}
+                    </Stack>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">—</Typography>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Chip
@@ -143,23 +197,33 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                     {record.recordsCount.toLocaleString()}
                   </Typography>
                 </TableCell>
-                <TableCell>
-                  <Typography variant="caption" color="text.secondary">
+                                <TableCell>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.74rem' }}>
                     {new Date(record.startedAt).toLocaleString()}
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.74rem' }}>
                     {record.finishedAt ? new Date(record.finishedAt).toLocaleString() : '—'}
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Typography
-                    variant="caption"
-                    color={record.errorMessage ? 'error.main' : 'text.secondary'}
-                  >
-                    {record.errorMessage || '—'}
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.74rem' }}>
+                    {formatDuration(record.startedAt, record.finishedAt)}
                   </Typography>
+                </TableCell>
+                <TableCell>
+                  {record.status === 'Failed' && record.errorMessage ? (
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={() => setErrorDialog({ correlationId: record.correlationId, message: record.errorMessage ?? '' })}
+                    >
+                      Show error
+                    </Button>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">—</Typography>
+                  )}
                 </TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
@@ -200,7 +264,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
             ))}
             {displayedTasks.length === 0 && !isLoading && (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                   <Typography variant="body2" color="text.secondary">
                     No task logs found
                   </Typography>
@@ -221,12 +285,32 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
         onRowsPerPageChange={onRowsPerPageChange}
       />
 
-      <PaginationJumpControls
+            <PaginationJumpControls
         page={page}
         totalCount={totalCount}
         rowsPerPage={rowsPerPage}
         onPageChange={onJumpPageChange}
       />
+
+      <Dialog
+        open={errorDialog !== null}
+        onClose={() => setErrorDialog(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Task error details</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+            Correlation ID: {errorDialog?.correlationId}
+          </Typography>
+          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {errorDialog?.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setErrorDialog(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
