@@ -1,7 +1,6 @@
 ﻿using CollectorService.Interfaces;
 using CollectorService.Contracts;
 using Common.Attributes;
-using Common.Exceptions;
 using Common.Interfaces.Parser;
 using System.Reflection;
 using Common.Enums;

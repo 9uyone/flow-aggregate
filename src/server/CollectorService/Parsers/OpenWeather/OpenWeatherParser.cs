@@ -13,7 +13,7 @@ namespace CollectorService.Parsers.OpenWeather;
 [ParserParameter("units", "By default is Metric.", isRequired: false, allowCustomValues: false)]
 [ParserMetrics("humidityPercent", "windSpeed")]
 [ParserDimensions("city")]
-public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : IDataParser {
+public class OpenWeatherParser(IHttpRestClient httpClient, IConfiguration config) : IDataParser {
 	private string ApiKey => config["Parsers:OpenWeather:ApiKey"]
 		?? throw new InvalidOperationException("OpenWeather API Key is missing in configuration.");
 
@@ -39,7 +39,7 @@ public class WeatherParser(IHttpRestClient httpClient, IConfiguration config) : 
 		return [new ParserDataPayload {
 			Category = "Temperature",
 			Source = "openweathermap.org",
-			Metric = "temperature",
+			Metric = $"temperature_{units}",
 			Value = (decimal)weather.Main.Temp,
 			Metadata = new Dictionary<string, string> {
 				[MetadataKeys.Provider] = "OpenWeatherMap",
