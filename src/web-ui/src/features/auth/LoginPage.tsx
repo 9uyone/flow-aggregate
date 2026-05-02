@@ -53,9 +53,7 @@ export const LoginPage: React.FC = () => {
           </Typography>
 
           {/* Google Login Button */}
-          <Box sx={{ width: '100%', maxWidth: 400 }}>
-            <GoogleLoginButton />
-          </Box>
+          <GoogleLoginButton />
 
           {/* Footer */}
           <Typography

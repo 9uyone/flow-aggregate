@@ -1,5 +1,5 @@
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { Alert, Stack } from '@mui/material';
+import { Alert, Stack, Box } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/authApi';
@@ -52,20 +52,31 @@ export const GoogleLoginButton: React.FC = () => {
   };
 
   return (
-    <Stack spacing={2}>
-      <GoogleLogin
-        onSuccess={handleSuccess}
-        onError={handleError}
-        useOneTap
-        size="large"
-        width="400"
-        logo_alignment="left"
-      />
+    <Stack spacing={2} sx={{ width: '100%', alignItems: 'center' }}>
+      <Box
+        sx={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          // Target the Google button that the library injects so it fits mobile
+          '& .g_id_signin': {
+            width: '100% !important',
+            borderRadius: 1,
+            boxSizing: 'border-box',
+          },
+        }}
+      >
+        <GoogleLogin
+          onSuccess={handleSuccess}
+          onError={handleError}
+          useOneTap
+          size="large"
+          logo_alignment="left"
+        />
+      </Box>
 
       {error && (
-        <Alert severity="error">
-          {error}
-        </Alert>
+        <Alert severity="error">{error}</Alert>
       )}
     </Stack>
   );
