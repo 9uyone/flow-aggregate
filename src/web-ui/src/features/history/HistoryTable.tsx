@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material';
 import { PaginationJumpControls } from '../../components';
 import type { ParserRunStatus, ParserTaskItem } from '../../types/storage';
+import { DateValueCell } from '../data/CollectedDataViewParts';
 
 const getStatusColor = (status: ParserRunStatus) => {
   switch (status) {
@@ -198,15 +199,11 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                   </Typography>
                 </TableCell>
                                 <TableCell>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.74rem' }}>
-                    {new Date(record.startedAt).toLocaleString()}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.74rem' }}>
-                    {record.finishedAt ? new Date(record.finishedAt).toLocaleString() : '—'}
-                  </Typography>
-                </TableCell>
+                                  <DateValueCell value={record.startedAt} />
+                                </TableCell>
+                                <TableCell>
+                                  <DateValueCell value={record.finishedAt} />
+                                </TableCell>
                 <TableCell>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.74rem' }}>
                     {formatDuration(record.startedAt, record.finishedAt)}

@@ -338,9 +338,13 @@ const normalizeCollectedDataItem = (item: unknown): CollectedDataItem | null => 
   const metricsRaw = raw.metrics ?? raw.Metrics ?? raw.values ?? raw.Values ?? {};
   const metricRaw = raw.metric ?? raw.Metric;
   const valueRaw = raw.value ?? raw.Value;
-  const typeRaw = raw.type ?? raw.Type;
+  const categoryRaw = raw.category ?? raw.Category ?? raw.type ?? raw.Type;
   const sourceRaw = raw.source ?? raw.Source;
   const metadataRaw = raw.metadata ?? raw.Metadata;
+  const providerRaw = raw.provider
+    ?? raw.Provider
+    ?? (metadataRaw && typeof metadataRaw === 'object' ? (metadataRaw as Record<string, unknown>).provider : undefined)
+    ?? (metadataRaw && typeof metadataRaw === 'object' ? (metadataRaw as Record<string, unknown>).Provider : undefined);
 
   if (typeof idRaw !== 'string' || typeof parserSlugRaw !== 'string') {
     return null;
@@ -361,12 +365,16 @@ const normalizeCollectedDataItem = (item: unknown): CollectedDataItem | null => 
       };
     }
 
-    if (typeof typeRaw === 'string') {
-      metricsRecord.type = typeRaw;
+    if (typeof categoryRaw === 'string') {
+      metricsRecord['metadata.category'] = categoryRaw;
     }
 
     if (typeof sourceRaw === 'string') {
       metricsRecord.source = sourceRaw;
+    }
+
+    if (typeof providerRaw === 'string') {
+      metricsRecord['metadata.provider'] = providerRaw;
     }
 
     if (metadataRaw && typeof metadataRaw === 'object') {

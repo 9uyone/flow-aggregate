@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import { PaginationJumpControls } from '../../components';
 import type { CollectedDataItem, ParserCatalogItem } from '../../types/storage';
-import { ParserLabel } from './CollectedDataViewParts';
+import { DateValueCell, ParserLabel } from './CollectedDataViewParts';
 
 interface CollectedDataTableProps {
   displayedItems: CollectedDataItem[];
@@ -58,10 +58,9 @@ interface DimensionEntry {
 
 interface RowMetricInfo {
   primaryMetric: { key: string; value: number } | null;
-  primaryDimensionKey: string | null;
-  primaryDimensionValue: string | null;
   dimensionSignature: string;
   badges: MetricBadge[];
+  metadata: Record<string, string>;
 }
 
 
@@ -214,20 +213,36 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
   const metricInfoById = useMemo(() => {
     const map = new Map<string, RowMetricInfo>();
 
-        displayedItems.forEach((item) => {
+    displayedItems.forEach((item) => {
       const primaryMetric = getPrimaryMetric(item.metrics);
       const dimensions = getDimensionEntries(item.metrics);
       const primaryDimension = getPrimaryDimension(dimensions);
 
+      const metadataEntries = Object.entries(item.metrics)
+        .filter(([k]) => k === 'unit' || k === 'source' || k === 'category' || k === 'metadata.unit' || k === 'metadata.source' || k === 'metadata.category' || k.startsWith('metadata.'))
+        .map(([k, v]) => {
+          const raw = k.replace(/^metadata\./, '');
+          const key = raw === 'type' ? 'category' : raw;
+          return [key, String(v ?? '')] as const;
+        });
+      const metadataMap: Record<string, string> = Object.fromEntries(metadataEntries);
+
       map.set(item.id, {
         primaryMetric,
-        primaryDimensionKey: primaryDimension?.key ?? null,
-        primaryDimensionValue: primaryDimension?.value ?? null,
         dimensionSignature: getDimensionSignature(dimensions),
         badges: getMetricBadges(item.metrics, [
           ...(primaryMetric ? [primaryMetric.key] : []),
           ...(primaryDimension ? [`metadata.${primaryDimension.key}`] : []),
+          'metadata.unit',
+          'unit',
+          'metadata.source',
+          'source',
+          'metadata.category',
+          'metadata.type',
+          'type',
+          'metadata.provider',
         ]),
+        metadata: metadataMap,
       });
     });
 
@@ -263,12 +278,9 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
     return result;
   }, [displayedItems, metricInfoById]);
 
-    const showContextColumn = useMemo(
-    () => displayedItems.some((item) => getDimensionEntries(item.metrics).length > 0),
-    [displayedItems]
-  );
+  const showSourceColumn = true;
 
-  const emptyColSpan = 6 + (showContextColumn ? 0 : -1);
+  const emptyColSpan = 6 + (showSourceColumn ? 0 : -1);
   const highlightedRawJson = useMemo(
     () => (rawJsonItem ? formatCodeJson(rawJsonItem) : ''),
     [rawJsonItem]
@@ -302,11 +314,12 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
         >
           <TableHead>
             <TableRow>
-                            <TableCell>Parser</TableCell>
-              {showContextColumn && <TableCell>Context</TableCell>}
+              <TableCell>Parser</TableCell>
+              <TableCell>Category</TableCell>
+              {showSourceColumn && <TableCell>Source</TableCell>}
               <TableCell>Timestamp</TableCell>
               <TableCell>Captured at</TableCell>
-              <TableCell >Metrics</TableCell>
+              <TableCell>Metrics</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -332,41 +345,102 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
               return (
                 <TableRow key={item.id} hover sx={{ '&:last-child td': { border: 0 } }}>
                   <TableCell>
-                                        <ParserLabel
-                      slug={item.parserSlug}
-                      displayName={parser?.displayName}
-                    />
+                    <Box>
+                      <ParserLabel
+                        slug={item.parserSlug}
+                        displayName={parser?.displayName}
+                      />
+                    </Box>
                   </TableCell>
 
-                                    {showContextColumn && (
+                  <TableCell>
+                    {metricInfo?.metadata?.category ? (
+                      <Chip label={metricInfo.metadata.category} size="small" />
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">—</Typography>
+                    )}
+                  </TableCell>
+
+                  {showSourceColumn && (
                     <TableCell>
-                      <Typography variant="body2">{metricInfo?.primaryDimensionValue ?? '—'}</Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Tooltip title="Provider is the human-friendly label; source is the technical value.">
+                            <Typography variant="body2">
+                              {metricInfo?.metadata?.provider || metricInfo?.metadata?.source || '—'}
+                            </Typography>
+                          </Tooltip>
+
+                          {metricInfo?.metadata?.source && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                const toCopy = metricInfo.metadata.source;
+                                try {
+                                  void navigator.clipboard.writeText(toCopy || '');
+                                } catch {
+                                  // ignore
+                                }
+                              }}
+                              aria-label="Copy source"
+                            >
+                              <ContentCopyIcon fontSize="inherit" />
+                            </IconButton>
+                          )}
+                        </Box>
+
+                        {metricInfo?.metadata?.source && metricInfo?.metadata?.provider && metricInfo.metadata.source !== metricInfo.metadata.provider && (
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                            {/^https?:\/\//i.test(metricInfo.metadata.source) ? (
+                              <a
+                                href={metricInfo.metadata.source}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: 'inherit', textDecoration: 'underline' }}
+                              >
+                                {metricInfo.metadata.source}
+                              </a>
+                            ) : (
+                              metricInfo.metadata.source
+                            )}
+                          </Typography>
+                        )}
+                      </Box>
                     </TableCell>
                   )}
 
                   <TableCell>
-                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                      {item.timestamp ? new Date(item.timestamp).toLocaleString() : '—'}
-                    </Typography>
+                    <DateValueCell value={item.timestamp} />
                   </TableCell>
 
                   <TableCell>
-                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                      {item.capturedAt ? new Date(item.capturedAt).toLocaleString() : '—'}
-                    </Typography>
+                    <DateValueCell value={item.capturedAt} />
                   </TableCell>
 
                   <TableCell sx={{ minWidth: 300, width: '42%' }}>
                     <Stack spacing={0.75}>
                       {metricInfo?.primaryMetric ? (
                         <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="h6" sx={{ lineHeight: 1.1 }}>
-                            {formatMainValue(metricInfo.primaryMetric.value)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {metricInfo.primaryMetric.key}
-                          </Typography>
-                          {sparklineValues.length > 1 && <Sparkline values={sparklineValues} />}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                              <Typography variant="h6" sx={{ lineHeight: 1.1 }}>
+                                {formatMainValue(metricInfo.primaryMetric.value)}
+                              </Typography>
+                              {metricInfo.metadata?.unit && (
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                                  {metricInfo.metadata.unit}
+                                </Typography>
+                              )}
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">
+                              {metricInfo.primaryMetric.key}
+                            </Typography>
+                          </Box>
+                          {sparklineValues.length > 1 && (
+                            <Box sx={{ ml: '6px' }}>
+                              <Sparkline values={sparklineValues} />
+                            </Box>
+                          )}
                         </Stack>
                       ) : (
                         <Typography variant="body2" color="text.secondary">
@@ -375,42 +449,45 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
                       )}
 
                       {badges.length > 0 && (
-                        <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
-                                                                              {sortedBadges.slice(0, 8).map((badge) => {
-                            const isMetricField = metricFields.includes(badge.key) || metricFields.includes(badge.label);
+                        <>
+                          <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1, mt: 0.5 }} />
+                          <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" sx={{ pt: 0.5 }}>
+                            {sortedBadges.slice(0, 8).map((badge) => {
+                              const isMetricField = metricFields.includes(badge.key) || metricFields.includes(badge.label);
 
-                            return (
-                              <Tooltip key={`${item.id}-${badge.key}`} title={`${badge.label}: ${badge.value}`}>
-                                <Chip
-                                  size="small"
-                                  label={`${badge.label}: ${badge.value}`}
-                                  variant={isMetricField ? 'outlined' : 'filled'}
-                                  color={isMetricField ? 'primary' : 'default'}
-                                  sx={{
-                                    borderRadius: 5,
-                                    flex: '0 1 auto',
-                                    maxWidth: '100%',
-                                    ...(isMetricField
-                                      ? {
-                                          backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                                          fontWeight: 500,
-                                        }
-                                      : {
-                                          backgroundColor: 'action.hover',
-                                          color: 'text.secondary',
-                                        }),
-                                    '& .MuiChip-label': {
-                                      maxWidth: { xs: 220, sm: 320, md: 420 },
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                    },
-                                  }}
-                                />
-                              </Tooltip>
-                            );
-                          })}
-                          {sortedBadges.length > 8 && <Chip size="small" label={`+${sortedBadges.length - 8}`} />}
-                        </Stack>
+                              return (
+                                <Tooltip key={`${item.id}-${badge.key}`} title={`${badge.label}: ${badge.value}`}>
+                                  <Chip
+                                    size="small"
+                                    label={`${badge.label}: ${badge.value}`}
+                                    variant={isMetricField ? 'outlined' : 'filled'}
+                                    color={isMetricField ? 'primary' : 'default'}
+                                    sx={{
+                                      borderRadius: 5,
+                                      flex: '0 1 auto',
+                                      maxWidth: '100%',
+                                      ...(isMetricField
+                                        ? {
+                                            backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                            fontWeight: 500,
+                                          }
+                                        : {
+                                            backgroundColor: 'action.hover',
+                                            color: 'text.secondary',
+                                          }),
+                                      '& .MuiChip-label': {
+                                        maxWidth: { xs: 220, sm: 320, md: 420 },
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                      },
+                                    }}
+                                  />
+                                </Tooltip>
+                              );
+                            })}
+                            {sortedBadges.length > 8 && <Chip size="small" label={`+${sortedBadges.length - 8}`} />}
+                          </Stack>
+                        </>
                       )}
                     </Stack>
                   </TableCell>

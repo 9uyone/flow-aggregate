@@ -8,8 +8,14 @@ const formatMetadataLabel = (key: string) => {
   if (key === 'location') {
     return 'Location';
   }
+  if (key === 'category') {
+    return 'Category';
+  }
   if (key === 'provider') {
     return 'Provider';
+  }
+  if (key === 'source') {
+    return 'Source';
   }
   return key;
 };
@@ -93,6 +99,34 @@ export const MetricsSummary: React.FC<MetricsSummaryProps> = ({ metrics, compact
           })}
         </Stack>
       )}
+    </Stack>
+  );
+};
+
+interface DateValueCellProps {
+  value: string | null;
+  emptyLabel?: string;
+}
+
+export const DateValueCell: React.FC<DateValueCellProps> = ({ value, emptyLabel = '—' }) => {
+  if (!value) {
+    return (
+      <Typography variant="caption" color="text.secondary" component="div">
+        {emptyLabel}
+      </Typography>
+    );
+  }
+
+  const date = new Date(value);
+
+  return (
+    <Stack spacing={0.75}>
+      <Typography variant="caption" color="text.secondary" component="div" sx={{ lineHeight: 1 }}>
+        {date.toLocaleDateString()}
+      </Typography>
+      <Typography variant="caption" color="text.secondary" component="div" sx={{ lineHeight: 1 }}>
+        {date.toLocaleTimeString()}
+      </Typography>
     </Stack>
   );
 };
