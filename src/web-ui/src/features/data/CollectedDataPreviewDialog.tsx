@@ -1,33 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
-  Box,
   IconButton,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  Tooltip,
-  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import {
-  ContentCopy as ContentCopyIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { storageApi } from '../../api';
-import { PaginationJumpControls } from '../../components';
-import type { CollectedDataItem } from '../../types/storage';
-import { MetricsSummary, ParserLabel } from './CollectedDataViewParts';
+import type { CollectedDataItem, ParserCatalogItem } from '../../types/storage';
+import { CollectedDataTable } from './CollectedDataTable';
 
 interface CollectedDataPreviewDialogProps {
   open: boolean;
@@ -42,6 +28,7 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
   onClose,
   getParserDisplayName,
 }) => {
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [items, setItems] = useState<CollectedDataItem[]>([]);
@@ -106,6 +93,30 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
     setPage(0);
   };
 
+  const parserBySlug = useMemo(() => {
+    const parserItems = items.map((item) => {
+      const displayName = getParserDisplayName ? getParserDisplayName(item.parserSlug) : item.parserSlug;
+
+      const parser: ParserCatalogItem = {
+        slug: item.parserSlug,
+        displayName,
+        description: '',
+        sourceType: 'internal',
+        metricFields: [],
+        dimensions: [],
+        supportsScheduledRun: false,
+        supportsManualRun: true,
+        supportsPushIngest: false,
+        supportsParameters: false,
+        isExternalOwnedByCurrentUser: false,
+      };
+
+      return [item.parserSlug, parser] as const;
+    });
+
+    return new Map(parserItems);
+  }, [items, getParserDisplayName]);
+
   const title = useMemo(() => {
     if (!correlationId) {
       return 'Run preview';
@@ -145,110 +156,22 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
         </IconButton>
       </DialogTitle>
       <DialogContent dividers>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {isLoading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-            <CircularProgress size={28} />
-          </Box>
-        )}
-
-        {!isLoading && (
-          <>
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 900 }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Parser</TableCell>
-                    <TableCell>Timestamp</TableCell>
-                    <TableCell>Captured at</TableCell>
-                    <TableCell>Metrics</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {items.map((item) => {
-                    return (
-                      <TableRow key={item.id} hover>
-                        <TableCell>
-                          <ParserLabel
-                            slug={item.parserSlug}
-                            displayName={getParserDisplayName ? getParserDisplayName(item.parserSlug) : item.parserSlug}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="caption" color="text.secondary">
-                            {item.timestamp ? new Date(item.timestamp).toLocaleString() : '—'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="caption" color="text.secondary">
-                            {item.capturedAt ? new Date(item.capturedAt).toLocaleString() : '—'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <MetricsSummary metrics={item.metrics} compact />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                            <Tooltip title="Copy correlation ID">
-                              <span>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => void copyToClipboard(item.correlationId ?? '')}
-                                  disabled={!item.correlationId}
-                                >
-                                  <ContentCopyIcon fontSize="inherit" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                            <Tooltip title="Copy config ID">
-                              <span>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => void copyToClipboard(item.configId ?? '')}
-                                  disabled={!item.configId}
-                                >
-                                  <ContentCopyIcon fontSize="inherit" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-
-                  {items.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No collected records found for this run
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              component="div"
-              count={totalCount}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-            />
-            <PaginationJumpControls
-              page={page}
-              totalCount={totalCount}
-              rowsPerPage={rowsPerPage}
-              onPageChange={setPage}
-              bottomPadding={1}
-            />
-          </>
-        )}
+        <CollectedDataTable
+          displayedItems={items}
+          parserBySlug={parserBySlug}
+          isLoading={isLoading}
+          error={error}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={totalCount}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          onJumpPageChange={setPage}
+          onCopyCorrelationId={(value) => void copyToClipboard(value)}
+          onCopyConfigId={(value) => void copyToClipboard(value)}
+          onOpenHistory={(value) => navigate(`/history?correlationId=${encodeURIComponent(value)}`)}
+          variant="modal"
+        />
       </DialogContent>
     </Dialog>
   );

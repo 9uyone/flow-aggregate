@@ -42,6 +42,7 @@ interface CollectedDataTableProps {
   onCopyCorrelationId: (correlationId: string) => void;
   onCopyConfigId: (configId: string) => void;
   onOpenHistory: (correlationId: string) => void;
+  variant?: 'full' | 'modal';
 }
 
 interface MetricBadge {
@@ -207,8 +208,10 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
   onCopyCorrelationId,
   onCopyConfigId,
   onOpenHistory,
+  variant = 'full',
 }) => {
   const [rawJsonItem, setRawJsonItem] = useState<CollectedDataItem | null>(null);
+  const showRawJsonButton = variant === 'full';
 
   const metricInfoById = useMemo(() => {
     const map = new Map<string, RowMetricInfo>();
@@ -365,11 +368,9 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
                     <TableCell>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Tooltip title="Provider is the human-friendly label; source is the technical value.">
-                            <Typography variant="body2">
-                              {metricInfo?.metadata?.provider || metricInfo?.metadata?.source || '—'}
-                            </Typography>
-                          </Tooltip>
+                          <Typography variant="body2">
+                            {metricInfo?.metadata?.provider || metricInfo?.metadata?.source || '—'}
+                          </Typography>
 
                           {metricInfo?.metadata?.source && (
                             <IconButton
@@ -523,28 +524,31 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
                       </Stack>
 
                       <Stack direction="row" spacing={0.5}>
-                        <Tooltip title="Open history">
-                          <span>
-                            <IconButton
-                              size="small"
-                              onClick={() => onOpenHistory(item.correlationId ?? '')}
-                              disabled={!item.correlationId}
-                              aria-label="Open history"
-                            >
-                              <HistoryIcon fontSize="inherit" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
+                        {showRawJsonButton && (
+                          <>
+                          <Tooltip title="Open history">
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => onOpenHistory(item.correlationId ?? '')}
+                                disabled={!item.correlationId}
+                                aria-label="Open history"
+                              >
+                                <HistoryIcon fontSize="inherit" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
 
-                        <Tooltip title="View raw JSON">
-                          <IconButton
-                            size="small"
-                            onClick={() => setRawJsonItem(item)}
-                            aria-label="View raw JSON"
-                          >
-                            <CodeIcon fontSize="inherit" />
-                          </IconButton>
-                        </Tooltip>
+                            <Tooltip title="View raw JSON">
+                              <IconButton
+                                size="small"
+                                onClick={() => setRawJsonItem(item)}
+                                aria-label="View raw JSON"
+                              >
+                                <CodeIcon fontSize="inherit" />
+                              </IconButton>
+                            </Tooltip>
+                          </>)}
                       </Stack>
                     </Stack>
                   </TableCell>
@@ -582,43 +586,45 @@ export const CollectedDataTable: React.FC<CollectedDataTableProps> = ({
         onPageChange={onJumpPageChange}
       />
 
-      <Drawer anchor="right" open={rawJsonItem !== null} onClose={() => setRawJsonItem(null)}>
-        <Box sx={{ width: { xs: '100vw', sm: 560 }, p: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-            <Box>
-              <Typography variant="h6">Raw JSON</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {rawJsonItem?.id ?? '—'}
-              </Typography>
-            </Box>
-            <IconButton onClick={() => setRawJsonItem(null)} aria-label="Close raw JSON panel">
-              <CloseIcon />
-            </IconButton>
-          </Stack>
+      {showRawJsonButton && (
+        <Drawer anchor="right" open={rawJsonItem !== null} onClose={() => setRawJsonItem(null)}>
+          <Box sx={{ width: { xs: '100vw', sm: 560 }, p: 2 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+              <Box>
+                <Typography variant="h6">Raw JSON</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {rawJsonItem?.id ?? '—'}
+                </Typography>
+              </Box>
+              <IconButton onClick={() => setRawJsonItem(null)} aria-label="Close raw JSON panel">
+                <CloseIcon />
+              </IconButton>
+            </Stack>
 
-          <Box
-            component="pre"
-            sx={{
-              m: 0,
-              p: 2,
-              fontSize: '0.78rem',
-              lineHeight: 1.45,
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-              overflowX: 'auto',
-              borderRadius: 1.5,
-              border: '1px solid',
-              borderColor: 'divider',
-              backgroundColor: 'background.default',
-              '& .json-key': { color: 'primary.main' },
-              '& .json-string': { color: 'success.dark' },
-              '& .json-number': { color: 'warning.dark' },
-              '& .json-boolean': { color: 'secondary.main' },
-              '& .json-null': { color: 'text.secondary', fontStyle: 'italic' },
-            }}
-            dangerouslySetInnerHTML={{ __html: highlightedRawJson }}
-          />
-        </Box>
-      </Drawer>
+            <Box
+              component="pre"
+              sx={{
+                m: 0,
+                p: 2,
+                fontSize: '0.78rem',
+                lineHeight: 1.45,
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                overflowX: 'auto',
+                borderRadius: 1.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                backgroundColor: 'background.default',
+                '& .json-key': { color: 'primary.main' },
+                '& .json-string': { color: 'success.dark' },
+                '& .json-number': { color: 'warning.dark' },
+                '& .json-boolean': { color: 'secondary.main' },
+                '& .json-null': { color: 'text.secondary', fontStyle: 'italic' },
+              }}
+              dangerouslySetInnerHTML={{ __html: highlightedRawJson }}
+            />
+          </Box>
+        </Drawer>
+      )}
     </Paper>
   );
 };
