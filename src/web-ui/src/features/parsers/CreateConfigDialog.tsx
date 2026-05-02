@@ -35,7 +35,13 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
 
   return (
     <Dialog open={dialog.open} onClose={dialog.close} fullWidth maxWidth="sm">
-      <DialogTitle>{isCreateMode ? 'Create config' : 'Edit config'}</DialogTitle>
+      <DialogTitle>
+        {isCreateMode
+          ? dialog.supportsPushIngest
+            ? 'Create external config'
+            : 'Create config'
+          : 'Edit config'}
+      </DialogTitle>
       <DialogContent sx={{ pt: 1 }}>
         {dialog.isExternalDefinitionMode ? (
           <TextField
