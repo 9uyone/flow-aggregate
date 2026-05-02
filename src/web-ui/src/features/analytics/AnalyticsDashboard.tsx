@@ -23,12 +23,10 @@ import {
   CheckCircle as CheckCircleIcon,
   Add as AddIcon,
   PlayArrow as PlayArrowIcon,
-  ContentCopy as ContentCopyIcon,
-  History as HistoryIcon,
-  Dataset as DatasetIcon,
-  Visibility as VisibilityIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  History as HistoryIcon,
+  Dataset as DatasetIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useParserStore } from '../../store/parserStore';
@@ -38,6 +36,20 @@ import { PageSectionHeader } from '../../components/layout';
 import { CollectedDataPreviewDialog } from '../data';
 import { ParserHistoryChart } from './ParserHistoryChart';
 import type { ParserTaskItem } from '../../types/storage';
+
+// Utility function for relative time formatting
+const formatRelativeTime = (date: Date): string => {
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+};
 
 // TypeScript Interfaces
 interface QuickStat {
@@ -111,18 +123,6 @@ export const AnalyticsDashboard: React.FC = () => {
   const parserBySlug = useMemo(() => {
     return new Map(parsers.map((parser) => [parser.slug, parser.name]));
   }, [parsers]);
-
-  const copyToClipboard = useCallback(async (value: string) => {
-    if (!value) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      // Ignore clipboard failures; the value remains visible.
-    }
-  }, []);
 
   const formatParserOptions = useCallback((options?: ParserTaskItem['parserOptions']) => {
     if (!options) {
@@ -384,99 +384,97 @@ export const AnalyticsDashboard: React.FC = () => {
           </Typography>
         ) : (
           <Stack spacing={1.25}>
-                      {displayedRecentTasks.map((task) => (
+            {displayedRecentTasks.map((task) => (
               <Box
                 key={task.correlationId}
                 sx={{
                   display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'space-between',
-                  alignItems: 'flex-start',
                   border: `1px solid ${theme.palette.divider}`,
                   borderRadius: 1.5,
                   px: 1.5,
-                  py: 1,
+                  py: 1.25,
+                  gap: 2,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                  '&:hover': {
+                    backgroundColor: theme.palette.action.hover,
+                  },
                 }}
+                onClick={() => setPreviewCorrelationId(task.correlationId)}
               >
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="body2" fontWeight={600}>
+                {/* Left: Parser name and compact metadata - CLICKABLE */}
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  {/* Parser name */}
+                  <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
                     {parserBySlug.get(task.parserSlug) ?? task.parserSlug}
                   </Typography>
-                  {parserBySlug.get(task.parserSlug) && parserBySlug.get(task.parserSlug) !== task.parserSlug && (
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      ({task.parserSlug})
+
+                  {/* Compact metadata: Records and Options on separate lines */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      {task.recordsCount.toLocaleString()} record{task.recordsCount !== 1 ? 's' : ''}
                     </Typography>
-                  )}
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontFamily: 'monospace',
-                      display: 'block',
-                      maxWidth: { xs: 180, sm: 340 },
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {task.correlationId}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {new Date(task.startedAt).toLocaleString()}
-                    {task.finishedAt ? ` -> ${new Date(task.finishedAt).toLocaleTimeString()}` : ''}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Records: {task.recordsCount.toLocaleString()}
-                  </Typography>
-                  {formatParserOptions(task.parserOptions) && (
-                    <Typography variant="caption" color="text.secondary" display="block" sx={{ whiteSpace: 'normal' }}>
-                      Options: {formatParserOptions(task.parserOptions)}
-                    </Typography>
-                  )}
+                    {formatParserOptions(task.parserOptions) && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        {formatParserOptions(task.parserOptions)}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
-                <Stack spacing={1} alignItems="flex-end">
+
+                {/* Right: Relative time, Status badge, Navigation icons - NON-CLICKABLE */}
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Relative time */}
+                  <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                    {formatRelativeTime(new Date(task.startedAt))}
+                  </Typography>
+
+                  {/* Status badge */}
                   <Chip
                     size="small"
                     label={task.status}
                     color={task.status === 'Success' ? 'success' : task.status === 'Failed' ? 'error' : 'info'}
+                    variant="filled"
                   />
-                  <Stack direction="row" spacing={0.25}>
-                    <Tooltip title="Preview collected data">
-                      <IconButton
-                        size="small"
-                        onClick={() => setPreviewCorrelationId(task.correlationId)}
-                        aria-label="Preview collected data"
-                      >
-                        <VisibilityIcon fontSize="inherit" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Open history">
+
+                  {/* Navigation icons - visible on hover, muted */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, opacity: 0.6, transition: 'opacity 0.2s' }}>
+                    <Tooltip title="View in History">
                       <IconButton
                         size="small"
                         onClick={() => navigate(`/history?correlationId=${encodeURIComponent(task.correlationId)}`)}
-                        aria-label="Open history"
+                        aria-label="View in History"
+                        sx={{
+                          p: 0.5,
+                          color: 'text.secondary',
+                          '&:hover': { opacity: 1, color: 'text.primary' },
+                        }}
                       >
-                        <HistoryIcon fontSize="inherit" />
+                        <HistoryIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Open data">
+
+                    <Tooltip title="View Data">
                       <IconButton
                         size="small"
                         onClick={() => navigate(`/data?correlationId=${encodeURIComponent(task.correlationId)}`)}
-                        aria-label="Open data"
+                        aria-label="View Data"
+                        sx={{
+                          p: 0.5,
+                          color: 'text.secondary',
+                          '&:hover': { opacity: 1, color: 'text.primary' },
+                        }}
                       >
-                        <DatasetIcon fontSize="inherit" />
+                        <DatasetIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                  </Stack>
-                  <Tooltip title="Copy correlation ID">
-                    <IconButton
-                      size="small"
-                      onClick={() => void copyToClipboard(task.correlationId)}
-                      aria-label="Copy correlation ID"
-                    >
-                      <ContentCopyIcon fontSize="inherit" />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
+                  </Box>
+                </Box>
               </Box>
             ))}
           </Stack>
