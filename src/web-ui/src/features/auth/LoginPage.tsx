@@ -1,8 +1,12 @@
 import { Box, Paper, Typography, Container } from '@mui/material';
+import { useEffect } from 'react';
 import { GoogleLoginButton } from './GoogleLoginButton';
 import { Dashboard as DashboardIcon } from '@mui/icons-material';
 
 export const LoginPage: React.FC = () => {
+  useEffect(() => {
+    document.title = 'FlowAggregate - Login';
+  }, []);
   return (
     <Box
       sx={{

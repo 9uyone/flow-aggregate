@@ -81,6 +81,12 @@ export const AppShell: React.FC = () => {
     }
   }, [location.pathname, navigate]);
 
+  // Update page title based on current view
+  useEffect(() => {
+    const viewLabel = currentView.charAt(0).toUpperCase() + currentView.slice(1);
+    document.title = `FlowAggregate - ${viewLabel}`;
+  }, [currentView]);
+
   const handleViewChange = (_event: React.SyntheticEvent, newView: ViewType) => {
     navigate(`/${newView}`);
     if (isMobile) {
