@@ -27,7 +27,7 @@ internal class ParserConfigInternalService(IMongoRepository<ParserUserConfig> re
 	}
 
 	public async Task<ParserConfigDto?> GetByTokenHashAsync(string tokenHash) {
-		var (configs, _) = await repo.FindAsync(c => c.External!.TokenHash == tokenHash);
+		var (configs, _) = await repo.FindAsync(c => c.External!.TokenHash.Equals(tokenHash, StringComparison.OrdinalIgnoreCase));
 		return configs.FirstOrDefault() is { } config ? MapToDto(config) : null;
 	}
 
