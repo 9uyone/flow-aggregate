@@ -91,7 +91,7 @@ export const AnalyticsDashboard: React.FC = () => {
     const fetchRecentTasks = async () => {
       setRecentTasksLoading(true);
       try {
-        const response = await storageApi.getTasks(1, 5, { oldFirst: false });
+        const response = await storageApi.getTasks(1, 10, { oldFirst: false });
         setRecentTasks(response.items);
       } catch (err) {
         console.error('Error fetching recent tasks:', err);
