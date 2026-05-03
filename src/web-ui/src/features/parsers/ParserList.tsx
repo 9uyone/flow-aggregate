@@ -268,7 +268,7 @@ export const ParserList: React.FC = () => {
     setIsPreparingRun(true);
 
     try {
-      const details = await storageApi.getParserDetails(slug);
+      const details = await storageApi.getParserDetails(slug, true);
       setParserDetails(details);
 
       if (details.parameters.length === 0) {

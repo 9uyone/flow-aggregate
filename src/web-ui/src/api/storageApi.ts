@@ -15,6 +15,8 @@ import type {
   CreateExternalConfigResponse,
   CreateExternalParserDefinitionDto,
   UpdateExternalParserDefinitionDto,
+  UpsertExternalConfigWithDefinitionDto,
+  UpsertExternalConfigResultDto,
   UpdateConfigDto,
   TaskStatusResponse,
   UserConfig,
@@ -226,12 +228,23 @@ const normalizeParserDetailsResponse = (payload: unknown): ParserDetailsResponse
       ? (raw.MetricFields as unknown[])
       : [];
 
+  const dimensionsRaw = Array.isArray(raw.dimensions)
+    ? raw.dimensions
+    : Array.isArray(raw.Dimensions)
+      ? (raw.Dimensions as unknown[])
+      : [];
+
   return {
     slug: String(raw.slug ?? raw.Slug ?? ''),
     displayName: String(raw.displayName ?? raw.DisplayName ?? raw.slug ?? raw.Slug ?? ''),
     description: String(raw.description ?? raw.Description ?? ''),
     sourceType,
     metricFields: metricFieldsRaw.map((metric) => String(metric)),
+    dimensions: dimensionsRaw.map((dimension) => String(dimension)).filter(Boolean),
+    supportsScheduledRun: Boolean(raw.supportsScheduledRun ?? raw.SupportsScheduledRun),
+    supportsManualRun: Boolean(raw.supportsManualRun ?? raw.SupportsManualRun),
+    supportsPushIngest: Boolean(raw.supportsPushIngest ?? raw.SupportsPushIngest),
+    supportsParameters: Boolean(raw.supportsParameters ?? raw.SupportsParameters),
     parameters,
   };
 };
@@ -543,8 +556,13 @@ export const storageApi = {
   /**
    * Fetch full parser details with parameter definitions
    */
-  getParserDetails: async (slug: string): Promise<ParserDetailsResponse> => {
-    const { data } = await axiosInstance.get(`/collector/parsers/${slug}`);
+  getParserDetails: async (
+    slug: string,
+    includeParameters: boolean = false
+  ): Promise<ParserDetailsResponse> => {
+    const { data } = await axiosInstance.get(`/storage/parsers/${slug}`, {
+      params: { includeParameters },
+    });
     return normalizeParserDetailsResponse(data);
   },
 
@@ -595,6 +613,20 @@ export const storageApi = {
     dto: UpdateExternalParserDefinitionDto
   ): Promise<void> => {
     await axiosInstance.put(`/storage/parsers/external/${slug}`, dto);
+  },
+
+  /**
+   * Upsert external config with definition in one atomic operation.
+   * Creates definition and config, or updates if exists.
+   */
+  upsertExternalConfigWithDefinition: async (
+    dto: UpsertExternalConfigWithDefinitionDto
+  ): Promise<UpsertExternalConfigResultDto> => {
+    const { data } = await axiosInstance.post<UpsertExternalConfigResultDto>(
+      '/storage/configs/external/upsert',
+      dto
+    );
+    return data;
   },
 
   /**

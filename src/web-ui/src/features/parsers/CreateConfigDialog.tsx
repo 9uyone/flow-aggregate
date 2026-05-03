@@ -30,14 +30,14 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
 }) => {
   const isCreateMode = dialog.mode === 'create';
   const externalCreateCompleted = isCreateMode
-    && dialog.supportsPushIngest
+    && dialog.isExternalConfigMode
     && Boolean(dialog.createdExternalToken);
 
   return (
     <Dialog open={dialog.open} onClose={dialog.close} fullWidth maxWidth="sm">
       <DialogTitle>
         {isCreateMode
-          ? dialog.supportsPushIngest
+          ? dialog.isExternalConfigMode
             ? 'Create external config'
             : 'Create config'
           : 'Edit config'}
@@ -72,12 +72,8 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
           </TextField>
         )}
 
-        {dialog.supportsPushIngest ? (
+        {dialog.isExternalConfigMode ? (
           <>
-            <Typography variant="subtitle2" sx={{ mt: 1 }}>
-              Step 1: Definition
-            </Typography>
-
             <TextField
               fullWidth
               margin="dense"
@@ -106,8 +102,8 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
                 <TextField
                   {...params}
                   margin="dense"
-                  label="Metric fields"
-                  helperText="Press Enter after each value"
+                  label="Additional metrics"
+                  helperText="Optional. Press Enter after each value"
                 />
               )}
             />
@@ -127,30 +123,6 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
                 />
               )}
             />
-
-            <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
-              <Button
-                variant="outlined"
-                onClick={dialog.saveExternalDefinition}
-                disabled={dialog.isSavingExternalDefinition || !dialog.parserSlug}
-              >
-                {dialog.isSavingExternalDefinition ? 'Saving definition...' : 'Save definition'}
-              </Button>
-            </Stack>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>
-              Step 2: Create config
-            </Typography>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              After definition is saved, create config to get ingest token.
-            </Typography>
-
-            {!dialog.canCreateExternalConfig && (
-              <Alert severity="warning" sx={{ mt: 1 }}>
-                Спочатку створіть external parser definition
-              </Alert>
-            )}
           </>
         ) : (
           <>
@@ -301,12 +273,6 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
             {dialog.createdExternalToken}
           </Alert>
         )}
-
-        {externalCreateCompleted && (
-          <Alert severity="info" sx={{ mt: 1 }}>
-            Config already created in this dialog session. Close and reopen the dialog to create another config.
-          </Alert>
-        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={dialog.close}>Close</Button>
@@ -317,7 +283,6 @@ export const CreateConfigDialog: React.FC<CreateConfigDialogProps> = ({
           disabled={
             dialog.isSubmitting
             || !dialog.parserSlug
-            || (dialog.supportsPushIngest && !dialog.canCreateExternalConfig)
             || externalCreateCompleted
           }
         >

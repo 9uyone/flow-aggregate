@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { storageApi } from '../../api';
-import type { CollectedDataItem, ParserCatalogItem } from '../../types/storage';
+import type { CollectedDataItem, ParserCatalogItem, ParserDetailsResponse } from '../../types/storage';
 import { CollectedDataTable } from './CollectedDataTable';
 
 interface CollectedDataPreviewDialogProps {
@@ -33,6 +33,7 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [items, setItems] = useState<CollectedDataItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [previewParserDetails, setPreviewParserDetails] = useState<ParserDetailsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -70,11 +71,20 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
 
       setItems(response.items);
       setTotalCount(response.totalCount);
+
+      const previewSlug = response.items[0]?.parserSlug;
+      if (previewSlug) {
+        const details = await storageApi.getParserDetails(previewSlug, false);
+        setPreviewParserDetails(details);
+      } else {
+        setPreviewParserDetails(null);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load preview data';
       setError(message);
       setItems([]);
       setTotalCount(0);
+      setPreviewParserDetails(null);
     } finally {
       setIsLoading(false);
     }
@@ -94,9 +104,26 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
   };
 
   const parserBySlug = useMemo(() => {
-    const parserItems = items.map((item) => {
-      const displayName = getParserDisplayName ? getParserDisplayName(item.parserSlug) : item.parserSlug;
+    const mapEntries = items.map((item) => {
+      if (previewParserDetails && previewParserDetails.slug === item.parserSlug) {
+        const parser: ParserCatalogItem = {
+          slug: previewParserDetails.slug,
+          displayName: previewParserDetails.displayName,
+          description: previewParserDetails.description,
+          sourceType: previewParserDetails.sourceType,
+          metricFields: previewParserDetails.metricFields,
+          dimensions: previewParserDetails.dimensions,
+          supportsScheduledRun: previewParserDetails.supportsScheduledRun,
+          supportsManualRun: previewParserDetails.supportsManualRun,
+          supportsPushIngest: previewParserDetails.supportsPushIngest,
+          supportsParameters: previewParserDetails.supportsParameters,
+          isExternalOwnedByCurrentUser: false,
+        };
 
+        return [item.parserSlug, parser] as const;
+      }
+
+      const displayName = getParserDisplayName ? getParserDisplayName(item.parserSlug) : item.parserSlug;
       const parser: ParserCatalogItem = {
         slug: item.parserSlug,
         displayName,
@@ -114,8 +141,8 @@ export const CollectedDataPreviewDialog: React.FC<CollectedDataPreviewDialogProp
       return [item.parserSlug, parser] as const;
     });
 
-    return new Map(parserItems);
-  }, [items, getParserDisplayName]);
+    return new Map(mapEntries);
+  }, [items, getParserDisplayName, previewParserDetails]);
 
   const title = useMemo(() => {
     if (!correlationId) {

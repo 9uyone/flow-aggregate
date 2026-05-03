@@ -70,6 +70,21 @@ export interface UpdateExternalParserDefinitionDto {
   dimensions: string[];
 }
 
+export interface UpsertExternalConfigWithDefinitionDto {
+  slug: string;
+  displayName: string;
+  description?: string;
+  metricFields: string[];
+  dimensions: string[];
+  isEnabled: boolean;
+}
+
+export interface UpsertExternalConfigResultDto {
+  configId: string;
+  isCreated: boolean;
+  token?: string;
+}
+
 export interface ParserParameterOption {
   value: string;
   label: string;
@@ -89,6 +104,11 @@ export interface ParserDetailsResponse {
   description: string;
   sourceType: ParserSourceType;
   metricFields: string[];
+  dimensions: string[];
+  supportsScheduledRun: boolean;
+  supportsManualRun: boolean;
+  supportsPushIngest: boolean;
+  supportsParameters: boolean;
   parameters: ParserParameterDefinition[];
 }
 

@@ -19,7 +19,7 @@ interface ParserConfigCardProps {
   config: ParserConfig;
   parserName: string;
   parserDescription: string;
-  metricOptionsCount: number;
+  metricFieldsCount: number;
   dimensionCount: number;
   supportsManualRun: boolean;
   selected: boolean;
@@ -38,7 +38,7 @@ export const ParserConfigCard: React.FC<ParserConfigCardProps> = ({
   config,
   parserName,
   parserDescription,
-  metricOptionsCount,
+  metricFieldsCount,
   dimensionCount,
   supportsManualRun,
   selected,
@@ -124,8 +124,12 @@ export const ParserConfigCard: React.FC<ParserConfigCardProps> = ({
           )}
 
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
-            <Chip size="small" label={`Metrics: ${metricOptionsCount}`} variant="outlined" />
-            <Chip size="small" label={`Dimensions: ${dimensionCount}`} variant="outlined" />
+            {metricFieldsCount > 0 && (
+              <Chip size="small" label={`Custom metrics: ${metricFieldsCount}`} variant="outlined" />
+            )}
+            {dimensionCount > 0 && (
+              <Chip size="small" label={`Dimensions: ${dimensionCount}`} variant="outlined" />
+            )}
           </Box>
 
           {config.cronExpression && (

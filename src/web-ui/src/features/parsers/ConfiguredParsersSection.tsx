@@ -92,8 +92,8 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
               (parserDefinition?.supportsPushIngest
                 ? 'Push-ingest parser configuration'
                 : 'Parser configuration');
-            const metricOptionsCount = parserDefinition?.metricOptions.length ?? 0;
-            const dimensionCount = Array.from(new Set(parserDefinition?.metricOptions.flatMap((option) => option.dimensions) ?? [])).length;
+            const metricFieldsCount = parserDefinition?.metricFields.length ?? 0;
+            const dimensionCount = parserDefinition?.dimensions.length ?? 0;
             const supportsManualRun = parserDefinition?.supportsManualRun ?? false;
 
             return (
@@ -102,7 +102,7 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
                   config={config}
                   parserName={parserName}
                   parserDescription={parserDescription}
-                  metricOptionsCount={metricOptionsCount}
+                  metricFieldsCount={metricFieldsCount}
                   dimensionCount={dimensionCount}
                   supportsManualRun={supportsManualRun}
                   selected={selectedParserSlug === config.slug}
