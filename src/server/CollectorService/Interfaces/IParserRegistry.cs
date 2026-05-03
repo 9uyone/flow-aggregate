@@ -1,4 +1,5 @@
 ﻿using CollectorService.Contracts;
+using Common.Contracts.Parser;
 
 namespace CollectorService.Interfaces;
 

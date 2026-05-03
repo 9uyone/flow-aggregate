@@ -5,6 +5,7 @@ using Common.Interfaces.Parser;
 using System.Reflection;
 using Common.Enums;
 using CollectorService.Extensions;
+using Common.Contracts.Parser;
 
 namespace CollectorService.Services;
 
@@ -86,10 +87,10 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 		var paramsAttr = reg.ParserType.GetCustomAttributes<ParserParameterAttribute>();
 		var parser = sp.GetRequiredService(reg.ParserType) as IDataParser;
 
-		var parameters = new List<ParameterDetailsDto>();
+		var parameters = new List<ParserParameterDetailsDto>();
 		foreach (var p in paramsAttr) {
 			var lookups = await parser.GetParameterLookupsAsync(p.Name);
-			parameters.Add(new ParameterDetailsDto(p.Name, p.Description, p.IsRequired, p.AllowCustomValues, lookups));
+			parameters.Add(new ParserParameterDetailsDto(p.Name, p.Description, p.IsRequired, p.AllowCustomValues, lookups));
 		}
 
 		var info = reg.Info;

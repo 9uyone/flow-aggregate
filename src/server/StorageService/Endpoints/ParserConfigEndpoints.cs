@@ -20,13 +20,14 @@ public static partial class StorageEndpoints {
 				return Results.Ok();
 			}).RequireAuthorization();
 
-		group.MapPost("/external", async (
-			UserConfigCreateExternalDto dto,
+
+		group.MapPost("/external/upsert", async (
+			UpsertExternalConfigWithDefinitionDto dto,
 			ParserConfigService service,
 			HttpContext httpContext) => {
 				var userId = httpContext.User.GetUserId()!;
-				var token = await service.CreateExternalAsync(dto, userId);
-				return Results.Ok(new { Token = token });
+				var result = await service.UpsertExternalWithDefinitionAsync(dto, userId);
+				return Results.Ok(result);
 			}).RequireAuthorization();
 
 		// Get all for user

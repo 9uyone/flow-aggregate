@@ -3,7 +3,6 @@ using Common.Enums;
 using Common.Exceptions;
 using Common.Interfaces;
 using MongoDB.Driver;
-using StorageService.Contracts.ParserCatalog;
 using StorageService.Entities;
 
 namespace StorageService.Services;
@@ -22,6 +21,12 @@ public sealed record ParserCatalogItemDto(
 	bool IsExternalOwnedByCurrentUser);
 
 internal class ParserCatalogService(IMongoRepository<ParserDefinition> definitionsRepo, IMongoRepository<ParserUserConfig> configsRepo) {
+	private static string[] NormalizeStrings(IEnumerable<string>? items) =>
+		items?.Where(v => !string.IsNullOrWhiteSpace(v))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.OrderBy(v => v)
+			.ToArray() ?? [];
+
 	public async Task<IReadOnlyList<ParserCatalogItemDto>> GetAllAsync(Guid userId) {
 		var definitions = await definitionsRepo.FindAllAsync(Builders<ParserDefinition>.Filter.Empty, Builders<ParserDefinition>.Sort.Ascending(x => x.DisplayName));
 		var (externalConfigs, _) = await configsRepo.FindAsync(x => x.SourceType == ParserSourceType.External && x.UserId == userId, page: 1, pageSize: 5000, oldFirst: false);
@@ -39,8 +44,8 @@ internal class ParserCatalogService(IMongoRepository<ParserDefinition> definitio
 				x.DisplayName,
 				x.Description,
 				x.SourceType.ToString(),
-				x.MetricFields?.Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(v => v).ToArray() ?? [],
-				x.Dimensions?.Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(v => v).ToArray() ?? [],
+				NormalizeStrings(x.MetricFields),
+				NormalizeStrings(x.Dimensions),
 				x.SupportsScheduledRun,
 				x.SupportsManualRun,
 				x.SupportsPushIngest,
@@ -48,81 +53,20 @@ internal class ParserCatalogService(IMongoRepository<ParserDefinition> definitio
 				x.SourceType == ParserSourceType.External && x.OwnerUserId == userId)).ToList();
 	}
 
-	public async Task<ParserCatalogItemDto> UpsertExternalAsync(Guid userId, UpsertExternalParserDefinitionDto dto) {
-		var slug = dto.Slug.Trim();
-		var existing = await FindDefinitionBySlugAsync(slug);
 
-		if (existing is not null && existing.SourceType != ParserSourceType.External)
-			throw new BadRequestException($"Parser slug '{slug}' is already used by non-external parser");
+	public async Task<ParserDefinition> GetDefinitionAsync(string slug, Guid userId) {
+		var definition = await FindDefinitionBySlugAsync(slug);
+		if (definition is null)
+			throw new NotFoundException($"Parser '{slug}' not found.");
 
-		if (existing is not null && existing.OwnerUserId != null && existing.OwnerUserId != userId)
-			throw new BadRequestException($"External parser slug '{slug}' belongs to another user");
-
-		var metricFields = dto.MetricFields
-			.Where(x => !string.IsNullOrWhiteSpace(x))
-			.Select(x => x.Trim())
-			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.OrderBy(x => x)
-			.ToArray();
-
-		var dimensions = dto.Dimensions
-			.Where(x => !string.IsNullOrWhiteSpace(x))
-			.Select(x => x.Trim())
-			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.OrderBy(x => x)
-			.ToArray();
-
-		var displayName = dto.DisplayName.Trim();
-		var description = dto.Description?.Trim() ?? string.Empty;
-
-		if (existing is null) {
-			await definitionsRepo.CreateAsync(new ParserDefinition {
-				Slug = slug,
-				DisplayName = displayName,
-				Description = description,
-				MetricFields = metricFields,
-				Dimensions = dimensions,
-				SourceType = ParserSourceType.External,
-				SupportsPushIngest = true,
-				SupportsManualRun = false,
-				SupportsScheduledRun = false,
-				SupportsParameters = false,
-				OwnerUserId = userId,
-				UpdatedAt = DateTime.UtcNow,
-			});
-		}
-		else {
-			var update = Builders<ParserDefinition>.Update
-				.Set(x => x.DisplayName, displayName)
-				.Set(x => x.Description, description)
-				.Set(x => x.MetricFields, metricFields)
-				.Set(x => x.Dimensions, dimensions)
-				.Set(x => x.SupportsPushIngest, true)
-				.Set(x => x.SupportsManualRun, false)
-				.Set(x => x.SupportsScheduledRun, false)
-				.Set(x => x.SupportsParameters, false)
-				.Set(x => x.UpdatedAt, DateTime.UtcNow)
-				.Set(x => x.OwnerUserId, userId);
-
-			await definitionsRepo.UpdateOneAsync(x => x.Slug == slug, update);
+		if (definition.SourceType == ParserSourceType.External && definition.OwnerUserId != null && definition.OwnerUserId != userId) {
+			var hasExternalConfig = await configsRepo.AnyAsync(x =>
+				x.SourceType == ParserSourceType.External && x.UserId == userId && x.ParserSlug == slug);
+			if (!hasExternalConfig)
+				throw new NotFoundException($"Parser '{slug}' not found.");
 		}
 
-		var saved = await FindDefinitionBySlugAsync(slug);
-		if (saved is null)
-			throw new InvalidOperationException("Failed to upsert external parser definition");
-
-		return new ParserCatalogItemDto(
-			saved.Slug,
-			saved.DisplayName,
-			saved.Description,
-			saved.SourceType.ToString(),
-			saved.MetricFields?.ToArray() ?? [],
-			saved.Dimensions?.ToArray() ?? [],
-			saved.SupportsScheduledRun,
-			saved.SupportsManualRun,
-			saved.SupportsPushIngest,
-			saved.SupportsParameters,
-			true);
+		return definition;
 	}
 
 	private async Task<ParserDefinition?> FindDefinitionBySlugAsync(string slug) {

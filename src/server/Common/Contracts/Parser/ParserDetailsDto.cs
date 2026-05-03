@@ -1,6 +1,13 @@
-﻿using Common.Enums;
+using Common.Enums;
 
-namespace CollectorService.Contracts;
+namespace Common.Contracts.Parser;
+
+public record ParserParameterDetailsDto(
+	string Name,
+	string Description,
+	bool IsRequired,
+	bool allowCustomValues,
+	IEnumerable<LookupOptionDto> Options);
 
 public record ParserDetailsDto(
 	string Slug,
@@ -13,5 +20,4 @@ public record ParserDetailsDto(
 	bool SupportsManualRun,
 	bool SupportsPushIngest,
 	bool SupportsParameters,
-	IEnumerable<ParameterDetailsDto> Parameters
-);
+	IEnumerable<ParserParameterDetailsDto> Parameters);

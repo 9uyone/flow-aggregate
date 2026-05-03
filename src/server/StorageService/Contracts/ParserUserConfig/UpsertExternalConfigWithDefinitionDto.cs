@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace StorageService.Contracts.ParserCatalog;
+namespace StorageService.Contracts.ParserUserConfig;
 
-internal class UpsertExternalParserDefinitionDto {
+internal class UpsertExternalConfigWithDefinitionDto {
 	[MinLength(3)]
 	[MaxLength(100)]
 	public required string Slug { get; init; }
@@ -16,4 +16,5 @@ internal class UpsertExternalParserDefinitionDto {
 
 	public string[] MetricFields { get; init; } = [];
 	public string[] Dimensions { get; init; } = [];
+	public bool IsEnabled { get; init; } = true;
 }

@@ -18,6 +18,7 @@ namespace StorageService.Services;
 internal class ParserConfigService(
 	IMongoRepository<ParserUserConfig> repo,
 	IMongoRepository<ParserDefinition> definitionsRepo,
+	IMongoDatabase database,
 	IConfiguration config,
 	IIntegrationDispatcher dispatcher)
 {
@@ -65,38 +66,82 @@ internal class ParserConfigService(
 		});
 	}
 
-	public async Task<string> CreateExternalAsync(UserConfigCreateExternalDto dto, Guid userId) {
-		if (await repo.AnyAsync(x => x.UserId == userId && x.ParserSlug == dto.ParserSlug))
-			throw new BadRequestException("Parser name must be unique");
+	public async Task<UpsertExternalConfigResultDto> UpsertExternalWithDefinitionAsync(UpsertExternalConfigWithDefinitionDto dto, Guid userId) {
+		var slug = dto.Slug.Trim();
+		var displayName = dto.DisplayName.Trim();
+		var description = dto.Description?.Trim() ?? string.Empty;
+		var metricFields = NormalizeStrings(dto.MetricFields);
+		var dimensions = NormalizeStrings(dto.Dimensions);
 
-		var parserDefinition = await FindParserDefinitionAsync(dto.ParserSlug);
-		if (parserDefinition is null)
-			throw new BadRequestException($"External parser definition for '{dto.ParserSlug}' is not registered. Create it in /storage/parsers/external first.");
+		using var session = await database.Client.StartSessionAsync();
+		session.StartTransaction();
 
-		if (parserDefinition.SourceType != ParserSourceType.External)
-			throw new BadRequestException($"Parser '{dto.ParserSlug}' is not an external parser");
+		try {
+			var definitionsCollection = database.GetCollection<ParserDefinition>("parser_definitions");
+			var configsCollection = database.GetCollection<ParserUserConfig>("parser_user_configs");
 
-		if (!parserDefinition.SupportsPushIngest)
-			throw new BadRequestException($"Parser '{dto.ParserSlug}' does not support external push ingest");
+			var existingDefinition = await definitionsCollection.Find(session, x => x.Slug == slug).FirstOrDefaultAsync();
+			if (existingDefinition is not null && existingDefinition.SourceType != ParserSourceType.External)
+				throw new BadRequestException($"Parser slug '{slug}' is already used by non-external parser");
 
-		if (parserDefinition.OwnerUserId is not null && parserDefinition.OwnerUserId != userId)
-			throw new BadRequestException($"External parser '{dto.ParserSlug}' belongs to another user");
+			if (existingDefinition is not null && existingDefinition.OwnerUserId is not null && existingDefinition.OwnerUserId != userId)
+				throw new BadRequestException($"External parser slug '{slug}' belongs to another user");
 
-		var token = GenerateToken();
-		var tokenHash = SecurityHelper.HashToken(token);
+			var definitionFilter = Builders<ParserDefinition>.Filter.Eq(x => x.Slug, slug);
+			var definitionUpdate = Builders<ParserDefinition>.Update
+				.Set(x => x.Slug, slug)
+				.Set(x => x.DisplayName, displayName)
+				.Set(x => x.Description, description)
+				.Set(x => x.MetricFields, metricFields)
+				.Set(x => x.Dimensions, dimensions)
+				.Set(x => x.SourceType, ParserSourceType.External)
+				.Set(x => x.SupportsPushIngest, true)
+				.Set(x => x.SupportsManualRun, false)
+				.Set(x => x.SupportsScheduledRun, false)
+				.Set(x => x.SupportsParameters, false)
+				.Set(x => x.OwnerUserId, userId)
+				.Set(x => x.UpdatedAt, DateTime.UtcNow)
+				.SetOnInsert(x => x.Id, Guid.NewGuid())
+				.SetOnInsert(x => x.Timestamp, DateTime.UtcNow);
 
-		await repo.CreateAsync(new ParserUserConfig {
-			UserId = userId,
-			ParserSlug = dto.ParserSlug,
-			IsEnabled = dto.IsEnabled,
-			SourceType = ParserSourceType.External,
-			External = new ExternalOptions
-			{
-				TokenHash = tokenHash
+			await definitionsCollection.UpdateOneAsync(session, definitionFilter, definitionUpdate, new UpdateOptions { IsUpsert = true });
+
+			var existingConfig = await configsCollection.Find(session, x => x.UserId == userId && x.ParserSlug == slug && x.SourceType == ParserSourceType.External).FirstOrDefaultAsync();
+			var created = existingConfig is null;
+			string? createdToken = null;
+			var configId = existingConfig?.Id ?? Guid.NewGuid();
+
+			if (created) {
+				createdToken = GenerateToken();
+				var tokenHash = SecurityHelper.HashToken(createdToken);
+				await configsCollection.InsertOneAsync(session, new ParserUserConfig {
+					Id = configId,
+					Timestamp = DateTime.UtcNow,
+					UserId = userId,
+					ParserSlug = slug,
+					IsEnabled = dto.IsEnabled,
+					SourceType = ParserSourceType.External,
+					External = new ExternalOptions { TokenHash = tokenHash }
+				});
 			}
-		});
+			else {
+				var configFilter = Builders<ParserUserConfig>.Filter.Eq(x => x.Id, existingConfig!.Id);
+				var configUpdate = Builders<ParserUserConfig>.Update
+					.Set(x => x.IsEnabled, dto.IsEnabled);
+				await configsCollection.UpdateOneAsync(session, configFilter, configUpdate);
+			}
 
-		return token;
+			await session.CommitTransactionAsync();
+			return new UpsertExternalConfigResultDto {
+				ConfigId = configId,
+				Token = createdToken,
+				IsCreated = created
+			};
+		}
+		catch {
+			await session.AbortTransactionAsync();
+			throw;
+		}
 	}
 
 	public async Task<(IEnumerable<UserConfigBaseDto> configs, int totalCount)> GetAllForUserAsync(
@@ -239,6 +284,13 @@ internal class ParserConfigService(
 		var (items, _) = await definitionsRepo.FindAsync(x => x.Slug == slug, page: 1, pageSize: 1);
 		return items.FirstOrDefault();
 	}
+
+	private static string[] NormalizeStrings(IEnumerable<string>? items) =>
+		items?.Where(v => !string.IsNullOrWhiteSpace(v))
+			.Select(v => v.Trim())
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.OrderBy(v => v)
+			.ToArray() ?? [];
 
 	private static string GenerateToken() {
 		byte[] randomNumber = new byte[32];
