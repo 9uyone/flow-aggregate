@@ -43,6 +43,7 @@ public class OpenWeatherParser(IHttpRestClient httpClient, IConfiguration config
 			Value = (decimal)weather.Main.Temp,
 			Metadata = new Dictionary<string, string> {
 				[MetadataKeys.Provider] = "OpenWeatherMap",
+				[MetadataKeys.Unit] = $"{(units == "metric" ? "°C" : "°F")}",
 				["city"] = city.ToLower().Replace(" ", "_"),
 				["description"] = weather.Weather.FirstOrDefault()?.Description ?? "No description",
 				["humidityPercent"] = weather.Main.Humidity.ToString(CultureInfo.InvariantCulture),
