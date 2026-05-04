@@ -39,7 +39,7 @@ public class OpenWeatherParser(IHttpRestClient httpClient, IConfiguration config
 		return [new ParserDataPayload {
 			Category = "Temperature",
 			Source = "openweathermap.org",
-			Metric = $"temperature_{units}",
+			Metric = $"temperature_{(units == "metric" ? "celsius" : "fahrenheit")}",
 			Value = (decimal)weather.Main.Temp,
 			Metadata = new Dictionary<string, string> {
 				[MetadataKeys.Provider] = "OpenWeatherMap",
@@ -52,10 +52,9 @@ public class OpenWeatherParser(IHttpRestClient httpClient, IConfiguration config
 		}];
 	}
 
-	// Cities example
 	public Task<IEnumerable<LookupOptionDto>> GetParameterLookupsAsync(string parameterName) {
 		if (parameterName == "city") {
-			return Task.FromResult<IEnumerable<LookupOptionDto>>(new List<LookupOptionDto>
+			return Task.FromResult<IEnumerable<LookupOptionDto>>(new List<LookupOptionDto> // city examples
 			{
 				new("Lviv", "Львів"),
 				new("Kyiv", "Київ"),
