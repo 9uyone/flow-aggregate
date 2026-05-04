@@ -39,9 +39,7 @@ export const HistoryDataGrid: React.FC = () => {
   }, [parsers]);
 
   const parserSuggestions = useMemo(() => {
-    return parsers
-      .filter((parser) => parser.sourceType !== 'external')
-      .map((parser) => ({
+    return parsers.map((parser) => ({
         slug: parser.slug,
         displayName: parser.name,
       }))
