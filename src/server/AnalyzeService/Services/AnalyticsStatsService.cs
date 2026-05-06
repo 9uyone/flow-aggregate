@@ -8,6 +8,9 @@ public sealed record AnalyticsStatsDto(
 	double Min,
 	double Max,
 	double Average,
+	double Median,
+	double Q1,
+	double Q3,
 	double FirstValue,
 	double LastValue,
 	double Delta,
@@ -30,7 +33,7 @@ public interface IAnalyticsStatsService
 	Task<AnalyticsStatsDto> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
 }
 
-public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsCache cache) : IAnalyticsStatsService
+public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsCache cache, IHistoryQueryService historyQueryService) : IAnalyticsStatsService
 {
 	public async Task<AnalyticsStatsDto> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default)
 	{
@@ -75,8 +78,14 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 			var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/stats/{request.Slug}", query);
 			return await httpClient.GetAsync<StorageStatsDto>(uri);
 		}, cancellationToken);
+		var history = await historyQueryService.GetHistoryAsync(request, cancellationToken);
+		var values = history.Select(point => point.Value).OrderBy(value => value).ToArray();
+		var median = ResolvePercentile(values, 0.5);
+		var q1 = ResolvePercentile(values, 0.25);
+		var q3 = ResolvePercentile(values, 0.75);
+
 		if (stats is null)
-			return new AnalyticsStatsDto(0, 0, 0, 0, 0, 0, 0, null, null, null);
+			return new AnalyticsStatsDto(0, 0, 0, 0, median, q1, q3, 0, 0, 0, null, null, null);
 
 		var baseline = stats.Average;
 		var delta = stats.LastValue - baseline;
@@ -87,12 +96,33 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 			stats.Min,
 			stats.Max,
 			stats.Average,
+			median,
+			q1,
+			q3,
 			stats.FirstValue,
 			stats.LastValue,
 			delta,
 			percentChange,
 			stats.FirstTimestamp,
 			stats.LastTimestamp);
+	}
+
+	private static double ResolvePercentile(double[] sortedValues, double percentile)
+	{
+		if (sortedValues.Length == 0)
+			return 0;
+
+		if (sortedValues.Length == 1)
+			return sortedValues[0];
+
+		var position = (sortedValues.Length - 1) * percentile;
+		var lowerIndex = (int)Math.Floor(position);
+		var upperIndex = (int)Math.Ceiling(position);
+		if (lowerIndex == upperIndex)
+			return sortedValues[lowerIndex];
+
+		var weight = position - lowerIndex;
+		return sortedValues[lowerIndex] + (sortedValues[upperIndex] - sortedValues[lowerIndex]) * weight;
 	}
 }
 

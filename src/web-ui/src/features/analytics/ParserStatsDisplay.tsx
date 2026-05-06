@@ -160,6 +160,21 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
       value: formatNumber(stats.lastValue),
       format: "number",
     },
+    {
+      label: "Q1 (25th percentile)",
+      value: formatNumber(stats.q1),
+      format: "number",
+    },
+    {
+      label: "Median",
+      value: formatNumber(stats.median),
+      format: "number",
+    },
+    {
+      label: "Q3 (75th percentile)",
+      value: formatNumber(stats.q3),
+      format: "number",
+    },
   ];
 
   return (
@@ -236,7 +251,8 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
       {/* Statistics Grid - 3 columns on desktop, 2 on tablet */}
       <Grid container spacing={2}>
         {statItems.map((item, idx) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={idx}>
+          //<Grid size={{ xs: 12, sm: 6, md: 4 }} key={idx}>
+          <Grid size={{ xs: 6, md: 4 }} key={idx}>
             <Card
               variant="outlined"
               sx={{

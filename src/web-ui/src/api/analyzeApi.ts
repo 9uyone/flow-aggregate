@@ -10,6 +10,9 @@ export interface ParserMetricStats {
   min: number;
   max: number;
   average: number;
+  median: number;
+  q1: number;
+  q3: number;
   firstValue: number;
   lastValue: number;
   delta: number;
