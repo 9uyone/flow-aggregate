@@ -5,8 +5,6 @@ namespace AnalyzeService.Services;
 
 public sealed record HistoryPointDto(string Timestamp, double Value);
 
-public sealed record HistoryQueryResult(bool Success, string? ErrorMessage, HistoryPointDto[]? Data);
-
 public sealed record HistoryQueryRequest(
 	string Slug,
 	string Metric,
@@ -19,15 +17,15 @@ public sealed record HistoryQueryRequest(
 
 public interface IHistoryQueryService
 {
-	Task<HistoryQueryResult> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
+	Task<HistoryPointDto[]> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCache cache) : IHistoryQueryService
 {
-	public async Task<HistoryQueryResult> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default)
+	public async Task<HistoryPointDto[]> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrWhiteSpace(request.Metric))
-			return new HistoryQueryResult(false, "Metric is required.", null);
+			throw new Common.Exceptions.BadRequestException("Metric is required.");
 
 		DateTime effectiveFrom;
 		DateTime effectiveTo;
@@ -36,7 +34,7 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 		if (!string.IsNullOrWhiteSpace(request.Range))
 		{
 			if (!AnalyticsTimeRangeResolver.TryResolvePreset(request.Range, out effectiveFrom, out effectiveTo, out effectiveInterval))
-				return new HistoryQueryResult(false, "Range must be one of: day, week, month, quarter, year, all, all-time.", null);
+				throw new Common.Exceptions.BadRequestException("Range must be one of: day, week, month, quarter, year, all, all-time.");
 
 			if (!string.IsNullOrWhiteSpace(request.Interval))
 				effectiveInterval = request.Interval.Trim().ToLowerInvariant();
@@ -44,7 +42,7 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 		else
 		{
 			if (request.From is null || request.To is null)
-				return new HistoryQueryResult(false, "from and to are required when range is not specified.", null);
+				throw new Common.Exceptions.BadRequestException("from and to are required when range is not specified.");
 
 			effectiveFrom = request.From.Value;
 			effectiveTo = request.To.Value;
@@ -54,10 +52,10 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 		}
 
 		if (!AnalyticsTimeRangeResolver.IsSupportedInterval(effectiveInterval))
-			return new HistoryQueryResult(false, "Interval must be one of: hour, day, week, month.", null);
+			throw new Common.Exceptions.BadRequestException("Interval must be one of: hour, day, week, month.");
 
 		if (effectiveFrom > effectiveTo)
-			return new HistoryQueryResult(false, "'from' must be less than or equal to 'to'.", null);
+			throw new Common.Exceptions.BadRequestException("'from' must be less than or equal to 'to'.");
 
 		var query = new Dictionary<string, string?>
 		{
@@ -79,7 +77,7 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 			return await httpClient.GetAsync<HistoryPointDto[]>(uri) ?? Array.Empty<HistoryPointDto>();
 		}, cancellationToken);
 
-		return new HistoryQueryResult(true, null, data ?? Array.Empty<HistoryPointDto>());
+		return data ?? Array.Empty<HistoryPointDto>();
 	}
 }
 

@@ -12,27 +12,21 @@ public sealed record AiAnalyticsSummaryInput(
 	ForecastResultDto? Forecast,
 	AiParserContext Parser);
 
-public sealed record AdvancedAnalyticsResult<T>(bool Success, string? ErrorMessage, T? Data);
-
 public interface IAdvancedAnalyticsService {
-	Task<AdvancedAnalyticsResult<TrendResultDto>> GetTrendAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
-	Task<AdvancedAnalyticsResult<VolatilityResultDto>> GetVolatilityAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
-	Task<AdvancedAnalyticsResult<ForecastResultDto>> GetForecastAsync(HistoryQueryRequest request, int horizon, CancellationToken cancellationToken = default);
-	Task<AdvancedAnalyticsResult<string>> GetAIAnalyticsSummary(AiAnalyticsSummaryInput input, CancellationToken cancellationToken = default);
+	Task<TrendResultDto> GetTrendAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
+	Task<VolatilityResultDto> GetVolatilityAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
+	Task<ForecastResultDto> GetForecastAsync(HistoryQueryRequest request, int horizon, CancellationToken cancellationToken = default);
+	Task<string> GetAIAnalyticsSummary(AiAnalyticsSummaryInput input, CancellationToken cancellationToken = default);
 }
 
 public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQueryService, IAiModelClient aiModelClient) : IAdvancedAnalyticsService {
-	public async Task<AdvancedAnalyticsResult<TrendResultDto>> GetTrendAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
-		var pointsResult = await GetSortedPointsAsync(request, cancellationToken);
-		if (!pointsResult.Success)
-			return new AdvancedAnalyticsResult<TrendResultDto>(false, pointsResult.ErrorMessage, null);
-
-		var points = pointsResult.Data;
+	public async Task<TrendResultDto> GetTrendAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
+		var points = await GetSortedPointsAsync(request, cancellationToken);
 		if (points is null || points.Length == 0)
-			return new AdvancedAnalyticsResult<TrendResultDto>(true, null, new TrendResultDto(0, 0, 0, "flat", 0));
+			return new TrendResultDto(0, 0, 0, "flat", 0);
 
 		if (points.Length == 1)
-			return new AdvancedAnalyticsResult<TrendResultDto>(true, null, new TrendResultDto(0, points[0].Value, 1, "flat", 1));
+			return new TrendResultDto(0, points[0].Value, 1, "flat", 1);
 
 		var xs = Enumerable.Range(0, points.Length).Select(i => (double)i).ToArray();
 		var ys = points.Select(p => p.Value).ToArray();
@@ -58,17 +52,13 @@ public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQuerySe
 			r2 = 0;
 
 		var direction = slope > 0.0001 ? "up" : slope < -0.0001 ? "down" : "flat";
-		return new AdvancedAnalyticsResult<TrendResultDto>(true, null, new TrendResultDto(slope, intercept, Math.Clamp(r2, 0, 1), direction, points.Length));
+		return new TrendResultDto(slope, intercept, Math.Clamp(r2, 0, 1), direction, points.Length);
 	}
 
-	public async Task<AdvancedAnalyticsResult<VolatilityResultDto>> GetVolatilityAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
-		var pointsResult = await GetSortedPointsAsync(request, cancellationToken);
-		if (!pointsResult.Success)
-			return new AdvancedAnalyticsResult<VolatilityResultDto>(false, pointsResult.ErrorMessage, null);
-
-		var points = pointsResult.Data;
+	public async Task<VolatilityResultDto> GetVolatilityAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
+		var points = await GetSortedPointsAsync(request, cancellationToken);
 		if (points is null || points.Length == 0)
-			return new AdvancedAnalyticsResult<VolatilityResultDto>(true, null, new VolatilityResultDto(0, 0, 0, 0, 0, 0));
+			return new VolatilityResultDto(0, 0, 0, 0, 0, 0);
 
 		var values = points.Select(p => p.Value).ToArray();
 		var mean = values.Average();
@@ -76,30 +66,24 @@ public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQuerySe
 		var stdDev = Math.Sqrt(variance);
 		var cv = mean == 0 ? 0 : (stdDev / Math.Abs(mean)) * 100;
 
-		return new AdvancedAnalyticsResult<VolatilityResultDto>(true, null, new VolatilityResultDto(
+		return new VolatilityResultDto(
 			mean,
 			stdDev,
 			cv,
 			values.Min(),
 			values.Max(),
-			values.Length));
+			values.Length);
 	}
 
-	public async Task<AdvancedAnalyticsResult<ForecastResultDto>> GetForecastAsync(HistoryQueryRequest request, int horizon, CancellationToken cancellationToken = default) {
+	public async Task<ForecastResultDto> GetForecastAsync(HistoryQueryRequest request, int horizon, CancellationToken cancellationToken = default) {
 		if (horizon <= 0 || horizon > 240)
-			return new AdvancedAnalyticsResult<ForecastResultDto>(false, "horizon must be between 1 and 240", null);
+			throw new Common.Exceptions.BadRequestException("horizon must be between 1 and 240");
 
-		var pointsResult = await GetSortedPointsAsync(request, cancellationToken);
-		if (!pointsResult.Success)
-			return new AdvancedAnalyticsResult<ForecastResultDto>(false, pointsResult.ErrorMessage, null);
-
-		var points = pointsResult.Data;
+		var points = await GetSortedPointsAsync(request, cancellationToken);
 		if (points is null || points.Length < 2)
-			return new AdvancedAnalyticsResult<ForecastResultDto>(false, "At least 2 points are required for forecast", null);
+			throw new Common.Exceptions.BadRequestException("At least 2 points are required for forecast");
 
 		var trendResult = await GetTrendAsync(request, cancellationToken);
-		if (!trendResult.Success || trendResult.Data is null)
-			return new AdvancedAnalyticsResult<ForecastResultDto>(false, trendResult.ErrorMessage ?? "Unable to calculate trend", null);
 
 		var interval = ResolveInterval(request, points.Length);
 		var step = ResolveStep(interval);
@@ -109,19 +93,19 @@ public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQuerySe
 
 		for (var i = 0; i < horizon; i++) {
 			var x = startX + i;
-			var value = trendResult.Data.Slope * x + trendResult.Data.Intercept;
+			var value = trendResult.Slope * x + trendResult.Intercept;
 			var timestamp = lastTimestamp.AddTicks(step.Ticks * (i + 1));
 			forecastPoints.Add(new ForecastPointDto(timestamp.ToString("O"), value));
 		}
 
-		return new AdvancedAnalyticsResult<ForecastResultDto>(true, null, new ForecastResultDto(
+		return new ForecastResultDto(
 			horizon,
 			interval,
 			forecastPoints.ToArray(),
-			"Linear forecast based on simple trend"));
+			"Linear forecast based on simple trend");
 	}
 
-	public async Task<AdvancedAnalyticsResult<string>> GetAIAnalyticsSummary(AiAnalyticsSummaryInput input, CancellationToken cancellationToken = default) {
+	public async Task<string> GetAIAnalyticsSummary(AiAnalyticsSummaryInput input, CancellationToken cancellationToken = default) {
 		var stats = input.MetricStatistics;
 		var trend = input.TrendInfo;
 		var volatility = input.VolatilityInfo;
@@ -167,20 +151,18 @@ TASK: Reply in English with 3-5 concise sentences. FOCUS on interpreting the MEA
 			userMessage,
 			cancellationToken);
 
-		return string.IsNullOrWhiteSpace(summary)
-			? new AdvancedAnalyticsResult<string>(false, "AI summary unavailable", null)
-			: new AdvancedAnalyticsResult<string>(true, null, summary);
+		if (string.IsNullOrWhiteSpace(summary))
+			throw new Common.Exceptions.ExternalServiceException("AI summary unavailable");
+
+		return summary;
 	}
 
-	private async Task<AdvancedAnalyticsResult<HistoryPointDto[]>> GetSortedPointsAsync(HistoryQueryRequest request, CancellationToken cancellationToken) {
+	private async Task<HistoryPointDto[]> GetSortedPointsAsync(HistoryQueryRequest request, CancellationToken cancellationToken) {
 		var history = await historyQueryService.GetHistoryAsync(request, cancellationToken);
-		if (!history.Success)
-			return new AdvancedAnalyticsResult<HistoryPointDto[]>(false, history.ErrorMessage, null);
-
-		var points = (history.Data ?? Array.Empty<HistoryPointDto>())
+		var points = (history ?? Array.Empty<HistoryPointDto>())
 			.OrderBy(p => p.Timestamp, StringComparer.Ordinal)
 			.ToArray();
-		return new AdvancedAnalyticsResult<HistoryPointDto[]>(true, null, points);
+		return points;
 	}
 
 	private static string ResolveInterval(HistoryQueryRequest request, int pointsCount) {

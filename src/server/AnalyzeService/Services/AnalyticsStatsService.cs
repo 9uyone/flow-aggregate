@@ -15,8 +15,6 @@ public sealed record AnalyticsStatsDto(
 	string? FirstTimestamp,
 	string? LastTimestamp);
 
-public sealed record AnalyticsStatsResult(bool Success, string? ErrorMessage, AnalyticsStatsDto? Data);
-
 public sealed record StorageStatsDto(
 	double Count,
 	double Min,
@@ -29,15 +27,15 @@ public sealed record StorageStatsDto(
 
 public interface IAnalyticsStatsService
 {
-	Task<AnalyticsStatsResult> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
+	Task<AnalyticsStatsDto> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsCache cache) : IAnalyticsStatsService
 {
-	public async Task<AnalyticsStatsResult> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default)
+	public async Task<AnalyticsStatsDto> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrWhiteSpace(request.Metric))
-			return new AnalyticsStatsResult(false, "Metric is required.", null);
+			throw new Common.Exceptions.BadRequestException("Metric is required.");
 
 		DateTime from;
 		DateTime to;
@@ -45,19 +43,19 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 		if (!string.IsNullOrWhiteSpace(request.Range))
 		{
 			if (!AnalyticsTimeRangeResolver.TryResolvePreset(request.Range, out from, out to, out _))
-				return new AnalyticsStatsResult(false, "Range must be one of: day, week, month, quarter, year, all, all-time.", null);
+				throw new Common.Exceptions.BadRequestException("Range must be one of: day, week, month, quarter, year, all, all-time.");
 		}
 		else
 		{
 			if (request.From is null || request.To is null)
-				return new AnalyticsStatsResult(false, "from and to are required when range is not specified.", null);
+				throw new Common.Exceptions.BadRequestException("from and to are required when range is not specified.");
 
 			from = request.From.Value;
 			to = request.To.Value;
 		}
 
 		if (from > to)
-			return new AnalyticsStatsResult(false, "'from' must be less than or equal to 'to'.", null);
+			throw new Common.Exceptions.BadRequestException("'from' must be less than or equal to 'to'.");
 
 		var query = new Dictionary<string, string?>
 		{
@@ -78,13 +76,13 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 			return await httpClient.GetAsync<StorageStatsDto>(uri);
 		}, cancellationToken);
 		if (stats is null)
-			return new AnalyticsStatsResult(true, null, new AnalyticsStatsDto(0, 0, 0, 0, 0, 0, 0, null, null, null));
+			return new AnalyticsStatsDto(0, 0, 0, 0, 0, 0, 0, null, null, null);
 
 		var baseline = stats.Average;
 		var delta = stats.LastValue - baseline;
 		double? percentChange = baseline == 0 ? null : (delta / baseline) * 100;
 
-		return new AnalyticsStatsResult(true, null, new AnalyticsStatsDto(
+		return new AnalyticsStatsDto(
 			stats.Count,
 			stats.Min,
 			stats.Max,
@@ -94,7 +92,7 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 			delta,
 			percentChange,
 			stats.FirstTimestamp,
-			stats.LastTimestamp));
+			stats.LastTimestamp);
 	}
 }
 
