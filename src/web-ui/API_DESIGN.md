@@ -419,6 +419,19 @@ Forecast rules:
 2. Uses same base query filters as history/stats (metric + range/from/to + interval + dynamic dimensions).
 3. Forecast may be unavailable for very short history windows (e.g. 1 point).
 
+### Get parser AI analytics summary
+```
+GET /api/analyze/parsers/{slug}/ai-summary?metric=temperature&range=week&horizon=12
+
+Response:
+"Friendly English summary string"
+```
+
+AI summary rules:
+1. Same base query filters as history/stats (metric + range/from/to + interval + dynamic dimensions).
+2. `horizon` is optional; default is 12 and used for forecast context.
+3. Response is a plain string (English summary) or error if analytics cannot be computed.
+
 ---
 
 ## Ключові особливості API:

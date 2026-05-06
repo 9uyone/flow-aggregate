@@ -48,6 +48,8 @@ export interface ParserForecastResponse {
   note: string | null;
 }
 
+export type ParserAiSummaryResponse = string | null;
+
 export type AvailableMetricsResponse = MetricOption[];
 
 export type TimeRange =
@@ -80,6 +82,7 @@ export type GetParserStatsParams = AnalyticsQueryInput;
 export type GetParserTrendParams = AnalyticsQueryInput;
 export type GetParserVolatilityParams = AnalyticsQueryInput;
 export type GetParserForecastParams = AnalyticsQueryInput;
+export type GetParserAiSummaryParams = AnalyticsQueryInput;
 
 export interface GetDimensionOptionsParams {
   metric: string;
@@ -252,6 +255,26 @@ export const analyzeApi = {
       points,
       note: typeof data?.note === 'string' ? data.note : null,
     };
+  },
+
+  /**
+   * Get AI-generated analytics summary for selected metric and filters.
+   */
+  getParserAiSummary: async (
+    slug: string,
+    params: GetParserAiSummaryParams
+  ): Promise<ParserAiSummaryResponse> => {
+    const queryParams = buildAnalyticsQueryParams(params, {
+      includeHorizon: true,
+      defaultHorizon: 12,
+    });
+
+    const { data } = await axiosInstance.get<string>(
+      `/analyze/parsers/${slug}/ai-summary`,
+      { params: queryParams }
+    );
+
+    return typeof data === 'string' && data.trim().length > 0 ? data.trim() : null;
   },
 
   /**

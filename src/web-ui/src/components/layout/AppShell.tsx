@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   AppBar,
   Box,
@@ -17,43 +17,46 @@ import {
   ListItemIcon,
   ListItemText,
   ListItemButton,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Menu as MenuIcon,
   Assessment as AssessmentIcon,
   Storage as StorageIcon,
   History as HistoryIcon,
   Dataset as DatasetIcon,
+  BarChart as BarChartIcon,
   DarkModeOutlined as DarkModeIcon,
   LightModeOutlined as LightModeIcon,
-} from '@mui/icons-material';
-import { AnalyticsDashboard } from '../../features/analytics';
-import { CollectedDataGrid } from '../../features/data';
-import { HistoryDataGrid } from '../../features/history';
-import { ParserList } from '../../features/parsers';
-import { useAuthStore } from '../../store/authStore';
-import { useParserStore } from '../../store/parserStore';
-import { useThemeStore } from '../../store/themeStore';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useGlobalTaskPolling } from '../../hooks';
-import { UserProfileMenu } from './UserProfileMenu';
-import Logo from '../../../assets/logo-no-light.svg';
+} from "@mui/icons-material";
+import { AnalyticsDashboard } from "../../features/analytics";
+import { AnalyticsPage } from "../../features/analytics";
+import { CollectedDataGrid } from "../../features/data";
+import { HistoryDataGrid } from "../../features/history";
+import { ParserList } from "../../features/parsers";
+import { useAuthStore } from "../../store/authStore";
+import { useParserStore } from "../../store/parserStore";
+import { useThemeStore } from "../../store/themeStore";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useGlobalTaskPolling } from "../../hooks";
+import { UserProfileMenu } from "./UserProfileMenu";
+import Logo from "../../../assets/logo-no-light.svg";
 //import Logo from '../../../assets/logo.svg';
 
-type ViewType = 'overview' | 'history' | 'data' | 'management';
+type ViewType = "overview" | "analytics" | "history" | "data" | "management";
 
 const pathToView: Record<string, ViewType> = {
-  '/overview': 'overview',
-  '/history': 'history',
-  '/data': 'data',
-  '/management': 'management',
+  "/overview": "overview",
+  "/analytics": "analytics",
+  "/history": "history",
+  "/data": "data",
+  "/management": "management",
 };
 
 export const AppShell: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  
+
   const { user, logout } = useAuthStore();
   const { fetchConfigs } = useParserStore();
   const mode = useThemeStore((state) => state.mode);
@@ -64,30 +67,34 @@ export const AppShell: React.FC = () => {
   // Global polling for task statuses across all pages
   useGlobalTaskPolling();
 
-  const currentView = pathToView[location.pathname] ?? 'overview';
+  const currentView = pathToView[location.pathname] ?? "overview";
 
   useEffect(() => {
     void fetchConfigs();
   }, [fetchConfigs]);
 
   useEffect(() => {
-    if (location.pathname === '/') {
-      navigate('/overview', { replace: true });
+    if (location.pathname === "/") {
+      navigate("/overview", { replace: true });
       return;
     }
 
     if (!pathToView[location.pathname]) {
-      navigate('/overview', { replace: true });
+      navigate("/overview", { replace: true });
     }
   }, [location.pathname, navigate]);
 
   // Update page title based on current view
   useEffect(() => {
-    const viewLabel = currentView.charAt(0).toUpperCase() + currentView.slice(1);
+    const viewLabel =
+      currentView.charAt(0).toUpperCase() + currentView.slice(1);
     document.title = `FlowAggregate - ${viewLabel}`;
   }, [currentView]);
 
-  const handleViewChange = (_event: React.SyntheticEvent, newView: ViewType) => {
+  const handleViewChange = (
+    _event: React.SyntheticEvent,
+    newView: ViewType,
+  ) => {
     navigate(`/${newView}`);
     if (isMobile) {
       setMobileDrawerOpen(false);
@@ -96,7 +103,7 @@ export const AppShell: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   };
 
   const toggleMobileDrawer = () => {
@@ -104,10 +111,23 @@ export const AppShell: React.FC = () => {
   };
 
   const navigationItems = [
-    { label: 'Overview', value: 'overview' as ViewType, icon: <AssessmentIcon /> },
-    { label: 'History', value: 'history' as ViewType, icon: <HistoryIcon /> },
-    { label: 'Data', value: 'data' as ViewType, icon: <DatasetIcon /> },
-    { label: 'Management', value: 'management' as ViewType, icon: <StorageIcon /> },
+    {
+      label: "Overview",
+      value: "overview" as ViewType,
+      icon: <AssessmentIcon />,
+    },
+    {
+      label: "Analytics",
+      value: "analytics" as ViewType,
+      icon: <BarChartIcon />,
+    },
+    { label: "History", value: "history" as ViewType, icon: <HistoryIcon /> },
+    { label: "Data", value: "data" as ViewType, icon: <DatasetIcon /> },
+    {
+      label: "Management",
+      value: "management" as ViewType,
+      icon: <StorageIcon />,
+    },
   ];
 
   // Mobile Drawer Navigation
@@ -131,7 +151,10 @@ export const AppShell: React.FC = () => {
             >
               <ListItemIcon
                 sx={{
-                  color: currentView === item.value ? 'primary.main' : 'text.secondary',
+                  color:
+                    currentView === item.value
+                      ? "primary.main"
+                      : "text.secondary",
                 }}
               >
                 {item.icon}
@@ -152,10 +175,10 @@ export const AppShell: React.FC = () => {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'background.default',
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "background.default",
       }}
     >
       {/* AppBar */}
@@ -163,10 +186,10 @@ export const AppShell: React.FC = () => {
         position="sticky"
         elevation={0}
         sx={{
-          width: '100%',
+          width: "100%",
           left: 0,
           right: 0,
-          backgroundColor: 'background.paper',
+          backgroundColor: "background.paper",
           borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >
@@ -176,8 +199,8 @@ export const AppShell: React.FC = () => {
             sx={{
               px: { xs: 2, sm: 3 },
               minHeight: 64,
-              display: 'flex',
-              alignItems: 'center',
+              display: "flex",
+              alignItems: "center",
             }}
           >
             {/* Mobile Menu Button */}
@@ -185,24 +208,36 @@ export const AppShell: React.FC = () => {
               <IconButton
                 edge="start"
                 onClick={toggleMobileDrawer}
-                sx={{ mr: 2, color: 'text.primary' }}
+                sx={{ mr: 2, color: "text.primary" }}
               >
                 <MenuIcon />
               </IconButton>
             )}
 
             {/* Logo/Title */}
-            <Link to="/overview" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                <Box component="img" src={Logo} alt="FlowAggregate Logo" style={{ height: 40, marginRight: 12, filter: 'drop-shadow(0 0 2px rgba(129, 140, 248, 0.2))' }} />
+            <Link
+              to="/overview"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
+                <Box
+                  component="img"
+                  src={Logo}
+                  alt="FlowAggregate Logo"
+                  style={{
+                    height: 40,
+                    marginRight: 12,
+                    filter: "drop-shadow(0 0 2px rgba(129, 140, 248, 0.2))",
+                  }}
+                />
                 <Typography
                   variant="h6"
                   fontWeight="bold"
                   sx={{
                     background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
                   }}
                 >
                   FlowAggregate
@@ -218,10 +253,10 @@ export const AppShell: React.FC = () => {
                 sx={{
                   flexGrow: 1,
                   mx: 4,
-                  '& .MuiTab-root': {
-                    textTransform: 'none',
+                  "& .MuiTab-root": {
+                    textTransform: "none",
                     fontWeight: 600,
-                    fontSize: '1rem',
+                    fontSize: "1rem",
                     minHeight: 64,
                   },
                 }}
@@ -230,6 +265,12 @@ export const AppShell: React.FC = () => {
                   label="Overview"
                   value="overview"
                   icon={<AssessmentIcon />}
+                  iconPosition="start"
+                />
+                <Tab
+                  label="Analytics"
+                  value="analytics"
+                  icon={<BarChartIcon />}
                   iconPosition="start"
                 />
                 <Tab
@@ -253,25 +294,35 @@ export const AppShell: React.FC = () => {
               </Tabs>
             )}
 
-            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box
+              sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}
+            >
               <IconButton
                 size="small"
                 onClick={toggleMode}
-                aria-label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                aria-label={
+                  mode === "dark"
+                    ? "Switch to light theme"
+                    : "Switch to dark theme"
+                }
                 sx={{
                   border: `1px solid ${theme.palette.divider}`,
-                  color: 'text.primary',
-                  marginRight: 1
+                  color: "text.primary",
+                  marginRight: 1,
                 }}
               >
-                {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+                {mode === "dark" ? (
+                  <LightModeIcon fontSize="small" />
+                ) : (
+                  <DarkModeIcon fontSize="small" />
+                )}
               </IconButton>
 
               {/* User Avatar */}
               <UserProfileMenu
                 user={user}
                 onLogout={handleLogout}
-                size={isMobile ? 'small' : 'medium'}
+                size={isMobile ? "small" : "medium"}
                 bordered={!isMobile}
               />
             </Box>
@@ -287,7 +338,7 @@ export const AppShell: React.FC = () => {
           onClose={toggleMobileDrawer}
           PaperProps={{
             sx: {
-              backgroundColor: 'background.paper',
+              backgroundColor: "background.paper",
             },
           }}
         >
@@ -304,10 +355,11 @@ export const AppShell: React.FC = () => {
           }}
         >
           {/* View Panels */}
-          {currentView === 'overview' && <AnalyticsDashboard />}
-          {currentView === 'history' && <HistoryDataGrid />}
-          {currentView === 'data' && <CollectedDataGrid />}
-          {currentView === 'management' && <ParserList />}
+          {currentView === "overview" && <AnalyticsDashboard />}
+          {currentView === "analytics" && <AnalyticsPage />}
+          {currentView === "history" && <HistoryDataGrid />}
+          {currentView === "data" && <CollectedDataGrid />}
+          {currentView === "management" && <ParserList />}
         </Container>
       </Box>
     </Box>

@@ -15,11 +15,12 @@ import {
   Stack,
   TextField,
   Typography,
-} from '@mui/material';
-import type { MetricOption, TimeInterval } from '../../api';
-import type { PresetRange } from './analyticsUiHelpers';
+} from "@mui/material";
+import type { MetricOption, TimeInterval } from "../../api";
+import { DateTimeLocalPickerField } from "../../components";
+import type { PresetRange } from "./analyticsUiHelpers";
 
-type IntervalSelection = TimeInterval | 'auto';
+type IntervalSelection = TimeInterval | "auto";
 
 interface AnalyticsFiltersPanelProps {
   metricOptions: MetricOption[];
@@ -31,8 +32,8 @@ interface AnalyticsFiltersPanelProps {
   dimensionOptionsByKey: Record<string, string[]>;
   isDimensionOptionsLoading: boolean;
   dimensionOptionsError: string | null;
-  rangeMode: 'preset' | 'custom';
-  onRangeModeChange: (value: 'preset' | 'custom') => void;
+  rangeMode: "preset" | "custom";
+  onRangeModeChange: (value: "preset" | "custom") => void;
   timeRange: PresetRange;
   onTimeRangeChange: (value: PresetRange) => void;
   customFrom: string;
@@ -72,14 +73,15 @@ export const AnalyticsFiltersPanel: React.FC<AnalyticsFiltersPanelProps> = ({
   isMetricsLoading,
   metricsError,
 }) => {
-  const getDimensionLabel = (dimensionKey: string) => dimensionKey.replace(/_/g, ' ');
+  const getDimensionLabel = (dimensionKey: string) =>
+    dimensionKey.replace(/_/g, " ");
 
   return (
     <Stack spacing={2}>
       {metricsError && <Alert severity="error">{metricsError}</Alert>}
 
       {isMetricsLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
           <CircularProgress size={32} />
         </Box>
       ) : (
@@ -92,7 +94,9 @@ export const AnalyticsFiltersPanel: React.FC<AnalyticsFiltersPanelProps> = ({
                   labelId="metric-select-label"
                   label="Metric"
                   value={selectedMetric}
-                  onChange={(event) => onMetricChange(String(event.target.value))}
+                  onChange={(event) =>
+                    onMetricChange(String(event.target.value))
+                  }
                 >
                   {metricOptions.map((option) => (
                     <MenuItem key={option.metric} value={option.metric}>
@@ -106,11 +110,20 @@ export const AnalyticsFiltersPanel: React.FC<AnalyticsFiltersPanelProps> = ({
                 <>
                   <Divider />
                   <Box>
-                    <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={600}
+                      gutterBottom
+                    >
                       Dimensions
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                      Optional dimension filters. Leave empty to aggregate across all dimension values.
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1.5 }}
+                    >
+                      Optional dimension filters. Leave empty to aggregate
+                      across all dimension values.
                     </Typography>
                     {dimensionOptionsError && (
                       <Alert severity="warning" sx={{ mb: 1.5 }}>
@@ -119,29 +132,41 @@ export const AnalyticsFiltersPanel: React.FC<AnalyticsFiltersPanelProps> = ({
                     )}
                     <Box
                       sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                        display: "grid",
+                        gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
                         gap: 1.5,
                       }}
                     >
                       {selectedDimensionKeys.map((dimensionKey) => (
                         <FormControl key={dimensionKey} fullWidth size="small">
-                          <InputLabel id={`${dimensionKey}-label`}>{getDimensionLabel(dimensionKey)}</InputLabel>
+                          <InputLabel id={`${dimensionKey}-label`}>
+                            {getDimensionLabel(dimensionKey)}
+                          </InputLabel>
                           <Select
                             labelId={`${dimensionKey}-label`}
                             label={getDimensionLabel(dimensionKey)}
-                            value={selectedDimensions[dimensionKey] ?? ''}
-                            onChange={(event) => onDimensionChange(dimensionKey, String(event.target.value))}
-                            disabled={isDimensionOptionsLoading && !(dimensionOptionsByKey[dimensionKey]?.length)}
+                            value={selectedDimensions[dimensionKey] ?? ""}
+                            onChange={(event) =>
+                              onDimensionChange(
+                                dimensionKey,
+                                String(event.target.value),
+                              )
+                            }
+                            disabled={
+                              isDimensionOptionsLoading &&
+                              !dimensionOptionsByKey[dimensionKey]?.length
+                            }
                           >
                             <MenuItem value="">
                               <em>All values</em>
                             </MenuItem>
-                            {(dimensionOptionsByKey[dimensionKey] ?? []).map((option) => (
-                              <MenuItem key={option} value={option}>
-                                {option}
-                              </MenuItem>
-                            ))}
+                            {(dimensionOptionsByKey[dimensionKey] ?? []).map(
+                              (option) => (
+                                <MenuItem key={option} value={option}>
+                                  {option}
+                                </MenuItem>
+                              ),
+                            )}
                           </Select>
                         </FormControl>
                       ))}
@@ -151,19 +176,21 @@ export const AnalyticsFiltersPanel: React.FC<AnalyticsFiltersPanelProps> = ({
               )}
             </>
           ) : (
-            <Alert severity="warning">No metrics are available for this parser.</Alert>
+            <Alert severity="warning">
+              No metrics are available for this parser.
+            </Alert>
           )}
         </Stack>
       )}
 
-            <FormControl component="fieldset" fullWidth>
+      <FormControl component="fieldset" fullWidth>
         <FormLabel
           component="legend"
           sx={{
             mb: 1,
-            color: 'text.secondary',
-            '&.Mui-focused': {
-              color: 'text.secondary',
+            color: "text.secondary",
+            "&.Mui-focused": {
+              color: "text.secondary",
             },
           }}
         >
@@ -172,62 +199,103 @@ export const AnalyticsFiltersPanel: React.FC<AnalyticsFiltersPanelProps> = ({
         <RadioGroup
           row
           value={rangeMode}
-          onChange={(event) => onRangeModeChange(event.target.value as 'preset' | 'custom')}
+          onChange={(event) =>
+            onRangeModeChange(event.target.value as "preset" | "custom")
+          }
           sx={{ mb: 1 }}
         >
-          <FormControlLabel value="preset" control={<Radio size="small" />} label="Preset" />
-          <FormControlLabel value="custom" control={<Radio size="small" />} label="Custom" />
+          <FormControlLabel
+            value="preset"
+            control={<Radio size="small" />}
+            label="Preset"
+          />
+          <FormControlLabel
+            value="custom"
+            control={<Radio size="small" />}
+            label="Custom"
+          />
         </RadioGroup>
 
-        {rangeMode === 'preset' ? (
+        {rangeMode === "preset" ? (
           <RadioGroup
             row
             value={timeRange}
-            onChange={(event) => onTimeRangeChange(event.target.value as PresetRange)}
+            onChange={(event) =>
+              onTimeRangeChange(event.target.value as PresetRange)
+            }
           >
-            <FormControlLabel value="day" control={<Radio size="small" />} label="Last 24h" />
-            <FormControlLabel value="week" control={<Radio size="small" />} label="Last 7 days" />
-            <FormControlLabel value="month" control={<Radio size="small" />} label="Last month" />
-            <FormControlLabel value="quarter" control={<Radio size="small" />} label="Last 3 months" />
-            <FormControlLabel value="year" control={<Radio size="small" />} label="Last year" />
-            <FormControlLabel value="all" control={<Radio size="small" />} label="All time" />
+            <FormControlLabel
+              value="day"
+              control={<Radio size="small" />}
+              label="Last 24h"
+            />
+            <FormControlLabel
+              value="week"
+              control={<Radio size="small" />}
+              label="Last 7 days"
+            />
+            <FormControlLabel
+              value="month"
+              control={<Radio size="small" />}
+              label="Last month"
+            />
+            <FormControlLabel
+              value="quarter"
+              control={<Radio size="small" />}
+              label="Last 3 months"
+            />
+            <FormControlLabel
+              value="year"
+              control={<Radio size="small" />}
+              label="Last year"
+            />
+            <FormControlLabel
+              value="all"
+              control={<Radio size="small" />}
+              label="All time"
+            />
           </RadioGroup>
         ) : (
           <Stack spacing={2}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                gap: 2,
+              }}
+            >
+              <DateTimeLocalPickerField
                 label="From"
-                type="datetime-local"
                 value={customFrom}
-                onChange={(event) => onCustomFromChange(event.target.value)}
-                InputLabelProps={{ shrink: true }}
-                size="small"
+                onChange={onCustomFromChange}
               />
-              <TextField
+              <DateTimeLocalPickerField
                 label="To"
-                type="datetime-local"
                 value={customTo}
-                onChange={(event) => onCustomToChange(event.target.value)}
-                InputLabelProps={{ shrink: true }}
-                size="small"
+                onChange={onCustomToChange}
               />
             </Box>
             <Typography variant="caption" color="text.secondary">
-              These values are converted to ISO 8601 and sent as from / to without range.
+              These values are converted to ISO 8601 and sent as from / to
+              without range.
             </Typography>
           </Stack>
         )}
       </FormControl>
 
       <Grid container spacing={2}>
-                <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth size="small">
-            <InputLabel id="aggregation-interval-label">Aggregation interval</InputLabel>
+            <InputLabel id="aggregation-interval-label">
+              Aggregation interval
+            </InputLabel>
             <Select
               labelId="aggregation-interval-label"
               label="Aggregation interval"
               value={interval}
-              onChange={(event) => onIntervalChange(event.target.value as IntervalSelection)}
+              onChange={(event) =>
+                onIntervalChange(event.target.value as IntervalSelection)
+              }
             >
               <MenuItem value="auto">Auto</MenuItem>
               <MenuItem value="hour">Hour</MenuItem>
