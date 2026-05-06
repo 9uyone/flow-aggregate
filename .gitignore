@@ -421,3 +421,4 @@ FodyWeavers.xsd
 *.msp
 /.env.local
 /.env.local
+/src/server/AnalyzeService/appsettings.Development.json
