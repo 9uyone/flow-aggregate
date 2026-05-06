@@ -17,6 +17,8 @@ builder.Services.AddSingleton<AnalyticsCache>();
 builder.Services.AddScoped<IHistoryQueryService, HistoryQueryService>();
 builder.Services.AddScoped<IAnalyticsStatsService, AnalyticsStatsService>();
 builder.Services.AddScoped<IAdvancedAnalyticsService, AdvancedAnalyticsService>();
+builder.Services.Configure<OpenAiOptions>(builder.Configuration.GetSection("OpenAI"));
+builder.Services.AddHttpClient<IAiModelClient, OpenAiModelClient>();
 
 var app = builder.Build();
 

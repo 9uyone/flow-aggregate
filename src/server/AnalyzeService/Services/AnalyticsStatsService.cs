@@ -80,8 +80,9 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 		if (stats is null)
 			return new AnalyticsStatsResult(true, null, new AnalyticsStatsDto(0, 0, 0, 0, 0, 0, 0, null, null, null));
 
-		var delta = stats.LastValue - stats.FirstValue;
-		double? percentChange = stats.FirstValue == 0 ? null : (delta / stats.FirstValue) * 100;
+		var baseline = stats.Average;
+		var delta = stats.LastValue - baseline;
+		double? percentChange = baseline == 0 ? null : (delta / baseline) * 100;
 
 		return new AnalyticsStatsResult(true, null, new AnalyticsStatsDto(
 			stats.Count,

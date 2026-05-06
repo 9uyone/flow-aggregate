@@ -4,6 +4,13 @@ public sealed record TrendResultDto(double Slope, double Intercept, double R2, s
 public sealed record VolatilityResultDto(double Mean, double StdDev, double CoefficientOfVariation, double Min, double Max, int PointsCount);
 public sealed record ForecastPointDto(string Timestamp, double Value);
 public sealed record ForecastResultDto(int Horizon, string Interval, ForecastPointDto[] Points, string Note);
+public sealed record AiParserContext(string Slug, string? DisplayName, string? Description, string? SourceType);
+public sealed record AiAnalyticsSummaryInput(
+	AnalyticsStatsDto MetricStatistics,
+	TrendResultDto TrendInfo,
+	VolatilityResultDto VolatilityInfo,
+	ForecastResultDto? Forecast,
+	AiParserContext Parser);
 
 public sealed record AdvancedAnalyticsResult<T>(bool Success, string? ErrorMessage, T? Data);
 
@@ -11,9 +18,10 @@ public interface IAdvancedAnalyticsService {
 	Task<AdvancedAnalyticsResult<TrendResultDto>> GetTrendAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
 	Task<AdvancedAnalyticsResult<VolatilityResultDto>> GetVolatilityAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
 	Task<AdvancedAnalyticsResult<ForecastResultDto>> GetForecastAsync(HistoryQueryRequest request, int horizon, CancellationToken cancellationToken = default);
+	Task<AdvancedAnalyticsResult<string>> GetAIAnalyticsSummary(AiAnalyticsSummaryInput input, CancellationToken cancellationToken = default);
 }
 
-public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQueryService) : IAdvancedAnalyticsService {
+public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQueryService, IAiModelClient aiModelClient) : IAdvancedAnalyticsService {
 	public async Task<AdvancedAnalyticsResult<TrendResultDto>> GetTrendAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
 		var pointsResult = await GetSortedPointsAsync(request, cancellationToken);
 		if (!pointsResult.Success)
@@ -111,6 +119,57 @@ public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQuerySe
 			interval,
 			forecastPoints.ToArray(),
 			"Linear forecast based on simple trend"));
+	}
+
+	public async Task<AdvancedAnalyticsResult<string>> GetAIAnalyticsSummary(AiAnalyticsSummaryInput input, CancellationToken cancellationToken = default) {
+		var stats = input.MetricStatistics;
+		var trend = input.TrendInfo;
+		var volatility = input.VolatilityInfo;
+		var forecast = input.Forecast;
+		var parser = input.Parser;
+		var baseline = stats.Average;
+		var deltaFromAverage = stats.LastValue - baseline;
+		var percentChangeFromAverage = baseline == 0 ? 0 : (deltaFromAverage / baseline) * 100;
+		var isAnomaly = Math.Abs(stats.LastValue - baseline) > (2 * volatility.StdDev);
+
+		var forecastSnippet = forecast?.Points?.Length > 0
+			? string.Join(", ", forecast.Points.Take(3).Select(point => $"{point.Timestamp}:{point.Value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}"))
+			: "none";
+
+		var userMessage = $"""
+FORMAT=TOON
+parser.slug={parser.Slug}
+parser.name={parser.DisplayName ?? "(unknown)"}
+parser.description={parser.Description ?? "(none)"}
+parser.source={parser.SourceType ?? "(unknown)"}
+stats.mean={stats.Average.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+stats.min={stats.Min.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+stats.max={stats.Max.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+stats.points={stats.Count.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}
+stats.last={stats.LastValue.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+stats.deltaFromAverage={deltaFromAverage.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+stats.percentChangeFromAverage={percentChangeFromAverage.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+stats.isAnomaly={isAnomaly.ToString().ToLowerInvariant()}
+trend.slope={trend.Slope.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+trend.direction={trend.Direction}
+trend.quality={trend.R2.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+volatility.std={volatility.StdDev.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+volatility.cv={volatility.CoefficientOfVariation.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+volatility.mean={volatility.Mean.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+forecast.sample={forecastSnippet}
+forecast.note={forecast?.Note ?? "(none)"}
+
+TASK: Reply in English with 3-5 concise sentences. FOCUS on interpreting the MEANING of the data, not just repeating the numbers. Instead of saying 'the slope is X', say 'the trend shows steady growth/decline'. Describe the data domain correctly based on the description (e.g., 'currency exchange rates' or 'weather conditions'). Interpret volatility using descriptive terms (e.g., 'the data is highly stable' or 'unpredictable moderate fluctuations'). Compare the last value with the average and state if it's currently unusually high/low or within the normal range. End with a one-sentence future outlook. Tone: friendly, professional, insightful (like a smart colleague). No headings, no bullets, and NO REPEATING the exact numeric values from input unless absolutely necessary for comparison.
+""";
+
+		var summary = await aiModelClient.GetCompletionAsync(
+			"You are an expert data scientist for the Flow Aggregate platform.",
+			userMessage,
+			cancellationToken);
+
+		return string.IsNullOrWhiteSpace(summary)
+			? new AdvancedAnalyticsResult<string>(false, "AI summary unavailable", null)
+			: new AdvancedAnalyticsResult<string>(true, null, summary);
 	}
 
 	private async Task<AdvancedAnalyticsResult<HistoryPointDto[]>> GetSortedPointsAsync(HistoryQueryRequest request, CancellationToken cancellationToken) {

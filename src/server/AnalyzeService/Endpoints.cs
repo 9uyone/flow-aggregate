@@ -1,4 +1,5 @@
 ﻿using AnalyzeService.Services;
+using Common.Contracts.Parser;
 using Common.Extensions;
 using Common.Interfaces.Parser;
 using Microsoft.AspNetCore.Mvc;
@@ -81,6 +82,50 @@ public static class Endpoints
 			var dimensions = await BuildDimensionsAsync(httpClient, context.Request.Query, slug);
 			var result = await analyticsService.GetForecastAsync(new HistoryQueryRequest(slug, metric, range, interval, from, to, userId, dimensions), horizon);
 			return result.Success ? Results.Ok(result.Data) : Results.BadRequest(result.ErrorMessage);
+		});
+
+		group.MapGet("/parsers/{slug}/ai-summary", async (IAdvancedAnalyticsService analyticsService, IAnalyticsStatsService analyticsStatsService, IHttpRestClient httpClient, HttpContext context, string slug,
+			[FromQuery] string metric,
+			[FromQuery] int horizon = 12,
+			[FromQuery] string? range = null,
+			[FromQuery] string? interval = null,
+			[FromQuery] DateTime? from = null,
+			[FromQuery] DateTime? to = null) =>
+		{
+			var userId = context.User.GetUserId();
+			var dimensions = await BuildDimensionsAsync(httpClient, context.Request.Query, slug);
+			var request = new HistoryQueryRequest(slug, metric, range, interval, from, to, userId, dimensions);
+
+			var statsResult = await analyticsStatsService.GetStatsAsync(request);
+			if (!statsResult.Success || statsResult.Data is null)
+				return Results.BadRequest(statsResult.ErrorMessage ?? "Unable to calculate statistics");
+
+			var trendResult = await analyticsService.GetTrendAsync(request);
+			if (!trendResult.Success || trendResult.Data is null)
+				return Results.BadRequest(trendResult.ErrorMessage ?? "Unable to calculate trend");
+
+			var volatilityResult = await analyticsService.GetVolatilityAsync(request);
+			if (!volatilityResult.Success || volatilityResult.Data is null)
+				return Results.BadRequest(volatilityResult.ErrorMessage ?? "Unable to calculate volatility");
+
+			var forecastResult = await analyticsService.GetForecastAsync(request, horizon);
+			var forecastData = forecastResult.Success ? forecastResult.Data : null;
+
+			var parserDetails = await httpClient.GetAsync<ParserDetailsDto>($"/api/collector/parsers/{slug}");
+			var parserContext = new AiParserContext(
+				slug,
+				parserDetails?.DisplayName,
+				parserDetails?.Description,
+				parserDetails?.SourceType.ToString());
+
+			var summaryResult = await analyticsService.GetAIAnalyticsSummary(new AiAnalyticsSummaryInput(
+				statsResult.Data,
+				trendResult.Data,
+				volatilityResult.Data,
+				forecastData,
+				parserContext));
+
+			return summaryResult.Success ? Results.Ok(summaryResult.Data) : Results.BadRequest(summaryResult.ErrorMessage);
 		});
 
 		group.MapGet("/parsers/{slug}/available-metrics", async (IHttpRestClient httpClient, HttpContext context, string slug) =>
