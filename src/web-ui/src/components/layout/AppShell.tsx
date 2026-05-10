@@ -88,7 +88,7 @@ export const AppShell: React.FC = () => {
   useEffect(() => {
     const viewLabel =
       currentView.charAt(0).toUpperCase() + currentView.slice(1);
-    document.title = `FlowAggregate - ${viewLabel}`;
+    document.title = `${viewLabel} - FlowAggregate`;
   }, [currentView]);
 
   const handleViewChange = (
