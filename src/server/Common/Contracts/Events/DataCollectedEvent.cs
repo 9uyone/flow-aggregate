@@ -3,7 +3,7 @@ using Common.Interfaces;
 
 namespace Common.Contracts.Events;
 
-public class DataCollectedEvent: BaseEntity, ICorrelatedMessage {
+public class DataCollectedEvent : BaseEntity, ICorrelatedMessage {
 	public Guid? CorrelationId { get; set; }
 
 	public required string ParserSlug { get; set; } // e.g. open-weather-parser

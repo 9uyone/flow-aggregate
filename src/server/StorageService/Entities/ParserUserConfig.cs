@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace Common.Entities;
 
-public class ParserUserConfig: BaseEntity {
+public class ParserUserConfig : BaseEntity {
 	public required Guid UserId { get; init; }
 	public required string ParserSlug { get; init; }
 

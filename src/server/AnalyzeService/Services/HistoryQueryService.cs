@@ -15,15 +15,8 @@ public sealed record HistoryQueryRequest(
 	Guid UserId,
 	IReadOnlyDictionary<string, string>? Dimensions = null);
 
-public interface IHistoryQueryService
-{
-	Task<HistoryPointDto[]> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
-}
-
-public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCache cache) : IHistoryQueryService
-{
-	public async Task<HistoryPointDto[]> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default)
-	{
+public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCache cache) : IHistoryQueryService {
+	public async Task<HistoryPointDto[]> GetHistoryAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
 		if (string.IsNullOrWhiteSpace(request.Metric))
 			throw new Common.Exceptions.BadRequestException("Metric is required.");
 
@@ -31,16 +24,14 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 		DateTime effectiveTo;
 		string effectiveInterval;
 
-		if (!string.IsNullOrWhiteSpace(request.Range))
-		{
+		if (!string.IsNullOrWhiteSpace(request.Range)) {
 			if (!AnalyticsTimeRangeResolver.TryResolvePreset(request.Range, out effectiveFrom, out effectiveTo, out effectiveInterval))
 				throw new Common.Exceptions.BadRequestException("Range must be one of: day, week, month, quarter, year, all, all-time.");
 
 			if (!string.IsNullOrWhiteSpace(request.Interval))
 				effectiveInterval = request.Interval.Trim().ToLowerInvariant();
 		}
-		else
-		{
+		else {
 			if (request.From is null || request.To is null)
 				throw new Common.Exceptions.BadRequestException("from and to are required when range is not specified.");
 
@@ -57,8 +48,7 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 		if (effectiveFrom > effectiveTo)
 			throw new Common.Exceptions.BadRequestException("'from' must be less than or equal to 'to'.");
 
-		var query = new Dictionary<string, string?>
-		{
+		var query = new Dictionary<string, string?> {
 			["metric"] = request.Metric,
 			["interval"] = effectiveInterval,
 			["from"] = effectiveFrom.ToString("O"),
@@ -71,8 +61,7 @@ public sealed class HistoryQueryService(IHttpRestClient httpClient, AnalyticsCac
 				query[dimension.Key] = dimension.Value;
 
 		var cacheKey = AnalyticsCache.BuildKey("history", request.Slug, query);
-		var data = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () =>
-		{
+		var data = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () => {
 			var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/history/{request.Slug}", query);
 			return await httpClient.GetAsync<HistoryPointDto[]>(uri) ?? Array.Empty<HistoryPointDto>();
 		}, cancellationToken);

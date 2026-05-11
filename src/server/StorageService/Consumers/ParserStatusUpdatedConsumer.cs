@@ -1,15 +1,15 @@
-﻿using Common.Interfaces;
+﻿using Common.Contracts.Events;
 using Common.Entities;
+using Common.Enums;
+using Common.Interfaces;
 using MassTransit;
 using MongoDB.Driver;
-using Common.Contracts.Events;
 using StorageService.Entities;
-using Common.Enums;
 
 namespace ProcessorService.Consumers;
 
 public class ParserStatusUpdatedConsumer(
-		IMongoRepository<ParserUserConfig> configRepo, 
+		IMongoRepository<ParserUserConfig> configRepo,
 		IMongoRepository<ExecutionLog> logRepo) : IConsumer<ParserStatusUpdatedEvent> {
 	public async Task Consume(ConsumeContext<ParserStatusUpdatedEvent> context) {
 		var message = context.Message;
@@ -21,7 +21,7 @@ public class ParserStatusUpdatedConsumer(
 
 		await configRepo.UpdateOneAsync(c => c.Id == message.ConfigId, updateConfig);
 
-		await logRepo.CreateAsync(new ExecutionLog { 
+		await logRepo.CreateAsync(new ExecutionLog {
 			ParserSlug = message.ParserName,
 			UserId = message.UserId,
 			CorrelationId = message.CorrelationId,

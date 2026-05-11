@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace AuthService.Entities;
 
-public class RefreshToken: BaseEntity {
+public class RefreshToken : BaseEntity {
 	public Guid UserId { get; set; }
 	public string Token { get; set; } = null!;
 	public DateTime ExpiresAt { get; set; }

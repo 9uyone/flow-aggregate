@@ -1,58 +1,61 @@
+using AnalyzeService.Contracts;
+using AnalyzeService.Interfaces;
+
 namespace AnalyzeService.Services;
-
-public sealed record TrendResultDto(double Slope, double Intercept, double R2, string Direction, int PointsCount);
-public sealed record VolatilityResultDto(double Mean, double StdDev, double CoefficientOfVariation, double Min, double Max, int PointsCount);
-public sealed record ForecastPointDto(string Timestamp, double Value);
-public sealed record ForecastResultDto(int Horizon, string Interval, ForecastPointDto[] Points, string Note);
-public sealed record AiParserContext(string Slug, string? DisplayName, string? Description, string? SourceType);
-public sealed record AiAnalyticsSummaryInput(
-	AnalyticsStatsDto MetricStatistics,
-	TrendResultDto TrendInfo,
-	VolatilityResultDto VolatilityInfo,
-	ForecastResultDto? Forecast,
-	AiParserContext Parser);
-
-public interface IAdvancedAnalyticsService {
-	Task<TrendResultDto> GetTrendAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
-	Task<VolatilityResultDto> GetVolatilityAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
-	Task<ForecastResultDto> GetForecastAsync(HistoryQueryRequest request, int horizon, CancellationToken cancellationToken = default);
-	Task<string> GetAIAnalyticsSummary(AiAnalyticsSummaryInput input, CancellationToken cancellationToken = default);
-}
 
 public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQueryService, IAiModelClient aiModelClient) : IAdvancedAnalyticsService {
 	public async Task<TrendResultDto> GetTrendAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
 		var points = await GetSortedPointsAsync(request, cancellationToken);
 		if (points is null || points.Length == 0)
-			return new TrendResultDto(0, 0, 0, "flat", 0);
+			return new TrendResultDto(0, 0, 0, "flat", 0, "Stable", 0);
 
 		if (points.Length == 1)
-			return new TrendResultDto(0, points[0].Value, 1, "flat", 1);
+			return new TrendResultDto(0, points[0].Value, 1, "flat", 0, "Stable", 1);
 
-		var xs = Enumerable.Range(0, points.Length).Select(i => (double)i).ToArray();
-		var ys = points.Select(p => p.Value).ToArray();
+		static (double Slope, double Intercept, double R2) CalculateTrend(double[] ys) {
+			if (ys.Length == 0)
+				return (0, 0, 0);
 
-		var xMean = xs.Average();
-		var yMean = ys.Average();
-		var numerator = 0d;
-		var denominator = 0d;
+			if (ys.Length == 1)
+				return (0, ys[0], 1);
 
-		for (var i = 0; i < xs.Length; i++) {
-			var dx = xs[i] - xMean;
-			numerator += dx * (ys[i] - yMean);
-			denominator += dx * dx;
+			var xs = Enumerable.Range(0, ys.Length).Select(i => (double)i).ToArray();
+			var xMean = xs.Average();
+			var yMean = ys.Average();
+			var numerator = 0d;
+			var denominator = 0d;
+
+			for (var i = 0; i < xs.Length; i++) {
+				var dx = xs[i] - xMean;
+				numerator += dx * (ys[i] - yMean);
+				denominator += dx * dx;
+			}
+
+			var slope = denominator == 0 ? 0 : numerator / denominator;
+			var intercept = yMean - slope * xMean;
+
+			var ssTot = ys.Sum(y => Math.Pow(y - yMean, 2));
+			var ssRes = ys.Select((y, i) => y - (slope * xs[i] + intercept)).Sum(residual => residual * residual);
+			var r2 = ssTot == 0 ? 1 : 1 - (ssRes / ssTot);
+			if (double.IsNaN(r2) || double.IsInfinity(r2))
+				r2 = 0;
+
+			return (slope, intercept, Math.Clamp(r2, 0, 1));
 		}
 
-		var slope = denominator == 0 ? 0 : numerator / denominator;
-		var intercept = yMean - slope * xMean;
-
-		var ssTot = ys.Sum(y => Math.Pow(y - yMean, 2));
-		var ssRes = ys.Select((y, i) => y - (slope * xs[i] + intercept)).Sum(residual => residual * residual);
-		var r2 = ssTot == 0 ? 1 : 1 - (ssRes / ssTot);
-		if (double.IsNaN(r2) || double.IsInfinity(r2))
-			r2 = 0;
-
+		var ys = points.Select(p => p.Value).ToArray();
+		var (slope, intercept, r2) = CalculateTrend(ys);
 		var direction = slope > 0.0001 ? "up" : slope < -0.0001 ? "down" : "flat";
-		return new TrendResultDto(slope, intercept, Math.Clamp(r2, 0, 1), direction, points.Length);
+
+		var splitIndex = points.Length / 2;
+		var pastYs = ys.Take(splitIndex).ToArray();
+		var recentYs = ys.Skip(splitIndex).ToArray();
+		var (pastSlope, _, _) = CalculateTrend(pastYs);
+		var (recentSlope, _, _) = CalculateTrend(recentYs);
+		var momentum = recentSlope - pastSlope;
+		var momentumDirection = momentum > 0.0001 ? "Accelerating" : momentum < -0.0001 ? "Decelerating" : "Stable";
+
+		return new TrendResultDto(slope, intercept, r2, direction, momentum, momentumDirection, points.Length);
 	}
 
 	public async Task<VolatilityResultDto> GetVolatilityAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
@@ -106,6 +109,8 @@ public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQuerySe
 	}
 
 	public async Task<string> GetAIAnalyticsSummary(AiAnalyticsSummaryInput input, CancellationToken cancellationToken = default) {
+		string formatDouble(double value) => value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+
 		var stats = input.MetricStatistics;
 		var trend = input.TrendInfo;
 		var volatility = input.VolatilityInfo;
@@ -113,36 +118,38 @@ public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQuerySe
 		var parser = input.Parser;
 		var baseline = stats.Average;
 		var deltaFromAverage = stats.LastValue - baseline;
-		var percentChangeFromAverage = baseline == 0 ? 0 : (deltaFromAverage / baseline) * 100;
+		var deviationFromAverage = baseline == 0 ? 0 : (deltaFromAverage / baseline) * 100;
 		var isAnomaly = Math.Abs(stats.LastValue - baseline) > (2 * volatility.StdDev);
 
 		var forecastSnippet = forecast?.Points?.Length > 0
-			? string.Join(", ", forecast.Points.Take(3).Select(point => $"{point.Timestamp}:{point.Value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}"))
+			? string.Join(", ", forecast.Points.Take(3).Select(point => $"{point.Timestamp}:{formatDouble(point.Value)}"))
 			: "none";
 
 		var userMessage = $"""
 FORMAT=TOON
+parser.metric={parser.Metric}
 parser.slug={parser.Slug}
 parser.name={parser.DisplayName ?? "(unknown)"}
 parser.description={parser.Description ?? "(none)"}
-parser.source={parser.SourceType ?? "(unknown)"}
-stats.mean={stats.Average.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-stats.min={stats.Min.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-stats.max={stats.Max.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-stats.median={stats.Median.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-stats.q1={stats.Q1.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-stats.q3={stats.Q3.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+stats.mean={formatDouble(stats.Average)}
+stats.min={formatDouble(stats.Min)}
+stats.max={formatDouble(stats.Max)}
+stats.median={formatDouble(stats.Median)}
+stats.q1={formatDouble(stats.Q1)}
+stats.q3={formatDouble(stats.Q3)}
 stats.points={stats.Count.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}
-stats.last={stats.LastValue.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-stats.deltaFromAverage={deltaFromAverage.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-stats.percentChangeFromAverage={percentChangeFromAverage.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+stats.last={formatDouble(stats.LastValue)}
+stats.deltaFromAverage={formatDouble(deltaFromAverage)}
+stats.deviationFromAverage={formatDouble(deviationFromAverage)}
 stats.isAnomaly={isAnomaly.ToString().ToLowerInvariant()}
-trend.slope={trend.Slope.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+trend.slope={formatDouble(trend.Slope)}
 trend.direction={trend.Direction}
-trend.quality={trend.R2.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-volatility.std={volatility.StdDev.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-volatility.cv={volatility.CoefficientOfVariation.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
-volatility.mean={volatility.Mean.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}
+trend.momentum={formatDouble(trend.Momentum)}
+trend.momentumDirection={trend.MomentumDirection}
+trend.quality={formatDouble(trend.R2)}
+volatility.std={formatDouble(volatility.StdDev)}
+volatility.cv={formatDouble(volatility.CoefficientOfVariation)}
+volatility.mean={formatDouble(volatility.Mean)}
 forecast.sample={forecastSnippet}
 forecast.note={forecast?.Note ?? "(none)"}
 

@@ -21,10 +21,10 @@ public static class RedisExtensions {
 		}
 
 		var connectionString = $"{host}:{port},password={password}";
-		
-		services.AddSingleton<IConnectionMultiplexer>(sp => 
+
+		services.AddSingleton<IConnectionMultiplexer>(sp =>
 			ConnectionMultiplexer.Connect(connectionString));
-		
+
 		services.AddStackExchangeRedisCache(options => {
 			options.Configuration = connectionString;
 		});

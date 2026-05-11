@@ -1,14 +1,14 @@
-﻿using Common.Interfaces;
+﻿using Common.Extensions;
+using Common.Interfaces;
 using MongoDB.Driver;
 using System.Linq.Expressions;
-using Common.Extensions;
 
 namespace Common.Repositories;
 
 public class MongoRepository<T>(IMongoDatabase database, string collectionName) : IMongoRepository<T> where T : class {
 	private readonly IMongoCollection<T> _collection = database.GetCollection<T>(collectionName);
 
-	public async Task<T> CreateAsync(T entity) => 
+	public async Task<T> CreateAsync(T entity) =>
 		await _collection.InsertOneAsync(entity)
 			.ContinueWith(_ => entity);
 
@@ -26,7 +26,7 @@ public class MongoRepository<T>(IMongoDatabase database, string collectionName) 
 			.Skip(skipCount)
 			.Limit(actualPageSize)
 			.ToListAsync();
-		
+
 		return (items, totalCount);
 	}
 

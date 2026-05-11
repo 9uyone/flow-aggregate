@@ -1,5 +1,5 @@
-﻿using AuthService.Interfaces;
-using AuthService.Entities;
+﻿using AuthService.Entities;
+using AuthService.Interfaces;
 using Common.Interfaces;
 using Google.Apis.Auth;
 

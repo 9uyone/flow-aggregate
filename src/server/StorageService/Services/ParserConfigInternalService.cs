@@ -32,8 +32,7 @@ internal class ParserConfigInternalService(IMongoRepository<ParserUserConfig> re
 	}
 
 	public async Task<(IEnumerable<ParserConfigDto> configs, int totalCount)> GetActiveInternalConfigsAsync(
-		int page, int pageSize)
-	{
+		int page, int pageSize) {
 		var definitions = mongoDb.GetCollection<ParserDefinition>(MongoCollections.ParserDefinitions);
 		var allowedSlugs = await definitions.Find(x => x.SupportsScheduledRun)
 			.Project(x => x.Slug)

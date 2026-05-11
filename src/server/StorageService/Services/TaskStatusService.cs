@@ -19,8 +19,7 @@ internal class TaskStatusService(
 	IMongoRepository<ExecutionLog> executionLogRepo,
 	IMongoRepository<DataCollectedEvent> collectedDataRepo,
 	IConnectionMultiplexer redis,
-	IDistributedCache cache)
-{
+	IDistributedCache cache) {
 	public async Task<PagedResponse<TaskStatusDto>> GetTasksAsync(
 		Guid userId,
 		int? page,
@@ -30,8 +29,7 @@ internal class TaskStatusService(
 		string? parserSlug,
 		string? correlationId,
 		DateTime? from,
-		DateTime? to)
-	{
+		DateTime? to) {
 		ExecutionStatus? statusFilter = null;
 		if (!string.IsNullOrWhiteSpace(status)) {
 			if (!Enum.TryParse<ExecutionStatus>(status, true, out var parsedStatus))

@@ -6,8 +6,7 @@ namespace CollectorService.Workers;
 internal class ParserDiscoveryWorker(
 	IServiceScopeFactory scopeFactory,
 	IParserRegistry registry,
-	ILogger<ParsersDiscoveredEvent> logger) : BackgroundService
-{
+	ILogger<ParsersDiscoveredEvent> logger) : BackgroundService {
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		using var scope = scopeFactory.CreateScope();
 		var dispatcher = scope.ServiceProvider.GetRequiredService<IIntegrationDispatcher>();

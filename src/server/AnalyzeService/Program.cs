@@ -1,4 +1,6 @@
 using AnalyzeService;
+using AnalyzeService.Config;
+using AnalyzeService.Interfaces;
 using AnalyzeService.Services;
 using Common.Config;
 using Common.Extensions;

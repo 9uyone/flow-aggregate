@@ -13,11 +13,9 @@ namespace CollectorService.Services;
 public class ParserRunner(
 	IParserRegistry registry,
 	IServiceProvider sp,
-	IIntegrationDispatcher dispatcher) : IParserRunner 
-{
+	IIntegrationDispatcher dispatcher) : IParserRunner {
 	public async Task<IEnumerable<ParserDataPayload>> ExecuteAsync(
-		RunParserEvent command)
-	{
+		RunParserEvent command) {
 		var parserType = registry.GetParserType(command.ParserSlug);
 		if (parserType == null)
 			throw new ParserNotFoundException(command.ParserSlug);

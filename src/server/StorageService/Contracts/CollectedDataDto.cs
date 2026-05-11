@@ -1,8 +1,8 @@
-﻿using Common.Interfaces;
+using Common.Interfaces;
 
-namespace Storage.Contracts;
+namespace StorageService.Contracts;
 
-public class DataResultDto: ICorrelatedMessage {
+public class CollectedDataDto : ICorrelatedMessage {
 	public required Guid Id { get; init; }
 	public required Guid? CorrelationId { get; set; }
 
@@ -18,4 +18,4 @@ public class DataResultDto: ICorrelatedMessage {
 	public Dictionary<string, string>? Metadata { get; init; }
 
 	public Guid? ConfigId { get; init; }
-};
+}

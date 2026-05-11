@@ -20,8 +20,7 @@ internal class ParserConfigService(
 	IMongoRepository<ParserDefinition> definitionsRepo,
 	IMongoDatabase database,
 	IConfiguration config,
-	IIntegrationDispatcher dispatcher)
-{
+	IIntegrationDispatcher dispatcher) {
 	public async Task CreateInternalAsync(UserConfigCreateInternalDto dto, Guid userId) {
 		var parserDefinition = await GetParserDefinitionAsync(dto.ParserSlug);
 		if (!parserDefinition.SupportsManualRun)
@@ -66,7 +65,7 @@ internal class ParserConfigService(
 		});
 	}
 
-	public async Task<UpsertExternalConfigResultDto> UpsertExternalWithDefinitionAsync(UpsertExternalConfigWithDefinitionDto dto, Guid userId) {
+	public async Task<UpsertExternalConfigResponse> UpsertExternalWithDefinitionAsync(UpsertExternalConfigWithDefinitionDto dto, Guid userId) {
 		var slug = dto.Slug.Trim();
 		var displayName = dto.DisplayName.Trim();
 		var description = dto.Description?.Trim() ?? string.Empty;
@@ -132,7 +131,7 @@ internal class ParserConfigService(
 			}
 
 			await session.CommitTransactionAsync();
-			return new UpsertExternalConfigResultDto {
+			return new UpsertExternalConfigResponse {
 				ConfigId = configId,
 				Token = createdToken,
 				IsCreated = created
@@ -145,8 +144,7 @@ internal class ParserConfigService(
 	}
 
 	public async Task<(IEnumerable<UserConfigBaseDto> configs, int totalCount)> GetAllForUserAsync(
-		Guid userId, int? page, int? pageSize, bool? oldFirst)
-	{
+		Guid userId, int? page, int? pageSize, bool? oldFirst) {
 		var (configs, totalCount) = await repo.FindAsync(
 			c => c.UserId == userId,
 			page,
@@ -168,8 +166,7 @@ internal class ParserConfigService(
 	public async Task UpdateInternalAsync(
 		Guid id,
 		UserConfigPatchDto dto,
-		Guid userId)
-	{
+		Guid userId) {
 		if (dto.CronExpression != null) {
 			var interval = config.GetValue<int>("ParserConfigs:minIntervalSeconds");
 			if (!CronValidator.TryValidate(dto.CronExpression, minIntervalSeconds: interval, out var error))
@@ -203,8 +200,7 @@ internal class ParserConfigService(
 	public async Task UpdateExternalAsync(
 		Guid id,
 		UserConfigPatchDto dto,
-		Guid userId)
-	{
+		Guid userId) {
 		var existing = await repo.GetByIdAsync(id);
 		if (existing == null || existing.UserId != userId)
 			throw new NotFoundException("Parser configuration not found");
@@ -259,8 +255,7 @@ internal class ParserConfigService(
 		if (!parserDefinition.SupportsManualRun)
 			throw new BadRequestException($"Parser '{config.ParserSlug}' does not support manual run");
 
-		var command = new RunParserEvent
-		{
+		var command = new RunParserEvent {
 			ConfigId = config.Id,
 			ParserSlug = config.ParserSlug,
 			UserId = config.UserId,
@@ -305,11 +300,9 @@ internal class ParserConfigService(
 			? null
 			: (config.LastStatus == true ? ExecutionStatus.Success.ToString() : ExecutionStatus.Failed.ToString());
 
-		return config.SourceType switch
-		{
+		return config.SourceType switch {
 			ParserSourceType.Internal =>
-				new UserInternalConfigDto
-				{
+				new UserInternalConfigDto {
 					Id = config.Id,
 					CustomName = config.Internal?.CustomName,
 					SourceType = config.SourceType,
@@ -322,8 +315,7 @@ internal class ParserConfigService(
 					CronExpression = config.Internal?.CronExpression,
 				},
 			ParserSourceType.External =>
-				new UserExternalConfigDto
-				{
+				new UserExternalConfigDto {
 					Id = config.Id,
 					SourceType = config.SourceType,
 					ParserSlug = config.ParserSlug,

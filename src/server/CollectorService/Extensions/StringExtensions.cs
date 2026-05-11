@@ -5,7 +5,7 @@ public static class StringExtensions {
 		if (string.IsNullOrEmpty(text)) return "";
 
 		// Insert hyphen before uppercase letters
-		var withHyphens = string.Concat(text.Select((c, i) => 
+		var withHyphens = string.Concat(text.Select((c, i) =>
 			i > 0 && char.IsUpper(c) ? "-" + c : c.ToString()
 		));
 

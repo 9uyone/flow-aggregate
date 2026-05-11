@@ -1,6 +1,6 @@
-﻿using MassTransit;
+﻿using Common.Contracts.Events;
 using Common.Interfaces;
-using Common.Contracts.Events;
+using MassTransit;
 
 namespace ProcessorService.Consumers;
 

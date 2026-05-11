@@ -20,7 +20,7 @@ builder.Services.AddCors(options => {
 	options.AddPolicy("AllowFrontend",
 		policy => {
 			//policy.WithOrigins("http://localhost:3000")
-				//.WithOrigins("https://diploma-ui.9uyone.pp.ua")
+			//.WithOrigins("https://diploma-ui.9uyone.pp.ua")
 			policy.AllowAnyOrigin()
 				.AllowAnyHeader()
 				.AllowAnyMethod();
@@ -42,7 +42,7 @@ app.Use(async (context, next) => {
 });
 
 app.Use(async (context, next) => {
-if (context.Request.Path.StartsWithSegments("/internal")) {
+	if (context.Request.Path.StartsWithSegments("/internal")) {
 		var expectedPort = BackendDiscovery.InternalGateway.Port;
 		if (context.Connection.LocalPort != expectedPort) {
 			context.Response.StatusCode = StatusCodes.Status403Forbidden;

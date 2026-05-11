@@ -16,7 +16,7 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 		var startedAt = DateTime.UtcNow;
 		try {
 			logger.LogInformation($"[Collector] Parser {msg.ParserSlug} has been started; Config ID {msg.ConfigId}");
-			
+
 			var redisDb = redis.GetDatabase();
 			var statusKey = $"task_status:{msg.CorrelationId}";
 			var runningSetKey = $"running_tasks:{msg.UserId}";
@@ -26,7 +26,7 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 				ParserSlug = msg.ParserSlug,
 				StartedAt = startedAt
 			});
-			
+
 			await cache.SetStringAsync(statusKey, runningStatus, new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = ttl });
 			await redisDb.SetAddAsync(runningSetKey, msg.CorrelationId.ToString());
 
@@ -52,7 +52,7 @@ public class RunParserConsumer(IParserRunner runner, IDistributedCache cache, IC
 			var redisDb = redis.GetDatabase();
 			var statusKey = $"task_status:{msg.CorrelationId}";
 			var runningSetKey = $"running_tasks:{msg.UserId}";
-			
+
 			await redisDb.SetRemoveAsync(runningSetKey, msg.CorrelationId.ToString());
 			await cache.RemoveAsync(statusKey);
 

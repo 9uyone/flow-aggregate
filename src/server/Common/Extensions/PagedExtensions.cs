@@ -9,8 +9,7 @@ public static class PagedExtensions {
 	public static PagedResponse<T> ToPagedResponse<T>(
 		this IEnumerable<T> items,
 		int totalCount, int? page,
-		int? pageSize) where T : class 
-	{
+		int? pageSize) where T : class {
 		var actualPageSize = GetActualPageSize(pageSize);
 
 		return new PagedResponse<T> {

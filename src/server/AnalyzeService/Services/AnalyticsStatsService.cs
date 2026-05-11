@@ -1,55 +1,23 @@
+using AnalyzeService.Contracts;
+using AnalyzeService.Interfaces;
 using Common.Interfaces.Parser;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace AnalyzeService.Services;
 
-public sealed record AnalyticsStatsDto(
-	double Count,
-	double Min,
-	double Max,
-	double Average,
-	double Median,
-	double Q1,
-	double Q3,
-	double FirstValue,
-	double LastValue,
-	double Delta,
-	double? PercentChange,
-	string? FirstTimestamp,
-	string? LastTimestamp);
-
-public sealed record StorageStatsDto(
-	double Count,
-	double Min,
-	double Max,
-	double Average,
-	double FirstValue,
-	double LastValue,
-	string? FirstTimestamp,
-	string? LastTimestamp);
-
-public interface IAnalyticsStatsService
-{
-	Task<AnalyticsStatsDto> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default);
-}
-
-public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsCache cache, IHistoryQueryService historyQueryService) : IAnalyticsStatsService
-{
-	public async Task<AnalyticsStatsDto> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default)
-	{
+public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsCache cache, IHistoryQueryService historyQueryService) : IAnalyticsStatsService {
+	public async Task<AnalyticsStatsDto> GetStatsAsync(HistoryQueryRequest request, CancellationToken cancellationToken = default) {
 		if (string.IsNullOrWhiteSpace(request.Metric))
 			throw new Common.Exceptions.BadRequestException("Metric is required.");
 
 		DateTime from;
 		DateTime to;
 
-		if (!string.IsNullOrWhiteSpace(request.Range))
-		{
+		if (!string.IsNullOrWhiteSpace(request.Range)) {
 			if (!AnalyticsTimeRangeResolver.TryResolvePreset(request.Range, out from, out to, out _))
 				throw new Common.Exceptions.BadRequestException("Range must be one of: day, week, month, quarter, year, all, all-time.");
 		}
-		else
-		{
+		else {
 			if (request.From is null || request.To is null)
 				throw new Common.Exceptions.BadRequestException("from and to are required when range is not specified.");
 
@@ -60,8 +28,7 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 		if (from > to)
 			throw new Common.Exceptions.BadRequestException("'from' must be less than or equal to 'to'.");
 
-		var query = new Dictionary<string, string?>
-		{
+		var query = new Dictionary<string, string?> {
 			["metric"] = request.Metric,
 			["from"] = from.ToString("O"),
 			["to"] = to.ToString("O"),
@@ -73,8 +40,7 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 				query[dimension.Key] = dimension.Value;
 
 		var cacheKey = AnalyticsCache.BuildKey("stats", request.Slug, query);
-		var stats = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () =>
-		{
+		var stats = await cache.GetOrCreateAsync(cacheKey, TimeSpan.FromMinutes(2), async () => {
 			var uri = QueryHelpers.AddQueryString($"/internal/storage/aggregation/stats/{request.Slug}", query);
 			return await httpClient.GetAsync<StorageStatsDto>(uri);
 		}, cancellationToken);
@@ -107,8 +73,7 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 			stats.LastTimestamp);
 	}
 
-	private static double ResolvePercentile(double[] sortedValues, double percentile)
-	{
+	private static double ResolvePercentile(double[] sortedValues, double percentile) {
 		if (sortedValues.Length == 0)
 			return 0;
 
@@ -125,4 +90,3 @@ public sealed class AnalyticsStatsService(IHttpRestClient httpClient, AnalyticsC
 		return sortedValues[lowerIndex] + (sortedValues[upperIndex] - sortedValues[lowerIndex]) * weight;
 	}
 }
-

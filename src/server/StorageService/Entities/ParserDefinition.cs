@@ -5,7 +5,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace StorageService.Entities;
 
-public class ParserDefinition: BaseEntity {
+public class ParserDefinition : BaseEntity {
 	public required string Slug { get; set; }
 	public required string DisplayName { get; set; }
 	public string Description { get; set; } = string.Empty;

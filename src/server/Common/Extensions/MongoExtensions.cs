@@ -24,8 +24,7 @@ public static class MongoExtensions {
 	}
 
 	public static IServiceCollection AddAppMongoRepository<T>(this IServiceCollection services, string collectionName) where T : class {
-		services.AddScoped<IMongoRepository<T>>(sp =>
-		{
+		services.AddScoped<IMongoRepository<T>>(sp => {
 			var database = sp.GetRequiredService<IMongoDatabase>();
 			return new MongoRepository<T>(database, collectionName);
 		});

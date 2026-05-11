@@ -19,11 +19,10 @@ public static partial class StorageEndpoints {
 			[FromQuery] DateTime? from,
 			[FromQuery] DateTime? to,
 			TaskStatusService service,
-			HttpContext httpContext) =>
-		{
-			var userId = httpContext.User.GetUserId()!;
-			var result = await service.GetTasksAsync(userId, page, pageSize, oldFirst, status, parserSlug, correlationId, from, to);
-			return Results.Ok(result);
-		}).RequireAuthorization();
+			HttpContext httpContext) => {
+				var userId = httpContext.User.GetUserId()!;
+				var result = await service.GetTasksAsync(userId, page, pageSize, oldFirst, status, parserSlug, correlationId, from, to);
+				return Results.Ok(result);
+			}).RequireAuthorization();
 	}
 }

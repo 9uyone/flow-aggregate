@@ -4,13 +4,13 @@ using Common.Extensions;
 using Common.Interfaces;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Storage.Contracts;
+using StorageService.Contracts;
 using System.Text.RegularExpressions;
 
 namespace StorageService.Services;
 
 internal class CollectedDataService(IMongoRepository<DataCollectedEvent> repo) {
-	public async Task<PagedResponse<DataResultDto>> GetAsync(
+	public async Task<PagedResponse<CollectedDataDto>> GetAsync(
 		Guid userId,
 		Guid? correlationId,
 		Guid? configId,
@@ -20,8 +20,7 @@ internal class CollectedDataService(IMongoRepository<DataCollectedEvent> repo) {
 		string? parserSlug,
 		DateTime? from,
 		DateTime? to,
-		string? search)
-	{
+		string? search) {
 		var filter = BuildFilter(userId, correlationId, configId, parserSlug, from, to, search);
 		var sort = oldFirst == true
 			? Builders<DataCollectedEvent>.Sort.Ascending(x => x.Timestamp)
@@ -35,7 +34,7 @@ internal class CollectedDataService(IMongoRepository<DataCollectedEvent> repo) {
 		return items.ToPagedResponse(totalCount, actualPage, actualPageSize);
 	}
 
-	public async Task<List<DataResultDto>> GetByIdAsync(Guid userId, Guid id) {
+	public async Task<List<CollectedDataDto>> GetByIdAsync(Guid userId, Guid id) {
 		var result = await repo.GetByIdAsync(id);
 		if (result == null || result.UserId != userId)
 			return [];
@@ -86,7 +85,7 @@ internal class CollectedDataService(IMongoRepository<DataCollectedEvent> repo) {
 		return Builders<DataCollectedEvent>.Filter.And(filters);
 	}
 
-	private static DataResultDto MapToDto(DataCollectedEvent x) => new() {
+	private static CollectedDataDto MapToDto(DataCollectedEvent x) => new() {
 		Id = x.Id,
 		CorrelationId = x.CorrelationId,
 		ParserName = x.ParserSlug,

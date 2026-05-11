@@ -1,8 +1,8 @@
 ﻿using Common.Attributes;
 using Common.Constants;
+using Common.Contracts.Parser;
 using Common.Extensions;
 using Common.Interfaces.Parser;
-using Common.Contracts.Parser;
 
 namespace CollectorService.Parsers.NbuUsd;
 

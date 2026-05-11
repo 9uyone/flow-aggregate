@@ -35,18 +35,16 @@ builder.Services.AddRedisCache(builder.Configuration);
 builder.Services.AddHostedService<ParserDiscoveryWorker>();
 builder.Services.AddHostedService<NbuUsdSeederWorker>();
 
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
+builder.Services.ConfigureHttpJsonOptions(options => {
+	options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
 });
 
 TinyMapper.Bind<ParserDataPayload, DataCollectedEvent>();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
+if (app.Environment.IsDevelopment()) {
+	app.MapOpenApi();
 }
 //app.UseHttpsRedirection();
 

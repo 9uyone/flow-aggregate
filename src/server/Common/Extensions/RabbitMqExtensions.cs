@@ -8,12 +8,10 @@ namespace Common.Extensions;
 
 public static class RabbitMqExtensions {
 	public static IServiceCollection AddAppRabbit(this IServiceCollection services, IConfiguration configuration) {
-		services.AddMassTransit(x =>
-		{
+		services.AddMassTransit(x => {
 			x.AddConsumers(Assembly.GetEntryAssembly());
 
-			x.UsingRabbitMq((context, cfg) =>
-			{
+			x.UsingRabbitMq((context, cfg) => {
 				var section = configuration.GetSection("RABBITMQ");
 				cfg.Host(section["HOST"], "/", h => {
 					h.Username(section["USER"] ?? "guest");

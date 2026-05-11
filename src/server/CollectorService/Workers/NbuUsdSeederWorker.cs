@@ -8,8 +8,7 @@ namespace CollectorService.Workers;
 internal sealed class NbuUsdSeederWorker(
 	IServiceScopeFactory scopeFactory,
 	IConfiguration configuration,
-	ILogger<NbuUsdSeederWorker> logger) : BackgroundService
-{
+	ILogger<NbuUsdSeederWorker> logger) : BackgroundService {
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
 		var section = configuration.GetSection("Seeder:NbuUsd");
 		if (!section.GetValue("Enabled", false))

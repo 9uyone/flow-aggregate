@@ -13,8 +13,7 @@ namespace SchedulerService;
 public class ParserSyncJob(
 	IHttpRestClient httpClient,
 	IIntegrationDispatcher dispatcher,
-	ILogger<ParserSyncJob> logger)
-{
+	ILogger<ParserSyncJob> logger) {
 	public async Task UpdateScheduleAsync() {
 		var activeConfigs = await GetAllActiveInternalConfigsAsync();
 		var expectedJobIds = new HashSet<string>();

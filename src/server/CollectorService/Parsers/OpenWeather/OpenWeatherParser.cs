@@ -1,9 +1,9 @@
 ﻿using Common.Attributes;
-using Common.Extensions;
-using Common.Interfaces.Parser;
-using Common.Exceptions;
 using Common.Constants;
 using Common.Contracts.Parser;
+using Common.Exceptions;
+using Common.Extensions;
+using Common.Interfaces.Parser;
 using System.Globalization;
 
 namespace CollectorService.Parsers.OpenWeather;
@@ -19,7 +19,7 @@ public class OpenWeatherParser(IHttpRestClient httpClient, IConfiguration config
 
 	public async Task<IEnumerable<ParserDataPayload>> ParseAsync(IDictionary<string, string> parameters) {
 		var units = parameters.GetValueOrDefault("units", "metric");
-		var city = parameters["city"] 
+		var city = parameters["city"]
 			?? throw new ArgumentException("Parameter 'city' is required.");
 
 		var encodedCity = Uri.EscapeDataString(city);
@@ -61,7 +61,8 @@ public class OpenWeatherParser(IHttpRestClient httpClient, IConfiguration config
 				new("Kyiv", "Київ"),
 				new("Odesa", "Одеса")
 			});
-		} else if (parameterName == "units") {
+		}
+		else if (parameterName == "units") {
 			return Task.FromResult<IEnumerable<LookupOptionDto>>(new List<LookupOptionDto>
 			{
 				new("metric", "Metric (°C, m/s)"),

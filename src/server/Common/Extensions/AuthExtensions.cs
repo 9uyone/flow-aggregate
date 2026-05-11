@@ -14,11 +14,11 @@ public static class AuthExtensions {
 			throw new UnauthorizedAccessException("User is not authenticated");
 
 		var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-		
+
 		if (string.IsNullOrEmpty(userIdClaim))
 			throw new UnauthorizedAccessException("User ID claim not found in token");
 
-		if(!Guid.TryParse(userIdClaim, out Guid userId))
+		if (!Guid.TryParse(userIdClaim, out Guid userId))
 			throw new UnauthorizedAccessException("Cannot parse UserId");
 
 		return userId;

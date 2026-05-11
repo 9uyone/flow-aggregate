@@ -1,11 +1,11 @@
-﻿using CollectorService.Interfaces;
-using CollectorService.Contracts;
+﻿using CollectorService.Contracts;
+using CollectorService.Extensions;
+using CollectorService.Interfaces;
 using Common.Attributes;
+using Common.Contracts.Parser;
+using Common.Enums;
 using Common.Interfaces.Parser;
 using System.Reflection;
-using Common.Enums;
-using CollectorService.Extensions;
-using Common.Contracts.Parser;
 
 namespace CollectorService.Services;
 
@@ -29,8 +29,8 @@ public class ParserRegistry(IServiceProvider sp) : IParserRegistry {
 			var info = type.GetCustomAttribute<ParserInfoAttribute>();
 			if (info == null) continue;
 
-			var source = type.Assembly == typeof(ParserRegistry).Assembly 
-				? ParserSourceType.Internal 
+			var source = type.Assembly == typeof(ParserRegistry).Assembly
+				? ParserSourceType.Internal
 				: ParserSourceType.Plugin;
 
 			var metricFields = type.GetCustomAttributes<ParserMetricsAttribute>()

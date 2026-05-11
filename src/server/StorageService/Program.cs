@@ -1,12 +1,13 @@
-using Common.Constants;
-using Common.Extensions;
-using Common.Entities;
-using StorageService.Endpoints;
-using Common.Config;
-using Common.Contracts.Events;
-using StorageService.Entities;
 using CollectorService.Interfaces;
+using Common.Config;
+using Common.Constants;
+using Common.Contracts.Events;
+using Common.Entities;
+using Common.Extensions;
 using Common.Messaging;
+using StorageService.Endpoints;
+using StorageService.Entities;
+using StorageService.Interfaces;
 using StorageService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,7 +41,7 @@ builder.Services.AddMyHttpClient();
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment()) {
-    app.MapOpenApi();
+	app.MapOpenApi();
 }
 
 app.UseExceptionHandler();

@@ -1,27 +1,14 @@
-using System.Net.Http.Headers;
+using AnalyzeService.Config;
+using AnalyzeService.Interfaces;
 using Microsoft.Extensions.Options;
+using System.Net.Http.Headers;
 
 namespace AnalyzeService.Services;
 
-public interface IAiModelClient
-{
-	Task<string?> GetCompletionAsync(string systemMessage, string userMessage, CancellationToken cancellationToken = default);
-}
-
-public sealed class OpenAiOptions
-{
-	public string ApiKey { get; set; } = string.Empty;
-	public string BaseUrl { get; set; } = "https://api.openai.com/v1/";
-	public string Model { get; set; } = "gpt-4o-mini";
-	public double Temperature { get; set; } = 0.2;
-}
-
-public sealed class OpenAiModelClient(HttpClient httpClient, IOptions<OpenAiOptions> options, ILogger<OpenAiModelClient> logger) : IAiModelClient
-{
+public sealed class OpenAiModelClient(HttpClient httpClient, IOptions<OpenAiOptions> options, ILogger<OpenAiModelClient> logger) : IAiModelClient {
 	private readonly OpenAiOptions options = options.Value;
 
-	public async Task<string?> GetCompletionAsync(string systemMessage, string userMessage, CancellationToken cancellationToken = default)
-	{
+	public async Task<string?> GetCompletionAsync(string systemMessage, string userMessage, CancellationToken cancellationToken = default) {
 		if (string.IsNullOrWhiteSpace(userMessage))
 			return null;
 
@@ -39,11 +26,9 @@ public sealed class OpenAiModelClient(HttpClient httpClient, IOptions<OpenAiOpti
 			],
 			options.Temperature);
 
-		try
-		{
+		try {
 			var response = await httpClient.PostAsJsonAsync("chat/completions", request, cancellationToken);
-			if (!response.IsSuccessStatusCode)
-			{
+			if (!response.IsSuccessStatusCode) {
 				logger.LogWarning("OpenAI request failed with status {StatusCode}", response.StatusCode);
 				return null;
 			}
@@ -52,8 +37,7 @@ public sealed class OpenAiModelClient(HttpClient httpClient, IOptions<OpenAiOpti
 			var content = payload?.Choices?.FirstOrDefault()?.Message?.Content;
 			return string.IsNullOrWhiteSpace(content) ? null : content.Trim();
 		}
-		catch (Exception ex)
-		{
+		catch (Exception ex) {
 			logger.LogError(ex, "OpenAI request failed");
 			return null;
 		}

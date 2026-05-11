@@ -10,5 +10,5 @@ internal class UserConfigCreateInternalDto {
 
 	public string? CustomName { get; init; }
 	public string? CronExpression { get; init; }
-	public  IDictionary<string, string>? Options { get; init; }
+	public IDictionary<string, string>? Options { get; init; }
 }

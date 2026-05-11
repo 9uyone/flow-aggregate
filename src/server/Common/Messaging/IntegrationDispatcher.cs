@@ -18,8 +18,7 @@ public class IntegrationDispatcher(
 			logger.LogInformation("Dispatching {MessageType} to RabbitMQ. Content: {@Message}",
 				typeof(T).Name, message);
 
-			await publishEndpoint.Publish(message, context =>
-			{
+			await publishEndpoint.Publish(message, context => {
 				if (message is ICorrelatedMessage correlated)
 					context.CorrelationId = correlated.CorrelationId;
 

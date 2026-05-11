@@ -1,4 +1,3 @@
-using Common.Config;
 using Common.Contracts.Parser;
 using Common.Enums;
 using Common.Extensions;
@@ -42,7 +41,8 @@ public static partial class StorageEndpoints {
 						var response = await httpClient.GetAsync<ParametersWrapper>(url);
 						if (response?.Parameters != null && response.Parameters.Count > 0)
 							parameters = response.Parameters;
-					} catch {
+					}
+					catch {
 						// якщо запит не вдався або десеріалізація не вдалась, залишаємо пусту колекцію
 					}
 				}
@@ -59,7 +59,7 @@ public static partial class StorageEndpoints {
 					definition.SupportsPushIngest,
 					definition.SupportsParameters,
 					parameters));
-		}).RequireAuthorization();
+			}).RequireAuthorization();
 
 	}
 }

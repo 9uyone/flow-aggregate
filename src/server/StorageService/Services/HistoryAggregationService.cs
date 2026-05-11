@@ -1,53 +1,42 @@
 using Common.Constants;
 using Common.Contracts.Events;
+using Common.Exceptions;
 using MongoDB.Bson;
 using MongoDB.Driver;
+
+using StorageService.Interfaces;
 
 namespace StorageService.Services;
 
 public sealed record HistoryPointDto(string Timestamp, double Value);
-public sealed record DimensionOptionsResult(bool Success, string? ErrorMessage, string[]? Data);
 
-public sealed record HistoryAggregationResult(bool Success, string? ErrorMessage, HistoryPointDto[]? Data);
-
-public interface IHistoryAggregationService
-{
-	Task<HistoryAggregationResult> GetHistoryAsync(Guid? userId, string slug, string metric, string interval, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default);
-	Task<DimensionOptionsResult> GetDimensionOptionsAsync(Guid? userId, string slug, string metric, string dimensionKey, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default);
-}
-
-public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggregationService
-{
-	public async Task<HistoryAggregationResult> GetHistoryAsync(Guid? userId, string slug, string metric, string interval, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default)
-	{
+public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggregationService {
+	public async Task<HistoryPointDto[]> GetHistoryAsync(Guid? userId, string slug, string metric, string interval, DateTime from, DateTime to, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default) {
 		if (string.IsNullOrWhiteSpace(metric))
-			return new HistoryAggregationResult(false, "Metric is required.", null);
+			throw new BadRequestException("Metric is required.");
 
 		if (string.IsNullOrWhiteSpace(interval))
-			return new HistoryAggregationResult(false, "Interval is required.", null);
+			throw new BadRequestException("Interval is required.");
 
 		if (from > to)
-			return new HistoryAggregationResult(false, "'from' must be less than or equal to 'to'.", null);
+			throw new BadRequestException("'from' must be less than or equal to 'to'.");
 
 		var unit = interval.Trim().ToLowerInvariant();
 
 		if (unit is not ("hour" or "day" or "week" or "month"))
-			return new HistoryAggregationResult(false, "Interval must be one of: hour, day, week, month.", null);
+			throw new BadRequestException("Interval must be one of: hour, day, week, month.");
 
 		var collection = db.GetCollection<DataCollectedEvent>(MongoCollections.CollectedData);
 		var filter = Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug)
 	& Builders<DataCollectedEvent>.Filter.Gte(x => x.CapturedAt, from)
 	& Builders<DataCollectedEvent>.Filter.Lte(x => x.CapturedAt, to);
 
-		if (userId.HasValue)
-		{
+		if (userId.HasValue) {
 			filter &= Builders<DataCollectedEvent>.Filter.Eq(x => x.UserId, userId.Value);
 		}
 
-		if (dimensions is not null)
-		{
-			foreach (var dimension in dimensions)
-			{
+		if (dimensions is not null) {
+			foreach (var dimension in dimensions) {
 				if (string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value))
 					continue;
 
@@ -89,20 +78,17 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 			.Sort(new BsonDocument("timestamp", 1))
 			.ToListAsync(cancellationToken);
 
-		var result = data
+		return data
 			.Select(x => new HistoryPointDto(x["timestamp"].AsString, x["value"].ToDouble()))
 			.ToArray();
-
-		return new HistoryAggregationResult(true, null, result);
 	}
 
-	public async Task<DimensionOptionsResult> GetDimensionOptionsAsync(Guid? userId, string slug, string metric, string dimensionKey, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default)
-	{
+	public async Task<string[]> GetDimensionOptionsAsync(Guid? userId, string slug, string metric, string dimensionKey, IReadOnlyDictionary<string, string>? dimensions = null, CancellationToken cancellationToken = default) {
 		if (string.IsNullOrWhiteSpace(metric))
-			return new DimensionOptionsResult(false, "Metric is required.", null);
+			throw new BadRequestException("Metric is required.");
 
 		if (string.IsNullOrWhiteSpace(dimensionKey))
-			return new DimensionOptionsResult(false, "Dimension key is required.", null);
+			throw new BadRequestException("Dimension key is required.");
 
 		var collection = db.GetCollection<DataCollectedEvent>(MongoCollections.CollectedData);
 		var metricFilter = Builders<DataCollectedEvent>.Filter.Or(
@@ -111,15 +97,12 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 		var filter = Builders<DataCollectedEvent>.Filter.Eq(x => x.ParserSlug, slug)
 	& metricFilter;
 
-		if (userId.HasValue)
-		{
+		if (userId.HasValue) {
 			filter &= Builders<DataCollectedEvent>.Filter.Eq(x => x.UserId, userId.Value);
 		}
 
-		if (dimensions is not null)
-		{
-			foreach (var dimension in dimensions)
-			{
+		if (dimensions is not null) {
+			foreach (var dimension in dimensions) {
 				if (string.Equals(dimension.Key, dimensionKey, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(dimension.Key) || string.IsNullOrWhiteSpace(dimension.Value))
 					continue;
 
@@ -129,12 +112,10 @@ public sealed class HistoryAggregationService(IMongoDatabase db) : IHistoryAggre
 
 		var values = await collection.Distinct<string>($"Metadata.{dimensionKey}", filter).ToListAsync(cancellationToken);
 
-		var result = values
+		return values
 			.Where(x => !string.IsNullOrWhiteSpace(x))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.OrderBy(x => x)
 			.ToArray();
-
-		return new DimensionOptionsResult(true, null, result);
 	}
 }
