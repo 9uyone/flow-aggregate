@@ -31,6 +31,8 @@ export interface ParserTrendResponse {
   r2: number;
   direction: 'up' | 'down' | 'flat';
   pointsCount: number;
+  momentum?: number | null;
+  momentumDirection?: 'Accelerating' | 'Decelerating' | 'Stable' | null;
 }
 
 export interface ParserVolatilityResponse {

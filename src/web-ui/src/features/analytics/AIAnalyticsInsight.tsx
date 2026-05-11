@@ -103,7 +103,7 @@ export const AIAnalyticsInsight: React.FC<AIAnalyticsInsightProps> = ({
           </Box>
         }
         title="AI Analytics Insight"
-        subheader="AI-generated insights from Gemini"
+        subheader="AI-generated insights from ChatGPT"
         sx={{ pb: 1.5 }}
       />
       <CardContent sx={{ pt: 0 }}>

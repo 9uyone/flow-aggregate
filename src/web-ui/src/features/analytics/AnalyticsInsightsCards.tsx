@@ -46,6 +46,21 @@ export const AnalyticsInsightsCards: React.FC<AnalyticsInsightsCardsProps> = ({
   isVolatilityLoading,
   volatilityError,
 }) => {
+  const momentumDirectionLabel = trend?.momentumDirection ?? "N/A";
+
+  const getMomentumDirectionColor = (
+    direction: ParserTrendResponse["momentumDirection"] | undefined,
+  ): "success" | "warning" | "default" => {
+    switch (direction) {
+      case "Accelerating":
+        return "success";
+      case "Decelerating":
+        return "warning";
+      default:
+        return "default";
+    }
+  };
+
   return (
     <Grid container spacing={3}>
       <Grid size={{ xs: 12, md: 6 }}>
@@ -80,8 +95,24 @@ export const AnalyticsInsightsCards: React.FC<AnalyticsInsightsCardsProps> = ({
                   Slope: {formatNumber(trend.slope, 4)}
                 </Typography>
                 <Typography variant="body2">
-                  Trend quality (r^2): {trendQuality.toFixed(1)}%
+                  Trend quality: {trendQuality.toFixed(1)}%
                 </Typography>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  useFlexGap
+                  flexWrap="wrap"
+                >
+                  <Typography variant="body2">
+                    Momentum: {typeof trend.momentum === "number" ? formatNumber(trend.momentum, 4) : "N/A"}
+                  </Typography>
+                  <Chip
+                    size="small"
+                    label={momentumDirectionLabel}
+                    color={getMomentumDirectionColor(trend.momentumDirection)}
+                  />
+                </Stack>
                 {/* <Typography variant="body2">pointsCount: {trend.pointsCount}</Typography> */}
               </Stack>
             ) : (

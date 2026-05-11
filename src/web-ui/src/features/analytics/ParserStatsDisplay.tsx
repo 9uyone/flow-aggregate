@@ -10,11 +10,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import {
-  Info as InfoIcon,
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-} from "@mui/icons-material";
+import { Info as InfoIcon } from "@mui/icons-material";
 import {
   analyzeApi,
   type MetricQueryParams,
@@ -119,14 +115,11 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
     return null;
   }
 
-  const isPositiveTrend =
-    stats.percentChange === null || stats.percentChange >= 0;
-
-  const formatNumber = (value: number): string => {
+  const formatNumber = (value: number, fractionDigits: number = 2): string => {
     if (Number.isInteger(value)) {
       return value.toString();
     }
-    return value.toFixed(2);
+    return value.toFixed(fractionDigits);
   };
 
   const statItems: StatItem[] = [
@@ -189,64 +182,6 @@ export const ParserStatsDisplay: React.FC<ParserStatsDisplayProps> = ({
           }}
         />
       )}
-
-      {/* Change Indicator Card */}
-      <Card
-        sx={{
-          background: (theme) =>
-            theme.palette.mode === "dark"
-              ? `linear-gradient(135deg, ${theme.palette.primary.main}10 0%, ${theme.palette.secondary.main}10 100%)`
-              : `linear-gradient(135deg, ${theme.palette.primary.main}05 0%, ${theme.palette.secondary.main}05 100%)`,
-          borderRadius: 2,
-          border: (theme) => `1px solid ${theme.palette.divider}`,
-        }}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Stack spacing={1}>
-            <Typography
-              variant="subtitle2"
-              color="text.primary"
-              fontWeight={500}
-            >
-              Shift
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
-              <Typography variant="h3" fontWeight={700} sx={{ lineHeight: 1 }}>
-                {stats.percentChange !== null ? (
-                  <>
-                    {isPositiveTrend ? (
-                      <TrendingUpIcon
-                        sx={{
-                          fontSize: "1.2em",
-                          color: "success.main",
-                          marginRight: 0.5,
-                          verticalAlign: "middle",
-                        }}
-                      />
-                    ) : (
-                      <TrendingDownIcon
-                        sx={{
-                          fontSize: "1.2em",
-                          color: "error.main",
-                          marginRight: 0.5,
-                          verticalAlign: "middle",
-                        }}
-                      />
-                    )}
-                    {isPositiveTrend ? "+" : ""}
-                    {stats.percentChange.toFixed(1)}%
-                  </>
-                ) : (
-                  "N/A"
-                )}
-              </Typography>
-            </Box>
-            <Typography variant="body2" color="text.secondary">
-              Last value vs average
-            </Typography>
-          </Stack>
-        </CardContent>
-      </Card>
 
       {/* Statistics Grid - 3 columns on desktop, 2 on tablet */}
       <Grid container spacing={2}>
