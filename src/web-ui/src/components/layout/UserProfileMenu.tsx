@@ -10,7 +10,7 @@ import {
   Box,
 } from '@mui/material';
 import {
-  Settings as SettingsIcon,
+  //Settings as SettingsIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material';
 import type { User } from '../../types/auth';
@@ -100,12 +100,12 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
           </Typography>
         </Box>
         <Divider />
-        <MenuItem onClick={handleMenuClose}>
+        {/* <MenuItem onClick={handleMenuClose}>
           <ListItemIcon>
             <SettingsIcon fontSize="small" />
           </ListItemIcon>
           Settings
-        </MenuItem>
+        </MenuItem> */}
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />
