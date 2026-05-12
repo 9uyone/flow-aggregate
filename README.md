@@ -1,16 +1,65 @@
 # Flow Aggregate
 
-Мікросервісна платформа збору, зберігання та аналітики даних для дипломного проєкту.
+Microservices platform for data collection, storage, and analytics (diploma project).
 
-Система побудована навколо ідеї універсального ingestion-конвеєра:
+A universal ingestion pipeline:
+- Connect data sources via internal parsers or external push integrations
+- Async processing & orchestration via RabbitMQ
+- MongoDB for data persistence + Redis for caching
+- Analytics layer: trends, volatility, forecasting
+- Centralized access via API Gateway + React portal
 
-- джерела даних підключаються через внутрішні парсери або зовнішні push-інтеграції;
-- обробка і синхронізація виконуються асинхронно через RabbitMQ;
-- дані та виконання зберігаються в MongoDB;
-- аналітика, тренди, волатильність та базовий forecasting надаються окремим сервісом;
-- доступ для клієнта централізовано через API Gateway.
+Production-ready architecture: health checks, OAuth2, scheduler (Hangfire), plugin system.
 
-Проєкт знаходиться на етапі полірування дипломної роботи, але вже має робочий контур production-like архітектури з Health Checks, auth, кешуванням і scheduler-ом.
+---
+
+## Quick Start
+
+### Prerequisites
+- Docker Desktop (Compose v2)
+- Available ports: 5050, 5672, 15672, 27017, 6379, 27170
+
+### 1. Setup Environment
+```bash
+cp .env.example .env
+cp src/web-ui/.env.example src/web-ui/.env
+```
+Or PowerShell:
+```powershell
+Copy-Item .env.example .env
+Copy-Item src/web-ui/.env.example src/web-ui/.env
+```
+
+Fill in required values:
+- `JWT__KEY` – random 32+ char string
+- `GOOGLE__CLIENT_ID` – OAuth app ID
+- `GOOGLE__CLIENT_SECRET` – OAuth secret
+
+### 2. Start Backend
+```bash
+docker compose up -d --build
+```
+
+**Useful URLs:**
+- API Gateway: http://localhost:5050
+- RabbitMQ: http://localhost:15672 (guest/guest)
+- Mongo Express: http://localhost:27170
+
+### 3. Start Frontend
+```bash
+cd src/web-ui
+npm install
+npm run dev
+```
+
+Frontend runs on `http://localhost:5173` (configurable).
+
+**CORS note:** Default Gateway config allows `http://localhost:3000`. If Vite uses a different port, update `.env`:
+```env
+VITE_API_BASE_URL=http://localhost:5050/api
+```
+
+---
 
 ## Architecture
 
@@ -120,87 +169,103 @@ erDiagram
 		PARSER_USER_CONFIG ||--o{ EXECUTION_LOG : "configId"
 ```
 
+---
+
 ## Microservices
 
 ### Collector Service
 
-Відповідає за запуск парсерів та прийом зовнішнього ingest-потоку.
+Responsible for parser execution and external ingest intake.
 
-Ключові обов'язки:
+**Key responsibilities:**
+- Load internal parsers via reflection
+- Dynamically load external plugin DLLs from `plugins_data` directory
+- Publish discovered parser catalog via RabbitMQ
+- Execute parsers via RunParserEvent
+- Accept external push via `/collector/ingest` (token-based)
+- Publish DataCollectedEvent + ParserStatusUpdatedEvent
 
-- завантаження internal parser-ів через reflection;
-- динамічне підключення зовнішніх plugin DLL з каталогу plugins_data;
-- публікація discovered parser catalog в RabbitMQ;
-- запуск парсера через RunParserEvent;
-- прийом external push через /collector/ingest (token-based);
-- публікація DataCollectedEvent + ParserStatusUpdatedEvent.
-
-Особливості:
-
-- підтримка Metadata та Dimensions на рівні parser-атрибутів;
-- correlationId проходить весь pipeline;
-- Redis використовується для live-статусів поточних задач.
+**Features:**
+- Metadata and Dimensions support at parser attribute level
+- CorrelationId flows through entire pipeline
+- Redis caches live task statuses
 
 ### Storage Service
 
-Центральний сервіс стану системи та історичних даних.
+Central service for system state and historical data.
 
-Ключові обов'язки:
+**Key responsibilities:**
+- Persist DataCollectedEvent and execution statuses
+- Parser catalog (internal/plugin/external)
+- User parser configurations (manual/scheduled/push)
+- Task history combining Mongo (completed) + Redis (running)
+- Aggregation API for Analyze:
+  - history
+  - stats
+  - metric list
+  - dimension options
 
-- збереження подій DataCollectedEvent і статусів виконання;
-- каталог парсерів (internal/plugin/external);
-- user-конфігурації парсерів (manual/scheduled/push);
-- task history з об'єднанням Mongo (completed) + Redis (running);
-- aggregation API для Analyze:
-	- history,
-	- stats,
-	- metric list,
-	- dimension options.
-
-Особливості:
-
-- динамічні фільтри по Metadata.{dimension};
-- валідація cron для schedule-конфігів;
-- підтримка user-owned external parser definitions.
+**Features:**
+- Dynamic filters by Metadata.{dimension}
+- Cron validation for scheduled configs
+- Support for user-owned external parser definitions
 
 ### Analyze Service
 
-Окремий шар аналітики поверх Storage.
+Analytics layer on top of Storage.
 
-Ключові обов'язки:
+**Key responsibilities:**
+- Compute historical time series and aggregated statistics
+- Trend analysis (slope, direction, R²)
+- Volatility (std dev, coefficient of variation)
+- Simple linear forecast (horizon configurable)
+- Dimension-aware analytics via query parameters
 
-- обчислення історичних рядів та агрегованої статистики;
-- тренд-аналіз (slope, direction, R2);
-- волатильність (std dev, coefficient of variation);
-- простий лінійний прогноз (forecast horizon);
-- dimension-aware аналітика через query-параметри.
+**Features:**
+- Aggregations don't duplicate data—read from Storage internal endpoints
+- Short-lived Redis cache reduces load on repeated queries
 
-Особливості:
+### Scheduler Service
 
-- агрегації не дублюють дані, а читають internal endpoints Storage;
-- короткочасний кеш в Redis знижує навантаження при повторних запитах.
+Hangfire-based recurring job orchestration.
+
+**Key responsibilities:**
+- Trigger parser runs on schedule
+- Sync active parser configurations
+- Publish RunParserEvent to RabbitMQ
+
+### Auth Service
+
+Google OAuth2 and token management.
+
+**Key responsibilities:**
+- Validate Google ID tokens
+- Issue JWT access/refresh tokens
+- Token refresh endpoint
+- User profile management
+
+---
 
 ## Frontend Portal
 
-Фронтенд розташований у src/web-ui (React + TypeScript + Vite + MUI).
+Frontend located in `src/web-ui` (React + TypeScript + Vite + MUI).
 
-Що реалізовано:
-
-- auth flow через Google OAuth + JWT/refresh;
-- централізований API client на Axios з auto-refresh token;
-- dashboard з overview/metrics/history/data/management;
-- parser management:
-	- каталоги парсерів,
-	- конфіги запуску,
-	- ручні запуски,
-	- моніторинг статусів;
-- аналітичні віджети на MUI X Charts:
-	- history,
-	- stats,
-	- trend,
-	- volatility,
-	- forecast;
-- dimension-aware фільтри для метрик.
+**Implemented:**
+- Auth flow via Google OAuth + JWT/refresh
+- Centralized Axios API client with auto-token-refresh
+- Dashboard: overview, metrics, history, data, management
+- Parser management:
+  - Parser catalogs
+  - Run configurations
+  - Manual runs
+  - Status monitoring
+- Analytics widgets (MUI X Charts):
+  - history
+  - stats
+  - trend
+  - volatility
+  - forecast
+- Dimension-aware metric filters
 
 ### UI Screenshots (placeholders)
 
@@ -209,43 +274,54 @@ erDiagram
 ![Analytics Charts](./docs/analytics-charts.png)
 ![History Grid](./docs/history-grid.png)
 
+---
+
 ## BI Layer (Metabase)
 
-На поточний момент Metabase не піднятий у docker-compose цього репозиторію, але архітектура вже сумісна з BI-підходом:
+Metabase is not currently deployed in this repo's docker-compose, but the architecture is BI-ready:
 
-- Storage формує стабільні історичні колекції для репортингу;
-- метрики мають parserSlug, metric, capturedAt, metadata для зрізів;
-- execution logs дають операційні KPI (success rate, latency, error trends).
+- Storage maintains stable historical collections for reporting
+- Metrics have parserSlug, metric, capturedAt, metadata for slicing
+- Execution logs provide operational KPIs (success rate, latency, error trends)
 
-Рекомендований сценарій:
+**Recommended approach:**
+1. Deploy Metabase in a separate container
+2. Connect MongoDB as data source
+3. Build dashboards from `collected_data` and `execution_logs` collections
 
-1. Підняти Metabase окремим контейнером.
-2. Підключити MongoDB як data source.
-3. Побудувати дашборди по колекціях collected_data та execution_logs.
+---
 
 ## Innovation Highlights
 
 ### 1) Dynamic Plugins
 
-- Collector завантажує сторонні parser DLL динамічно під час старту.
-- Новий parser можна додати без зміни основного коду сервісу.
-- Discovery-механізм автоматично публікує описи нових парсерів у каталог.
+- Collector dynamically loads third-party parser DLLs at startup
+- Add a new parser without modifying service code
+- Discovery mechanism automatically publishes parser descriptions to the catalog
 
 ### 2) Metadata Dimensions
 
-- Кожен запис даних може містити Metadata (ключ-значення).
-- Analyze/Storage підтримують dimension filters поверх Metadata.*.
-- Це дозволяє будувати багатовимірні зрізи без складних міграцій схеми.
+- Each data record can include Metadata (key-value)
+- Analyze/Storage support dimension filters over Metadata.*
+- Enables multi-dimensional slicing without complex schema migrations
 
-### 3) AI Insights (planned)
+### 3) AI Insights (Implemented with OpenAI)
 
-У проєкті вже є підготовлена аналітична база для AI-шару, але повноцінні AI Insights наразі ще не реалізовані.
+The project integrates OpenAI gpt-4o-mini to generate AI-powered analytics summaries.
 
-Планується додати:
+**Implementation:**
+- Combines trend analysis, volatility, forecast, and metric statistics into a single analytics context
+- Sends aggregated analytics to OpenAI for semantic interpretation
+- Server-side API key management (secure, not exposed to frontend)
+- Configurable via `OpenAI:ApiKey` environment variable
+- Result caching to control API costs
 
-- авто-інтерпретацію трендів і аномалій;
-- семантичні summary по часових рядах;
-- рекомендації щодо якості даних і налаштувань parser-ів.
+**Capabilities:**
+- Auto-interpretation of trends and anomalies
+- Semantic summaries over time series
+- Context-aware recommendations for data quality and parser settings
+
+---
 
 ## Tech Stack
 
@@ -260,56 +336,57 @@ erDiagram
 | Web Portal | TypeScript | React 19 + Vite + MUI | Browser state (Zustand) | HTTP API | Axios, React Query, MUI X Charts |
 | BI (optional) | - | Metabase | MongoDB | - | Metabase dashboards |
 
+---
+
 ## Deployment (Docker Compose)
 
 ### 1. Prerequisites
 
 - Docker Desktop (with Compose v2)
-- Вільні порти: 5050, 5672, 15672, 27017, 6379, 27170
+- Available ports: 5050, 5672, 15672, 27017, 6379, 27170
 
-### 2. Environment setup
+### 2. Environment Setup
 
-Скопіюй env-шаблони:
+Copy env templates:
 
 ```bash
 cp .env.example .env
 cp src/web-ui/.env.example src/web-ui/.env
 ```
 
-Для PowerShell (Windows):
+For PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 Copy-Item src/web-ui/.env.example src/web-ui/.env
 ```
 
-Заповни мінімум:
+Fill in minimum required values:
 
-- JWT__KEY
-- GOOGLE__CLIENT_ID
-- GOOGLE__CLIENT_SECRET
+- `JWT__KEY` – random 32+ char string for JWT signing
+- `GOOGLE__CLIENT_ID` – Google OAuth app ID
+- `GOOGLE__CLIENT_SECRET` – Google OAuth secret
 
-### 3. Start backend stack
+### 3. Start Backend Stack
 
 ```bash
 docker compose up -d --build
 ```
 
-Корисні URL:
-
+**Useful URLs:**
 - Gateway API: http://localhost:5050
-- RabbitMQ Management: http://localhost:15672
+- RabbitMQ Management: http://localhost:15672 (default: guest/guest)
 - Mongo Express: http://localhost:27170
 
-### 4. Optional Azure-oriented port mapping
+### 4. Optional Azure Port Mapping
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.azure.yml up -d --build
 ```
 
-У цьому режимі Gateway публікується на 80:8080.
+In this mode, Gateway is published to port 80:8080.
 
-### 5. Frontend run (dev)
+### 5. Frontend Development
 
 ```bash
 cd src/web-ui
@@ -317,35 +394,39 @@ npm install
 npm run dev
 ```
 
-Примітка: Gateway CORS у поточній конфігурації дозволяє origin http://localhost:3000.
-Якщо Vite стартує на іншому порту (наприклад 5173), або зміни порт dev-сервера, або онови CORS policy в Gateway.
-
-За замовчуванням фронтенд працює з VITE_API_BASE_URL=http://localhost:5000/api.
-Для поточного compose (Gateway на 5050) зазвичай зручно встановити:
+**CORS Note:** Default Gateway config allows `http://localhost:3000`. If Vite runs on a different port (e.g., 5173), update `.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:5050/api
 ```
 
-## API Surface (через Gateway)
+---
 
-- /api/auth/*
-- /api/collector/*
-- /api/storage/*
-- /api/analyze/*
+## API Surface (via Gateway)
 
-Internal маршрути для сервісної взаємодії:
+- `/api/auth/*` – authentication endpoints
+- `/api/collector/*` – parser execution and data ingestion
+- `/api/storage/*` – data and config persistence
+- `/api/analyze/*` – analytics and trend computation
 
-- /internal/storage/* (доступні тільки через внутрішній gateway порт)
+**Internal endpoints** (gateway-only, not exposed):
+- `/internal/storage/*` – inter-service communication
+
+---
 
 ## Current Status
 
-Проєкт вже функціонально демонструє:
+The project demonstrates:
 
-- модульний ingestion даних;
-- асинхронну оркестрацію через broker;
-- керовані parser-конфіги;
-- dimension-based analytics;
-- готовність до розширення BI та AI шаром.
+✅ Modular data ingestion  
+✅ Async orchestration via message broker  
+✅ Managed parser configurations  
+✅ Dimension-based analytics  
+✅ BI-ready data structure  
+✅ Plugin architecture for extensibility  
 
-Для дипломного захисту це показує не просто набір парсерів, а повноцінну extensible data platform з практичною архітектурою.
+For diploma defense, this showcases not just a set of parsers, but a complete extensible data platform with production-like architecture.
+
+---
+
+**[Українська версія](./README.uk.md)** — документація українською мовою.
