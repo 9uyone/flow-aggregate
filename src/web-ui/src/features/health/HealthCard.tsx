@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -80,13 +80,7 @@ const getRowStatus = (status: { ok: boolean; status: number | null } | null): Ro
 
 export const HealthCard: React.FC = () => {
   const theme = useTheme();
-  const { statuses, isLoading, lastChecked, fetchHealth, startAutoRefresh, stopAutoRefresh } = useHealthStore();
-
-  useEffect(() => {
-    startAutoRefresh();
-    return () => stopAutoRefresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { statuses, isLoading, lastChecked, fetchHealth } = useHealthStore();
 
   const serviceEntries = Object.entries(statuses) as [ServiceName, any][];
   const overallStatus = getOverallStatus(serviceEntries.map(([, status]) => status));

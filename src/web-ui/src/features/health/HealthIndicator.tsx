@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Tooltip } from '@mui/material';
 import { useHealthStore } from '../../store/healthStore';
 import { useNavigate } from 'react-router-dom';
@@ -25,8 +25,14 @@ const computeOverall = (statuses: Record<string, any>): StatusColor => {
 };
 
 export const HealthIndicator: React.FC = () => {
-  const { statuses } = useHealthStore();
+  const { statuses, startAutoRefresh, stopAutoRefresh } = useHealthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    startAutoRefresh();
+    return () => stopAutoRefresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const overall = computeOverall(statuses);
 
   const title =
