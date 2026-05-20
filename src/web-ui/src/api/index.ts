@@ -1,6 +1,7 @@
 export { default as axiosInstance } from './axiosInstance';
 export { storageApi } from './storageApi';
 export { analyzeApi } from './analyzeApi';
+export { checkService, getAllHealth, availableServices } from './healthApi';
 export type { 
   MetricOption,
   AvailableMetricsResponse,

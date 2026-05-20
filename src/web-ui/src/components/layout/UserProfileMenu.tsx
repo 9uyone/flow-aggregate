@@ -11,8 +11,10 @@ import {
 } from '@mui/material';
 import {
   //Settings as SettingsIcon,
+  MonitorHeartOutlined as HealthIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import type { User } from '../../types/auth';
 
 interface UserProfileMenuProps {
@@ -29,6 +31,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
   bordered = false,
 }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -41,6 +44,11 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
   const handleLogout = () => {
     handleMenuClose();
     onLogout();
+  };
+
+  const handleHealthOpen = () => {
+    handleMenuClose();
+    navigate('/health');
   };
 
   const avatarSize = size === 'small'
@@ -106,6 +114,12 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
           </ListItemIcon>
           Settings
         </MenuItem> */}
+        <MenuItem onClick={handleHealthOpen}>
+          <ListItemIcon>
+            <HealthIcon fontSize="small" />
+          </ListItemIcon>
+          Health
+        </MenuItem>
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />

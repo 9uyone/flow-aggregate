@@ -39,10 +39,12 @@ import { useThemeStore } from "../../store/themeStore";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useGlobalTaskPolling } from "../../hooks";
 import { UserProfileMenu } from "./UserProfileMenu";
+import HealthIndicator from '../../features/health/HealthIndicator';
+import HealthPage from '../../features/health/HealthPage';
 import Logo from "../../../assets/logo-no-light.svg";
 //import Logo from '../../../assets/logo.svg';
 
-type ViewType = "overview" | "analytics" | "history" | "data" | "management";
+type ViewType = "overview" | "analytics" | "history" | "data" | "management" | 'health';
 
 const pathToView: Record<string, ViewType> = {
   "/overview": "overview",
@@ -50,6 +52,7 @@ const pathToView: Record<string, ViewType> = {
   "/history": "history",
   "/data": "data",
   "/management": "management",
+    "/health": "health",
 };
 
 export const AppShell: React.FC = () => {
@@ -297,6 +300,7 @@ export const AppShell: React.FC = () => {
             <Box
               sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}
             >
+              <HealthIndicator />
               <IconButton
                 size="small"
                 onClick={toggleMode}
@@ -360,6 +364,7 @@ export const AppShell: React.FC = () => {
           {currentView === "history" && <HistoryDataGrid />}
           {currentView === "data" && <CollectedDataGrid />}
           {currentView === "management" && <ParserList />}
+          {currentView === "health" && <HealthPage />}
         </Container>
       </Box>
     </Box>
