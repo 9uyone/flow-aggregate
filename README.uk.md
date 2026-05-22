@@ -43,6 +43,8 @@ npm run dev
 - Mongo Express: http://localhost:27170
 - Frontend: http://localhost:5173
 
+- Health dashboard (frontend): http://localhost:5173/health — віджети стану сервісів і перевірки `/health/{service}`
+
 ---
 
 ## Архітектура (коротко)

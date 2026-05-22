@@ -60,7 +60,7 @@ export const AppShell: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
   const { fetchConfigs } = useParserStore();
   const mode = useThemeStore((state) => state.mode);
   const toggleMode = useThemeStore((state) => state.toggleMode);
@@ -73,8 +73,12 @@ export const AppShell: React.FC = () => {
   const currentView = pathToView[location.pathname] ?? "overview";
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
     void fetchConfigs();
-  }, [fetchConfigs]);
+  }, [fetchConfigs, isAuthenticated]);
 
   useEffect(() => {
     if (location.pathname === "/") {

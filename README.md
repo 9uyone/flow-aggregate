@@ -44,6 +44,7 @@ docker compose up -d --build
 - API Gateway: http://localhost:5050
 - RabbitMQ: http://localhost:15672 (guest/guest)
 - Mongo Express: http://localhost:27170
+ - Frontend Health Page: http://localhost:5173/health
 
 ### 3. Start Frontend
 ```bash
@@ -266,6 +267,8 @@ Frontend located in `src/web-ui` (React + TypeScript + Vite + MUI).
   - volatility
   - forecast
 - Dimension-aware metric filters
+
+- Health dashboard: service status and health checks UI (frontend polls `/health/{service}` endpoints)
 
 ### UI Screenshots (placeholders)
 

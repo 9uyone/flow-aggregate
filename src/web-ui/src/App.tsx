@@ -75,6 +75,7 @@ function App() {
       <ThemeProvider theme={selectedTheme}>
         <CssBaseline />
         <Routes>
+          <Route path="/health" element={<AppShell />} />
           <Route
             path="/login"
             element={
