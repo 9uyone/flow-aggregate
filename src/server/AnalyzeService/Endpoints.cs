@@ -9,6 +9,14 @@ using Microsoft.AspNetCore.Mvc;
 namespace AnalyzeService;
 
 public static class Endpoints {
+	private sealed record StorageOverviewDto(
+		int TotalRecords,
+		int RecordsLastDay,
+		int InternalParsers,
+		int PluginParsers,
+		int ExternalParsers,
+		double SuccessRateLast100,
+		int RunsConsidered);
 	private sealed record MetricOptionResponse(string Metric, string[] Dimensions);
 	private sealed record ParserDetailsResponse(IEnumerable<string>? Dimensions);
 	private static readonly HashSet<string> ReservedQueryKeys = ["metric", "range", "interval", "from", "to", "horizon", "dimension", "userId"];
@@ -79,7 +87,7 @@ public static class Endpoints {
 				return Results.Ok(result);
 			});
 
-		group.MapGet("/parsers/{slug}/ai-summary", async (IAdvancedAnalyticsService analyticsService, IAnalyticsStatsService analyticsStatsService, IHttpRestClient httpClient, HttpContext context, string slug,
+		group.MapGet("/parsers/{slug}/ai-summary", async (IAdvancedAnalyticsService analyticsService, IAnalyticsStatsService analyticsStatsService, AnalyticsCache analyticsCache, IHttpRestClient httpClient, HttpContext context, string slug,
 			[FromQuery] string metric,
 			[FromQuery] int horizon = 12,
 			[FromQuery] string? range = null,
@@ -89,31 +97,54 @@ public static class Endpoints {
 				var userId = context.User.GetUserId();
 				var dimensions = await BuildDimensionsAsync(httpClient, context.Request.Query, slug);
 				var request = new HistoryQueryRequest(slug, metric, range, interval, from, to, userId, dimensions);
-
-				var statsResult = await analyticsStatsService.GetStatsAsync(request);
-				var trendResult = await analyticsService.GetTrendAsync(request);
-				var volatilityResult = await analyticsService.GetVolatilityAsync(request);
-				ForecastResultDto? forecastData = null;
-				try {
-					forecastData = await analyticsService.GetForecastAsync(request, horizon);
+				var cacheParameters = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase) {
+					["metric"] = metric,
+					["range"] = range,
+					["interval"] = interval,
+					["from"] = from?.ToString("O"),
+					["to"] = to?.ToString("O"),
+					["horizon"] = horizon.ToString(),
+					["userId"] = userId.ToString()
+				};
+				foreach (var item in dimensions.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase)) {
+					cacheParameters[item.Key] = item.Value;
 				}
-				catch (Common.Exceptions.BadRequestException) {
-					forecastData = null;
+				var cacheKey = AnalyticsCache.BuildKey("ai-summary", slug, cacheParameters);
+
+				var cacheResult = await analyticsCache.GetOrCreateWithStateAsync<string>(cacheKey, TimeSpan.FromMinutes(5), async () => {
+					var statsResult = await analyticsStatsService.GetStatsAsync(request);
+					var trendResult = await analyticsService.GetTrendAsync(request);
+					var volatilityResult = await analyticsService.GetVolatilityAsync(request);
+					ForecastResultDto? forecastData = null;
+					try {
+						forecastData = await analyticsService.GetForecastAsync(request, horizon);
+					}
+					catch (Common.Exceptions.BadRequestException) {
+						forecastData = null;
+					}
+
+					var parserDetails = await httpClient.GetAsync<ParserDetailsDto>($"/api/collector/parsers/{slug}");
+					var parserContext = new AiParserContext(
+						metric,
+						slug,
+						parserDetails?.DisplayName,
+						parserDetails?.Description);
+					var cacheStats = analyticsCache.GetAiSummaryCacheStats();
+
+				return await analyticsService.GetAIAnalyticsSummary(new AiAnalyticsSummaryInput(
+						statsResult,
+						trendResult,
+						volatilityResult,
+						forecastData,
+						parserContext,
+					new AnalyzeService.Contracts.AiCacheContext(cacheStats.Hits, cacheStats.Misses, cacheStats.HitRate)));
+				}, context.RequestAborted);
+
+				analyticsCache.TrackAiSummaryCacheUsage(cacheResult.FromCache);
+				var summary = cacheResult.Value;
+				if (string.IsNullOrWhiteSpace(summary)) {
+					throw new Common.Exceptions.ExternalServiceException("AI summary unavailable");
 				}
-
-				var parserDetails = await httpClient.GetAsync<ParserDetailsDto>($"/api/collector/parsers/{slug}");
-				var parserContext = new AiParserContext(
-					metric,
-					slug,
-					parserDetails?.DisplayName,
-					parserDetails?.Description);
-
-				var summary = await analyticsService.GetAIAnalyticsSummary(new AiAnalyticsSummaryInput(
-					statsResult,
-					trendResult,
-					volatilityResult,
-					forecastData,
-					parserContext));
 
 				return Results.Ok(summary);
 			});
@@ -155,6 +186,25 @@ public static class Endpoints {
 				var result = await httpClient.GetAsync<string[]>(uri);
 				return Results.Ok(result ?? []);
 			});
+
+		group.MapGet("/overview", async (IHttpRestClient httpClient, AnalyticsCache analyticsCache, HttpContext context) =>
+		{
+			var userId = context.User.GetUserId();
+			var overview = await httpClient.GetAsync<StorageOverviewDto>($"/internal/storage/overview?userId={userId}");
+			if (overview is null)
+				throw new Common.Exceptions.ExternalServiceException("Overview data unavailable");
+
+			var cacheStats = analyticsCache.GetAiSummaryCacheStats();
+			return Results.Ok(new AnalyzeOverviewDto(
+				overview.TotalRecords,
+				overview.RecordsLastDay,
+				overview.InternalParsers,
+				overview.PluginParsers,
+				overview.ExternalParsers,
+				overview.SuccessRateLast100,
+				overview.RunsConsidered,
+				new AiCacheContext(cacheStats.Hits, cacheStats.Misses, cacheStats.HitRate)));
+		});
 	}
 
 	private static async Task<IReadOnlyDictionary<string, string>> BuildDimensionsAsync(IHttpRestClient httpClient, IQueryCollection query, string slug) {

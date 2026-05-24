@@ -56,5 +56,6 @@ app.MapParserConfigInternaEndpoints();
 app.MapCollectedDataEndpoints();
 app.MapTasksEndpoints();
 app.MapAggregationInternalEndpoints();
+app.MapOverviewInternalEndpoints();
 
 app.Run();

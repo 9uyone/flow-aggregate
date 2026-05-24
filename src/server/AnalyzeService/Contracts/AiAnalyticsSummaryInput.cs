@@ -5,4 +5,5 @@ public sealed record AiAnalyticsSummaryInput(
 	TrendResultDto TrendInfo,
 	VolatilityResultDto VolatilityInfo,
 	ForecastResultDto? Forecast,
-	AiParserContext Parser);
+	AiParserContext Parser,
+	AiCacheContext Cache);

@@ -116,6 +116,7 @@ public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQuerySe
 		var volatility = input.VolatilityInfo;
 		var forecast = input.Forecast;
 		var parser = input.Parser;
+		var cache = input.Cache;
 		var baseline = stats.Average;
 		var deltaFromAverage = stats.LastValue - baseline;
 		var deviationFromAverage = baseline == 0 ? 0 : (deltaFromAverage / baseline) * 100;

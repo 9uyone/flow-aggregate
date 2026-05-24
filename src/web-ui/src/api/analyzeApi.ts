@@ -21,6 +21,23 @@ export interface ParserMetricStats {
   lastTimestamp: string | null;
 }
 
+export interface AnalyzeOverviewAiCache {
+  hits: number;
+  misses: number;
+  hitRate: number;
+}
+
+export interface AnalyzeOverviewResponse {
+  totalRecords: number;
+  recordsLastDay: number;
+  internalParsers: number;
+  pluginParsers: number;
+  externalParsers: number;
+  successRateLast100: number;
+  runsConsidered: number;
+  aiSummaryCache: AnalyzeOverviewAiCache;
+}
+
 export interface MetricOption {
   metric: string;
   dimensions: string[];
@@ -161,6 +178,28 @@ export const analyzeApi = {
         metric: String(item.metric),
         dimensions: Array.isArray(item.dimensions) ? item.dimensions.map(String) : [],
       }));
+  },
+
+  /**
+   * Get dashboard overview stats for the main analytics cards.
+   */
+  getOverview: async (): Promise<AnalyzeOverviewResponse> => {
+    const { data } = await axiosInstance.get<AnalyzeOverviewResponse>(`/analyze/overview`);
+
+    return {
+      totalRecords: Number(data?.totalRecords ?? 0),
+      recordsLastDay: Number(data?.recordsLastDay ?? 0),
+      internalParsers: Number(data?.internalParsers ?? 0),
+      pluginParsers: Number(data?.pluginParsers ?? 0),
+      externalParsers: Number(data?.externalParsers ?? 0),
+      successRateLast100: Number(data?.successRateLast100 ?? 0),
+      runsConsidered: Number(data?.runsConsidered ?? 0),
+      aiSummaryCache: {
+        hits: Number(data?.aiSummaryCache?.hits ?? 0),
+        misses: Number(data?.aiSummaryCache?.misses ?? 0),
+        hitRate: Number(data?.aiSummaryCache?.hitRate ?? 0),
+      },
+    };
   },
 
   /**

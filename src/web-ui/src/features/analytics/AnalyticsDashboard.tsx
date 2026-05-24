@@ -19,18 +19,20 @@ import {
 import {
   Assessment as AssessmentIcon,
   DataUsage as DataUsageIcon,
-  Schedule as ScheduleIcon,
   CheckCircle as CheckCircleIcon,
+  Refresh as RefreshIcon,
   Add as AddIcon,
   PlayArrow as PlayArrowIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   History as HistoryIcon,
   Dataset as DatasetIcon,
+  AutoAwesomeOutlined as AutoAwesomeOutlinedIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { analyzeApi, storageApi } from "../../api";
+import type { AnalyzeOverviewResponse } from "../../api/analyzeApi";
 import { useParserStore } from "../../store/parserStore";
-import { storageApi } from "../../api";
 import { PageSectionHeader } from "../../components/layout";
 import { CollectedDataPreviewDialog } from "../data";
 import type { ParserTaskItem } from "../../types/storage";
@@ -54,15 +56,22 @@ interface QuickStat {
   id: string;
   title: string;
   value: string | number;
-  icon: React.ReactNode;
   color: string;
+  icon: React.ReactNode;
+  subtitle: React.ReactNode;
 }
+
+const formatNumber = (value: number): string => value.toLocaleString();
+
+const formatPercent = (value: number): string => {
+  const fixed = value.toFixed(1);
+  return fixed.endsWith(".0") ? `${value.toFixed(0)}%` : `${fixed}%`;
+};
 
 export const AnalyticsDashboard: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const {
-    selectedParserSlug,
     parsers,
     taskStatusesByCorrelationId,
     taskCompletionVersion,
@@ -73,15 +82,26 @@ export const AnalyticsDashboard: React.FC = () => {
   const [previewCorrelationId, setPreviewCorrelationId] = useState<
     string | null
   >(null);
+  const [overviewStats, setOverviewStats] = useState<AnalyzeOverviewResponse | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
 
-  const overallStats = useMemo(
-    () => ({
-      totalRecords: 0,
-      activeParsers: parsers.filter((parser) => parser.isActive).length,
-      successRate: 0,
-    }),
-    [parsers],
-  );
+  const fetchOverview = useCallback(async () => {
+    setOverviewLoading(true);
+
+    try {
+      const data = await analyzeApi.getOverview();
+      setOverviewStats(data);
+    } catch (error) {
+      console.error("Error fetching overview stats:", error);
+      setOverviewStats(null);
+    } finally {
+      setOverviewLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchOverview();
+  }, [fetchOverview]);
 
   // Fetch recent tasks only when expanded
   useEffect(() => {
@@ -145,38 +165,52 @@ export const AnalyticsDashboard: React.FC = () => {
     [],
   );
 
-  // Prepare quick stats cards
-  const quickStats: QuickStat[] = [
+  const parserTypeBreakdown = useMemo(() => {
+    const internal = overviewStats?.internalParsers ?? parsers.filter((parser) => parser.sourceType === "internal").length;
+    const plugin = overviewStats?.pluginParsers ?? parsers.filter((parser) => parser.sourceType === "plugin").length;
+    const external = overviewStats?.externalParsers ?? parsers.filter((parser) => parser.sourceType === "external").length;
+
+    return { internal, plugin, external };
+  }, [overviewStats, parsers]);
+
+  const overviewCards: QuickStat[] = [
     {
       id: "total-records",
       title: "Total records",
-      value: overallStats?.totalRecords.toLocaleString() || "0",
+      value: overviewStats ? formatNumber(overviewStats.totalRecords) : "—",
       icon: <AssessmentIcon sx={{ fontSize: 40 }} />,
       color: theme.palette.primary.main,
+      subtitle: overviewStats ? `+${formatNumber(overviewStats.recordsLastDay)} over the last 24 hours` : "Loading data...",
     },
     {
-      id: "active-parsers",
-      title: "Active parsers",
-      value:
-        overallStats?.activeParsers || parsers.filter((p) => p.isActive).length,
+      id: "parsers-catalog",
+      title: "Parsers catalog",
+      value: overviewStats ? `${formatNumber(parserTypeBreakdown.internal + parserTypeBreakdown.plugin + parserTypeBreakdown.external)} parsers` : "—",
       icon: <DataUsageIcon sx={{ fontSize: 40 }} />,
       color: theme.palette.secondary.main,
-    },
-    {
-      id: "selected-parser",
-      title: "Selected parser",
-      value: selectedParserSlug || "None",
-      icon: <ScheduleIcon sx={{ fontSize: 40 }} />,
-      color: theme.palette.info.main,
+      subtitle: overviewStats
+        ? `Internal ${parserTypeBreakdown.internal} · Plugin ${parserTypeBreakdown.plugin} · External ${parserTypeBreakdown.external}`
+        : "Loading data...",
     },
     {
       id: "success-rate",
       title: "Success rate",
-      value: overallStats?.successRate
-        ? `${overallStats.successRate.toFixed(1)}%`
-        : "N/A",
+      value: overviewStats ? formatPercent(overviewStats.successRateLast100) : "—",
       icon: <CheckCircleIcon sx={{ fontSize: 40 }} />,
       color: theme.palette.success.main,
+      subtitle: overviewStats
+        ? `Based on the last ${formatNumber(overviewStats.runsConsidered)} runs`
+        : "Loading data...",
+    },
+    {
+      id: "ai-cache-efficiency",
+      title: "AI cache efficiency",
+      value: overviewStats ? `${formatPercent(overviewStats.aiSummaryCache.hitRate)} cached` : "—",
+      icon: <AutoAwesomeOutlinedIcon sx={{ fontSize: 40 }} />,
+      color: theme.palette.info.main,
+      subtitle: overviewStats
+        ? `Saved ${formatNumber(overviewStats.aiSummaryCache.hits)} OpenAI requests`
+        : "Loading data...",
     },
   ];
 
@@ -185,11 +219,25 @@ export const AnalyticsDashboard: React.FC = () => {
       <PageSectionHeader
         title="Overview"
         description="Monitor your data parsing platform performance and activity"
+        action={
+          <Tooltip title="Refresh overview cards">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => void fetchOverview()}
+                disabled={overviewLoading}
+                aria-label="Refresh overview cards"
+              >
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        }
       />
 
       {/* Quick Stats - Top Row */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {quickStats.map((stat) => (
+        {overviewCards.map((stat) => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.id}>
             <Card
               sx={{
@@ -212,7 +260,7 @@ export const AnalyticsDashboard: React.FC = () => {
                     {stat.icon}
                   </Box>
                   <Box>
-                    {overallStats === null ? (
+                    {overviewLoading ? (
                       <Skeleton variant="text" width="60%" height={40} />
                     ) : (
                       <Typography
@@ -225,6 +273,9 @@ export const AnalyticsDashboard: React.FC = () => {
                     )}
                     <Typography variant="body2" color="text.secondary">
                       {stat.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
+                      {stat.subtitle}
                     </Typography>
                   </Box>
                 </Stack>
