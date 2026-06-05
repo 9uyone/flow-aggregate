@@ -53,11 +53,41 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
       >
         <Typography variant="h6">Saved configs</Typography>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <Button variant="outlined" startIcon={<InputIcon />} onClick={onAddExternalConfig}>
-            Create external parser
+          <Button
+            variant="outlined"
+            startIcon={<InputIcon />}
+            onClick={onAddExternalConfig}
+            sx={{
+              borderRadius: 1.5,
+              textTransform: 'none',
+              px: 2,
+              py: 1,
+              fontWeight: 600,
+              borderWidth: 2,
+              '&:hover': {
+                borderWidth: 2,
+              },
+            }}
+          >
+            New external
           </Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={onAddConfig}>
-            Add config
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={onAddConfig}
+            sx={{
+              borderRadius: 1.5,
+              textTransform: 'none',
+              px: 2,
+              py: 1,
+              fontWeight: 600,
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4,
+              },
+            }}
+          >
+            New config
           </Button>
         </Box>
       </Box>
@@ -77,7 +107,22 @@ export const ConfiguredParsersSection: React.FC<ConfiguredParsersSectionProps> =
                 <Typography variant="body2" color="text.secondary" mb={2}>
                   Create a configuration with parameters and optional schedule for recurring runs
                 </Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={onRefresh}>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={onRefresh}
+                  sx={{
+                    borderRadius: 1.5,
+                    textTransform: 'none',
+                    px: 2,
+                    py: 1,
+                    fontWeight: 600,
+                    boxShadow: 2,
+                    '&:hover': {
+                      boxShadow: 4,
+                    },
+                  }}
+                >
                   Refresh
                 </Button>
               </CardContent>

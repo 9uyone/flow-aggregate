@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Box,
   CircularProgress,
   Alert,
   Snackbar,
 } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useParserStore, type ParserConfig } from '../../store/parserStore';
 import { storageApi } from '../../api';
 import type { ParserDetailsResponse } from '../../types/storage';
@@ -18,6 +19,8 @@ import { useLatestTaskOptions } from './useLatestTaskOptions';
 import { useConfigDialog } from './useConfigDialog';
 
 export const ParserList: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     parsers,
     parserConfigs,
@@ -203,6 +206,26 @@ export const ParserList: React.FC = () => {
     void fetchConfigs();
   }, [fetchConfigs]);
 
+  const stateConsumedRef = useRef(false);
+
+  useEffect(() => {
+    const state = location.state as { openCreate?: 'internal' | 'external' } | null;
+    if (!state || stateConsumedRef.current) {
+      return;
+    }
+
+    if (state.openCreate === 'external') {
+      configDialog.openCreateExternal();
+    } else if (state.openCreate === 'internal') {
+      configDialog.openCreate();
+    }
+
+    stateConsumedRef.current = true;
+    // Clear navigation state so it won't trigger again
+    navigate('/management', { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, navigate, configDialog.openCreate, configDialog.openCreateExternal]);
+
   const runParserWithParams = async (slug: string, parameters: Record<string, string>) => {
     try {
       const response = await storageApi.runParserBySlug(slug, parameters);
@@ -325,6 +348,12 @@ export const ParserList: React.FC = () => {
     setRunParameterValues({});
   };
 
+  const handleCreateDialogClose = useCallback(() => {
+    configDialog.close();
+    stateConsumedRef.current = true;
+    navigate('/management', { replace: true, state: null });
+  }, [configDialog, navigate]);
+
   const handleParameterChange = (parameterSlug: string, value: string) => {
     setRunParameterValues((prev) => ({
       ...prev,
@@ -445,7 +474,7 @@ export const ParserList: React.FC = () => {
         onConfirm={handleConfirmDelete}
       />
 
-      <CreateConfigDialog dialog={configDialog} />
+      <CreateConfigDialog dialog={{ ...configDialog, close: handleCreateDialogClose }} />
     </Box>
   );
 };

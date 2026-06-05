@@ -30,7 +30,7 @@ import {
   AutoAwesomeOutlined as AutoAwesomeOutlinedIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { analyzeApi, storageApi } from "../../api";
+import { analyzeApi, storageApi, axiosInstance } from "../../api";
 import type { AnalyzeOverviewResponse } from "../../api/analyzeApi";
 import { useParserStore } from "../../store/parserStore";
 import { PageSectionHeader } from "../../components/layout";
@@ -73,8 +73,13 @@ export const AnalyticsDashboard: React.FC = () => {
   const navigate = useNavigate();
   const {
     parsers,
+    parserConfigs,
     taskStatusesByCorrelationId,
     taskCompletionVersion,
+    updateParser,
+    updateParserConfigsBySlug,
+    addRunningTaskId,
+    setTaskSlugForCorrelationId,
   } = useParserStore();
   const [recentTasks, setRecentTasks] = useState<ParserTaskItem[]>([]);
   const [recentTasksLoading, setRecentTasksLoading] = useState(false);
@@ -84,6 +89,8 @@ export const AnalyticsDashboard: React.FC = () => {
   >(null);
   const [overviewStats, setOverviewStats] = useState<AnalyzeOverviewResponse | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
+  const [quickActionsBusy, setQuickActionsBusy] = useState(false);
+  const [quickActionsMessage, setQuickActionsMessage] = useState<string | null>(null);
 
   const fetchOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -172,6 +179,74 @@ export const AnalyticsDashboard: React.FC = () => {
 
     return { internal, plugin, external };
   }, [overviewStats, parsers]);
+
+  const openManagementCreate = useCallback((mode: 'internal' | 'external') => {
+    navigate('/management', { state: { openCreate: mode } });
+  }, [navigate]);
+
+  const handleRunAllActiveConfigs = useCallback(async () => {
+    const activeConfigs = parserConfigs.filter((config) => {
+      const parser = parsers.find((item) => item.slug === config.slug);
+      return config.isActive && parser?.supportsManualRun;
+    });
+
+    if (activeConfigs.length === 0) {
+      setQuickActionsMessage('No active configs to run.');
+      return;
+    }
+
+    setQuickActionsBusy(true);
+    setQuickActionsMessage(null);
+
+    let startedCount = 0;
+    let failedCount = 0;
+
+    for (const config of activeConfigs) {
+      try {
+        const response = await storageApi.runConfig(config.configId);
+        startedCount += 1;
+        updateParser(config.slug, { status: 'Running' });
+        updateParserConfigsBySlug(config.slug, { status: 'Running' });
+        addRunningTaskId(response.correlationId);
+        setTaskSlugForCorrelationId(response.correlationId, config.slug);
+      } catch (error) {
+        failedCount += 1;
+        console.error(`Failed to run config ${config.configId}:`, error);
+      }
+    }
+
+    if (failedCount === 0) {
+      setQuickActionsMessage(`Started ${startedCount} active config${startedCount === 1 ? '' : 's'}.`);
+    } else if (startedCount === 0) {
+      setQuickActionsMessage('No active configs could be started.');
+    } else {
+      setQuickActionsMessage(`Started ${startedCount} config${startedCount === 1 ? '' : 's'}, ${failedCount} failed.`);
+    }
+
+    setQuickActionsBusy(false);
+  }, [
+    parserConfigs,
+    parsers,
+    updateParser,
+    updateParserConfigsBySlug,
+    addRunningTaskId,
+    setTaskSlugForCorrelationId,
+  ]);
+
+  const handleSyncScheduler = useCallback(async () => {
+    setQuickActionsBusy(true);
+    setQuickActionsMessage(null);
+
+    try {
+      await axiosInstance.post('/scheduler/sync-parsers');
+      setQuickActionsMessage('Scheduler sync triggered.');
+    } catch (error) {
+      console.error('Failed to trigger scheduler sync:', error);
+      setQuickActionsMessage('Scheduler sync failed.');
+    } finally {
+      setQuickActionsBusy(false);
+    }
+  }, []);
 
   const overviewCards: QuickStat[] = [
     {
@@ -303,6 +378,8 @@ export const AnalyticsDashboard: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
+            onClick={() => openManagementCreate('internal')}
+            disabled={quickActionsBusy}
             sx={{
               borderRadius: 2,
               textTransform: "none",
@@ -315,11 +392,33 @@ export const AnalyticsDashboard: React.FC = () => {
               },
             }}
           >
-            Add new parser
+            New config
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<PlayArrowIcon />}
+            onClick={() => void handleRunAllActiveConfigs()}
+            disabled={quickActionsBusy}
+            sx={{
+              borderRadius: 2,
+              textTransform: "none",
+              px: 3,
+              py: 1.5,
+              fontWeight: 600,
+              boxShadow: 2,
+              "&:hover": {
+                boxShadow: 4,
+              },
+            }}
+          >
+            Run all now
           </Button>
           <Button
             variant="outlined"
-            startIcon={<PlayArrowIcon />}
+            startIcon={<AddIcon />}
+            onClick={() => openManagementCreate('external')}
+            disabled={quickActionsBusy}
             sx={{
               borderRadius: 2,
               textTransform: "none",
@@ -332,9 +431,33 @@ export const AnalyticsDashboard: React.FC = () => {
               },
             }}
           >
-            Run all now
+            New external
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => void handleSyncScheduler()}
+            disabled={quickActionsBusy}
+            sx={{
+              borderRadius: 2,
+              textTransform: "none",
+              px: 3,
+              py: 1.5,
+              fontWeight: 600,
+              borderWidth: 2,
+              "&:hover": {
+                borderWidth: 2,
+              },
+            }}
+          >
+            Sync scheduler
           </Button>
         </Stack>
+        {quickActionsMessage && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+            {quickActionsMessage}
+          </Typography>
+        )}
       </Paper>
 
       <Paper
