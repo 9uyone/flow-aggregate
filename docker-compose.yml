@@ -8,18 +8,30 @@ x-healthcheck: &default-healthcheck
   retries: 3
 
 services:
+  frontend:
+    container_name: diploma-frontend
+    build:
+      context: ./src/web-ui
+      args:
+        - VITE_API_BASE_URL=http://localhost:5050/api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+    networks:
+      - public
+
   # --- ASP.NET ---
   gateway:
     container_name: diploma-gateway
-    build:
-      context: ./src/server
-      dockerfile: Gateway/Dockerfile
+    build: {context: ./src/server, dockerfile: Gateway/Dockerfile}
     ports:
       - "5050:8080"
     depends_on:
       - auth
       - collector
-      #- processor
+      - analyze
       - scheduler
       - storage
     networks:
@@ -34,8 +46,11 @@ services:
     build:
       context: ./src/server
       dockerfile: AnalyzeService/Dockerfile
-    # depends_on:
-      
+    depends_on:
+      storage:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - internal
     healthcheck: *default-healthcheck

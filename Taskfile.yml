@@ -4,12 +4,17 @@ tasks:
   up-rr:
     desc: Start redis, rabbitmq containers
     cmds:
-      - docker compose up -d redis mongo rabbitmq
+      - docker compose up -d redis rabbitmq
 
   up-deps:
     desc: Start redis, mongo, rabbitmq and mongo-express containers
     cmds:
       - docker compose up -d redis mongo rabbitmq mongo-express
+
+  up-frontend:
+    desc: Start only frontend container
+    cmds:
+      - docker compose up -d frontend
 
   up-aspnet:
     desc: Start all containers from compose project
@@ -18,7 +23,7 @@ tasks:
 
   up-all:
     desc: Start all containers from compose project (except mongo)
-    deps: [up-deps, up-aspnet]
+    deps: [up-rr, up-aspnet, up-frontend]
 
   up-all-mongo:
     desc: Start all containers from compose project
