@@ -3,6 +3,7 @@ using Common.Config;
 using Common.Extensions;
 using Common.Messaging;
 using Hangfire;
+using Microsoft.AspNetCore.Mvc;
 using SchedulerService;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +16,9 @@ builder.Services.AddScoped<IIntegrationDispatcher, IntegrationDispatcher>();
 builder.Services.AddMyHttpClient();
 builder.Services.AddAppHangfire();
 builder.Services.AddHealthChecks();
+builder.Services.AddAppAuthentication(builder.Configuration);
+builder.Services.AddAuthorization();
+builder.Services.AddScoped<ParserSyncJob>();
 
 var app = builder.Build();
 
@@ -31,5 +35,12 @@ using (var scope = app.Services.CreateScope()) {
 	);
 }
 app.UseHangfireDashboard();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapPost("/scheduler/sync-parsers", async ([FromServices] ParserSyncJob job) => {
+	await job.UpdateScheduleAsync();
+	return Results.Ok(new { Message = "Parser sync schedule updated." });
+});
 
 app.Run();

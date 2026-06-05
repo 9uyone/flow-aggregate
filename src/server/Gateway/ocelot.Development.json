@@ -86,6 +86,15 @@
 			],
 			"UpstreamPathTemplate": "/api/storage/{everything}"
 		},
+		{
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "localhost",
+					"Port": 5133
+				}
+			],
+			"UpstreamPathTemplate": "/api/scheduler/sync-parsers"
+		},
 
 		// Internal
 		{

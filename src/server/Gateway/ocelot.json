@@ -115,6 +115,22 @@
 				"AllowedScopes": []
 			}
 		},
+		{
+			"DownstreamPathTemplate": "/scheduler/sync-parsers",
+			"DownstreamScheme": "http",
+			"DownstreamHostAndPorts": [
+				{
+					"Host": "scheduler",
+					"Port": 8080
+				}
+			],
+			"UpstreamPathTemplate": "/api/scheduler/sync-parsers",
+			"UpstreamHttpMethod": [ "POST" ],
+			"AuthenticationOptions": {
+				"AuthenticationProviderKey": "Bearer",
+				"AllowedScopes": []
+			}
+		},
 
 		// Internal
 		{
