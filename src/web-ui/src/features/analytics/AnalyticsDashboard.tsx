@@ -346,10 +346,10 @@ export const AnalyticsDashboard: React.FC = () => {
                         {stat.value}
                       </Typography>
                     )}
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body1" color="text.secondary">
                       {stat.title}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
                       {stat.subtitle}
                     </Typography>
                   </Box>
