@@ -120,7 +120,8 @@ public sealed class AdvancedAnalyticsService(IHistoryQueryService historyQuerySe
 		var baseline = stats.Average;
 		var deltaFromAverage = stats.LastValue - baseline;
 		var deviationFromAverage = baseline == 0 ? 0 : (deltaFromAverage / baseline) * 100;
-		var isAnomaly = Math.Abs(stats.LastValue - baseline) > (2 * volatility.StdDev);
+		var anomalyThreshold = 3 * volatility.StdDev;
+		var isAnomaly = volatility.StdDev > 0 && Math.Abs(stats.LastValue - baseline) > anomalyThreshold;
 
 		var forecastSnippet = forecast?.Points?.Length > 0
 			? string.Join(", ", forecast.Points.Take(3).Select(point => $"{point.Timestamp}:{formatDouble(point.Value)}"))

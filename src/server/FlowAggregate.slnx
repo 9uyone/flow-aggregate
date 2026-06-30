@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="AnalyzeService/AnalyzeService.csproj" Id="c6f45974-018a-46a1-91fa-bd146ba65b4b" />
+  <Project Path="AnalyzeService.Tests/AnalyzeService.Tests.csproj" />
   <Project Path="AuthService/AuthService.csproj" Id="a8564055-a9f1-4d3e-89ba-e7eafcd4afcb" />
   <Project Path="CollectorService/CollectorService.csproj" />
   <Project Path="Common/Common.csproj" Id="ee85da4b-e8cf-4c34-8051-8d3648c41f9b" />
